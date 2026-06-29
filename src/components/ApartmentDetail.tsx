@@ -33,6 +33,7 @@ export default function ApartmentDetail({
   const [specialRequests, setSpecialRequests] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [promocode, setPromocode] = useState("");
+  const [bookingMode, setBookingMode] = useState<"live" | "inquiry">("live");
 
   // Profitroom booking launcher (Option B: Custom Form Integration)
   const handleProfitroomBook = (e: React.FormEvent) => {
@@ -286,7 +287,37 @@ export default function ApartmentDetail({
             </div>
 
             {!isSubmitted ? (
-              <form onSubmit={handleInquirySubmit} className="p-6 space-y-4">
+              <div className="p-6 pb-0 space-y-4">
+                {/* Booking Mode Selector Tab Bar */}
+                <div className="grid grid-cols-2 gap-1 p-1 bg-stone-100 border border-stone-200">
+                  <button
+                    type="button"
+                    onClick={() => setBookingMode("live")}
+                    className={`py-2 px-3 text-center text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                      bookingMode === "live"
+                        ? "bg-brand-teal text-brand-dark"
+                        : "text-stone-500 hover:text-stone-800"
+                    }`}
+                  >
+                    Direct Live Booking
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookingMode("inquiry")}
+                    className={`py-2 px-3 text-center text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                      bookingMode === "inquiry"
+                        ? "bg-brand-teal text-brand-dark"
+                        : "text-stone-500 hover:text-stone-800"
+                    }`}
+                  >
+                    Custom Inquiry / Proposal
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {!isSubmitted ? (
+              <form onSubmit={handleInquirySubmit} className="p-6 pt-2 space-y-4">
                 {/* Check in & Check out */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -403,96 +434,101 @@ export default function ApartmentDetail({
                 )}
 
                 {/* Guest Contact Details */}
-                <div className="pt-2 space-y-3">
-                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-stone-800 pb-1 border-b border-stone-200">Guest Contact Information</h4>
-                  
-                  <div>
-                    <input 
-                      type="text" 
-                      required
-                      placeholder="Your Full Name"
-                      value={inquiryName}
-                      onChange={(e) => setInquiryName(e.target.value)}
-                      className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
-                      id="inquiry-name"
-                    />
-                  </div>
+                {bookingMode === "inquiry" && (
+                  <div className="pt-2 space-y-3">
+                    <h4 className="text-[10px] font-bold uppercase tracking-wider text-stone-800 pb-1 border-b border-stone-200">Guest Contact Information</h4>
+                    
+                    <div>
+                      <input 
+                        type="text" 
+                        required
+                        placeholder="Your Full Name"
+                        value={inquiryName}
+                        onChange={(e) => setInquiryName(e.target.value)}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
+                        id="inquiry-name"
+                      />
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <input 
-                      type="email" 
-                      required
-                      placeholder="Email Address"
-                      value={inquiryEmail}
-                      onChange={(e) => setInquiryEmail(e.target.value)}
-                      className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
-                      id="inquiry-email"
-                    />
-                    <input 
-                      type="tel" 
-                      required
-                      placeholder="Phone (e.g. +254...)"
-                      value={inquiryPhone}
-                      onChange={(e) => setInquiryPhone(e.target.value)}
-                      className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
-                      id="inquiry-phone"
-                    />
-                  </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input 
+                        type="email" 
+                        required
+                        placeholder="Email Address"
+                        value={inquiryEmail}
+                        onChange={(e) => setInquiryEmail(e.target.value)}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
+                        id="inquiry-email"
+                      />
+                      <input 
+                        type="tel" 
+                        required
+                        placeholder="Phone (e.g. +254...)"
+                        value={inquiryPhone}
+                        onChange={(e) => setInquiryPhone(e.target.value)}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
+                        id="inquiry-phone"
+                      />
+                    </div>
 
-                  <div>
-                    <textarea 
-                      placeholder="Special requests or dietary preferences..."
-                      rows={2}
-                      value={specialRequests}
-                      onChange={(e) => setSpecialRequests(e.target.value)}
-                      className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal resize-none"
-                      id="inquiry-notes"
-                    />
+                    <div>
+                      <textarea 
+                        placeholder="Special requests or dietary preferences..."
+                        rows={2}
+                        value={specialRequests}
+                        onChange={(e) => setSpecialRequests(e.target.value)}
+                        className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal resize-none"
+                        id="inquiry-notes"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Real-time Profitroom Instant Booker Section */}
-                <div className="p-4 bg-brand-teal/5 border border-brand-teal/15 text-left space-y-2.5">
-                  <h4 className="text-[10px] font-bold text-brand-teal uppercase tracking-wider flex items-center gap-1.5">
-                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Direct Live Booking
-                  </h4>
-                  <p className="text-[11px] text-stone-500 font-light leading-snug">
-                    Instantly book real-time live rates with immediate reservation confirmation.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleProfitroomBook}
-                    disabled={!checkIn || !checkOut}
-                    className={`w-full py-2.5 font-bold rounded-none text-[10px] uppercase tracking-wider transition-colors duration-200 cursor-pointer text-center flex items-center justify-center gap-2 ${
-                      checkIn && checkOut 
-                        ? "bg-brand-teal text-brand-dark hover:bg-brand-dark hover:text-white" 
-                        : "bg-stone-100 text-stone-400 cursor-not-allowed"
-                    }`}
-                    id="btn-detail-profitroom-book"
-                  >
-                    <span>Instant Live Booking</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                  {!checkIn || !checkOut ? (
-                    <p className="text-[9px] text-stone-400 font-light italic">
-                      *Provide stay dates above to unlock live booking.
+                {bookingMode === "live" ? (
+                  <div className="p-4 bg-brand-teal/5 border border-brand-teal/15 text-left space-y-2.5">
+                    <h4 className="text-[10px] font-bold text-brand-teal uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Direct Live Booking
+                    </h4>
+                    <p className="text-[11px] text-stone-500 font-light leading-snug">
+                      Instantly book real-time live rates with immediate reservation confirmation.
                     </p>
-                  ) : null}
-                </div>
-
-                {/* Submit button (Inquiry is external placeholder booking) */}
-                <button 
-                  type="submit"
-                  className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs transition-colors duration-200 uppercase tracking-widest shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-                  id="btn-submit-inquiry"
-                >
-                  <span>Submit Booking Proposal</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-                <p className="text-[10px] text-stone-400 text-center font-light leading-snug">
-                  *This triggers an official booking proposal. A reservation executive from Tamarind Village Mombasa will contact you via email/phone within 2 hours to confirm availability and process final billing.
-                </p>
+                    <button
+                      type="button"
+                      onClick={handleProfitroomBook}
+                      disabled={!checkIn || !checkOut}
+                      className={`w-full py-3 font-bold rounded-none text-[10px] uppercase tracking-widest transition-colors duration-200 cursor-pointer text-center flex items-center justify-center gap-2 ${
+                        checkIn && checkOut 
+                          ? "bg-brand-teal text-brand-dark hover:bg-brand-dark hover:text-white" 
+                          : "bg-stone-100 text-stone-400 cursor-not-allowed"
+                      }`}
+                      id="btn-detail-profitroom-book"
+                    >
+                      <span>Book Instantly via Profitroom</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    {!checkIn || !checkOut ? (
+                      <p className="text-[9px] text-stone-400 font-light italic">
+                        *Provide stay dates above to unlock live booking.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <>
+                    <button 
+                      type="submit"
+                      className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs transition-colors duration-200 uppercase tracking-widest shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                      id="btn-submit-inquiry"
+                    >
+                      <span>Submit Booking Proposal</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                    <p className="text-[10px] text-stone-400 text-center font-light leading-snug">
+                      *This triggers an official booking proposal. A reservation executive from Tamarind Village Mombasa will contact you via email/phone within 2 hours to confirm availability and process final billing.
+                    </p>
+                  </>
+                )}
               </form>
             ) : (
               <motion.div 

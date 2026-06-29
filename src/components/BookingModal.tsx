@@ -12,6 +12,7 @@ interface BookingModalProps {
 export default function BookingModal({ isOpen, onClose, initialApartmentId }: BookingModalProps) {
   const [apartmentId, setApartmentId] = useState(initialApartmentId || "1-bedroom");
   const [packageId, setPackageId] = useState("bb");
+  const [bookingMode, setBookingMode] = useState<"live" | "inquiry">("live");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   
@@ -139,9 +140,37 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId }: Bo
           {!isSubmitted ? (
             <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-xs font-bold text-brand-teal uppercase tracking-widest">
-                  <Info className="w-4 h-4" />
-                  <span>Configure Your Stay Details</span>
+                <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-stone-100">
+                  <div className="flex items-center gap-2 text-xs font-bold text-brand-teal uppercase tracking-widest">
+                    <Info className="w-4 h-4" />
+                    <span>Configure Your Stay Details</span>
+                  </div>
+                </div>
+
+                {/* Booking Mode Selector Tab Bar */}
+                <div className="grid grid-cols-2 gap-1 p-1 bg-stone-100 border border-stone-200">
+                  <button
+                    type="button"
+                    onClick={() => setBookingMode("live")}
+                    className={`py-2 px-3 text-center text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                      bookingMode === "live"
+                        ? "bg-brand-teal text-brand-dark"
+                        : "text-stone-500 hover:text-stone-800"
+                    }`}
+                  >
+                    Direct Live Booking
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookingMode("inquiry")}
+                    className={`py-2 px-3 text-center text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                      bookingMode === "inquiry"
+                        ? "bg-brand-teal text-brand-dark"
+                        : "text-stone-500 hover:text-stone-800"
+                    }`}
+                  >
+                    Custom Inquiry / Proposal
+                  </button>
                 </div>
 
                 {/* Grid 1: Apartment Type, Boarding Package & Promocode */}
@@ -285,113 +314,128 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId }: Bo
                 )}
               </div>
 
-              {/* Guest Details Area */}
-              <div className="space-y-4 pt-4 border-t border-stone-200">
-                <div className="text-[10px] font-bold text-stone-800 uppercase tracking-widest block">
-                  Guest Contact Information
+              {/* Guest Details Area (Only in Inquiry Mode) */}
+              {bookingMode === "inquiry" && (
+                <div className="space-y-4 pt-4 border-t border-stone-200">
+                  <div className="text-[10px] font-bold text-stone-800 uppercase tracking-widest block">
+                    Guest Contact Information
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Your Full Name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
+                        id="modal-name"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <input
+                        type="email"
+                        required
+                        placeholder="Email Address"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
+                        id="modal-email"
+                      />
+                      <input
+                        type="tel"
+                        required
+                        placeholder="Phone Number (e.g., +254...)"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
+                        id="modal-phone"
+                      />
+                    </div>
+
+                    <div>
+                      <textarea
+                        placeholder="Special Requests (e.g. airport pickup, dietary needs, crib request, dhow boarding details)"
+                        rows={3}
+                        value={requests}
+                        onChange={(e) => setRequests(e.target.value)}
+                        className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal resize-none"
+                        id="modal-requests"
+                      />
+                    </div>
+                  </div>
                 </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Your Full Name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
-                      id="modal-name"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input
-                      type="email"
-                      required
-                      placeholder="Email Address"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
-                      id="modal-email"
-                    />
-                    <input
-                      type="tel"
-                      required
-                      placeholder="Phone Number (e.g., +254...)"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
-                      id="modal-phone"
-                    />
-                  </div>
-
-                  <div>
-                    <textarea
-                      placeholder="Special Requests (e.g. airport pickup, dietary needs, crib request, dhow boarding details)"
-                      rows={3}
-                      value={requests}
-                      onChange={(e) => setRequests(e.target.value)}
-                      className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal resize-none"
-                      id="modal-requests"
-                    />
-                  </div>
-                </div>
-              </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-4 pt-4 border-t border-stone-200">
-                {/* Real-time Profitroom Instant Booker Section */}
-                <div className="p-4 bg-brand-teal/5 border border-brand-teal/15 text-left space-y-3">
-                  <div className="flex justify-between items-start gap-2">
-                    <div>
-                      <h4 className="text-[10px] font-bold text-brand-teal uppercase tracking-wider flex items-center gap-1.5">
-                        <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Live Profitroom Booking Available
-                      </h4>
-                      <p className="text-[11px] text-stone-500 font-light mt-0.5">
-                        Instantly check live rates, room availability, and lock in direct-resort pricing.
-                      </p>
+                {bookingMode === "live" ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-brand-teal/5 border border-brand-teal/15 text-left space-y-3">
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <h4 className="text-[10px] font-bold text-brand-teal uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Live Profitroom Direct Booking
+                          </h4>
+                          <p className="text-[11px] text-stone-500 font-light mt-0.5">
+                            Instantly check direct rates, live availability, and lock in best-rate direct resort pricing.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {!checkIn || !checkOut ? (
+                        <div className="text-xs text-amber-600 font-light italic bg-amber-50 border border-amber-200/40 p-3">
+                          *Please select Check-In and Check-Out dates above to enable direct instant booking.
+                        </div>
+                      ) : null}
+
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          type="button"
+                          onClick={handleClose}
+                          className="sm:w-1/3 py-3 border border-brand-dark hover:bg-stone-50 text-brand-dark font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 cursor-pointer text-center"
+                        >
+                          Close
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleProfitroomBook}
+                          disabled={!checkIn || !checkOut}
+                          className={`sm:w-2/3 py-3 font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 cursor-pointer text-center flex items-center justify-center gap-2 ${
+                            checkIn && checkOut 
+                              ? "bg-brand-teal text-brand-dark hover:bg-brand-dark hover:text-white" 
+                              : "bg-stone-100 text-stone-400 cursor-not-allowed"
+                          }`}
+                          id="btn-modal-profitroom-direct-book"
+                        >
+                          <span>Book Instantly via Profitroom</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleProfitroomBook}
-                    disabled={!checkIn || !checkOut}
-                    className={`w-full py-2.5 font-bold rounded-none text-[10px] uppercase tracking-wider transition-colors duration-200 cursor-pointer text-center flex items-center justify-center gap-2 ${
-                      checkIn && checkOut 
-                        ? "bg-brand-teal text-brand-dark hover:bg-brand-dark hover:text-white" 
-                        : "bg-stone-200 text-stone-400 cursor-not-allowed"
-                    }`}
-                    id="btn-modal-profitroom-book"
-                  >
-                    <span>Launch Live Booking Panel ({selectedApartment.name})</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                  {!checkIn || !checkOut ? (
-                    <p className="text-[9px] text-stone-400 font-light italic">
-                      *Please specify Check-In and Check-Out dates above to unlock instant booking.
-                    </p>
-                  ) : null}
-                </div>
-
-                {/* Footer buttons for cancelling or executing standard proposals */}
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="sm:w-1/3 py-3 border border-brand-dark hover:bg-stone-50 text-brand-dark font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 cursor-pointer text-center"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="sm:w-2/3 py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer"
-                    id="btn-modal-submit"
-                  >
-                    <span>Submit Proposal Inquiry</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      type="button"
+                      onClick={handleClose}
+                      className="sm:w-1/3 py-3 border border-brand-dark hover:bg-stone-50 text-brand-dark font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 cursor-pointer text-center"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="sm:w-2/3 py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                      id="btn-modal-submit"
+                    >
+                      <span>Submit Proposal Inquiry</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </form>
           ) : (

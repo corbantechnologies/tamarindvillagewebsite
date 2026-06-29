@@ -110,6 +110,18 @@ export const APARTMENTS: ApartmentType[] = [
 
 export const PACKAGES: PackageType[] = [
   {
+    id: "ro",
+    name: "Room Only (Self-Catering)",
+    description: "Enjoy full flexibility during your stay with our room-only self-catering option. Savor the independence of cooking in your granite-top kitchen or dining à la carte.",
+    priceMarkupPercentage: 0,
+    pricePerPersonPerDay: 0,
+    highlights: [
+      "Access to fully equipped kitchen with premium appliances in your suite",
+      "Full flexibility to cook or dine à la carte at the resort's restaurants",
+      "Daily housekeeping, turndown service, and pool/gym access included"
+    ]
+  },
+  {
     id: "bb",
     name: "Bed & Breakfast",
     description: "Start each day of your stay with a fresh coastal breeze and a magnificent breakfast served poolside or right in the comfort of your apartment.",
