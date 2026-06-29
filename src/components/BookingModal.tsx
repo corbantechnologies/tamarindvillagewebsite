@@ -23,7 +23,31 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId }: Bo
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [requests, setRequests] = useState("");
+  const [promocode, setPromocode] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Profitroom booking launcher (Option B: Custom Form Integration)
+  const handleProfitroomBook = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!checkIn || !checkOut) {
+      alert("Please select both Check-In and Check-Out dates first to check live rates.");
+      return;
+    }
+
+    // Call the global Booking.Open function loaded from the Profitroom script
+    if (typeof (window as any).Booking !== "undefined") {
+      (window as any).Booking.Open({
+        checkin: checkIn,
+        checkout: checkOut,
+        occupancy: String(guests),
+        promocode: promocode || undefined
+      });
+    } else {
+      // Fallback: build a direct secure booking URL if the script is still loading or iframe sandbox blocks direct action
+      const fallbackUrl = `https://wis.upperbooking.com/tamarindvillage/booking?locale=en&checkin=${checkIn}&checkout=${checkOut}&occupancy=${guests}${promocode ? `&promocode=${encodeURIComponent(promocode)}` : ""}`;
+      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+    }
+  };
 
   // Update guests limits if apartment changes
   const handleApartmentChange = (id: string) => {
@@ -120,8 +144,8 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId }: Bo
                   <span>Configure Your Stay Details</span>
                 </div>
 
-                {/* Grid 1: Apartment Type & Boarding Package */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Grid 1: Apartment Type, Boarding Package & Promocode */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1.5">
                       Select Suite Category
@@ -156,6 +180,20 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId }: Bo
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1.5">
+                      Promo / Voucher Code
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. SUMMER26"
+                      value={promocode}
+                      onChange={(e) => setPromocode(e.target.value)}
+                      className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 bg-stone-50 font-medium focus:outline-none focus:border-brand-teal uppercase"
+                      id="modal-promocode"
+                    />
                   </div>
                 </div>
 
@@ -301,22 +339,59 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId }: Bo
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-stone-200">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="sm:w-1/3 py-3 border border-brand-dark hover:bg-stone-50 text-brand-dark font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 cursor-pointer text-center"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="sm:w-2/3 py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer"
-                  id="btn-modal-submit"
-                >
-                  <span>Submit Inquiry Request</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+              <div className="flex flex-col gap-4 pt-4 border-t border-stone-200">
+                {/* Real-time Profitroom Instant Booker Section */}
+                <div className="p-4 bg-brand-teal/5 border border-brand-teal/15 text-left space-y-3">
+                  <div className="flex justify-between items-start gap-2">
+                    <div>
+                      <h4 className="text-[10px] font-bold text-brand-teal uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Live Profitroom Booking Available
+                      </h4>
+                      <p className="text-[11px] text-stone-500 font-light mt-0.5">
+                        Instantly check live rates, room availability, and lock in direct-resort pricing.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleProfitroomBook}
+                    disabled={!checkIn || !checkOut}
+                    className={`w-full py-2.5 font-bold rounded-none text-[10px] uppercase tracking-wider transition-colors duration-200 cursor-pointer text-center flex items-center justify-center gap-2 ${
+                      checkIn && checkOut 
+                        ? "bg-brand-teal text-brand-dark hover:bg-brand-dark hover:text-white" 
+                        : "bg-stone-200 text-stone-400 cursor-not-allowed"
+                    }`}
+                    id="btn-modal-profitroom-book"
+                  >
+                    <span>Launch Live Booking Panel ({selectedApartment.name})</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                  {!checkIn || !checkOut ? (
+                    <p className="text-[9px] text-stone-400 font-light italic">
+                      *Please specify Check-In and Check-Out dates above to unlock instant booking.
+                    </p>
+                  ) : null}
+                </div>
+
+                {/* Footer buttons for cancelling or executing standard proposals */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="sm:w-1/3 py-3 border border-brand-dark hover:bg-stone-50 text-brand-dark font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 cursor-pointer text-center"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="sm:w-2/3 py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                    id="btn-modal-submit"
+                  >
+                    <span>Submit Proposal Inquiry</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </form>
           ) : (
