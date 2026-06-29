@@ -1,0 +1,8 @@
+{
+  "name": "Tamarind Village Mombasa",
+  "description": "A luxury coastal apartment resort website for Tamarind Village in Mombasa, Kenya. Highlights 1, 2, and 3-bedroom oceanfront suites, Tamarind dining experiences, dhow cruises, and packages.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
