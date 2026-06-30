@@ -1,3 +1,15 @@
+/**
+ * TAMARIND VILLAGE DATASET FILE
+ * 
+ * You can easily add, edit, or remove data here!
+ * - To add a new Apartment/Suite, append to the `APARTMENTS` array.
+ * - To edit Boarding Packages, edit the `PACKAGES` array.
+ * - To add/edit Restaurants or dining options, edit the `DINING` array.
+ * - To modify general Resort Facilities, edit the `FACILITIES` array.
+ * 
+ * No database required—changes made here will instantly reflect across the entire application!
+ */
+
 import { ApartmentType, PackageType, DiningExperience, FacilityType } from "./types";
 
 export const APARTMENTS: ApartmentType[] = [

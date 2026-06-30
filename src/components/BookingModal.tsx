@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { APARTMENTS, PACKAGES } from "../data";
+import { useLiveRates } from "../utils/profitroom";
 import { X, Calendar, CheckCircle, ArrowRight, DollarSign, Calculator, Info } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -7,9 +8,10 @@ interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialApartmentId?: string;
+  initialPackageId?: string;
 }
 
-export default function BookingModal({ isOpen, onClose, initialApartmentId }: BookingModalProps) {
+export default function BookingModal({ isOpen, onClose, initialApartmentId, initialPackageId }: BookingModalProps) {
   const [apartmentId, setApartmentId] = useState(initialApartmentId || "1-bedroom");
   const [packageId, setPackageId] = useState("bb");
   const [bookingMode, setBookingMode] = useState<"live" | "inquiry">("live");
@@ -19,6 +21,25 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId }: Bo
   // Set guest count default based on selected apartment
   const selectedApartment = APARTMENTS.find(a => a.id === apartmentId) || APARTMENTS[0];
   const [guests, setGuests] = useState(selectedApartment.maxGuests);
+
+  const { getLivePrice } = useLiveRates();
+  const { price: livePrice, isLive: isPriceLive } = getLivePrice(apartmentId, selectedApartment.pricePerNight);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (initialApartmentId) {
+        setApartmentId(initialApartmentId);
+        const apt = APARTMENTS.find(a => a.id === initialApartmentId);
+        if (apt) {
+          setGuests(apt.maxGuests);
+        }
+      }
+      if (initialPackageId) {
+        setPackageId(initialPackageId);
+        setBookingMode("inquiry");
+      }
+    }
+  }, [isOpen, initialApartmentId, initialPackageId]);
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,7 +88,7 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId }: Bo
     if (diffTime <= 0) return null;
 
     const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const basePrice = selectedApartment.pricePerNight * nights;
+    const basePrice = livePrice * nights;
     
     const pkg = PACKAGES.find(p => p.id === packageId) || PACKAGES[0];
     const packageRate = pkg.pricePerPersonPerDay;
@@ -290,7 +311,12 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId }: Bo
                     </div>
                     
                     <div className="flex justify-between text-stone-600">
-                      <span>{selectedApartment.name} ({breakdown.nights} nights x ${selectedApartment.pricePerNight})</span>
+                      <span className="flex items-center gap-1">
+                        {selectedApartment.name} ({breakdown.nights} nights x ${livePrice})
+                        {isPriceLive && (
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live price connected to booking engine"></span>
+                        )}
+                      </span>
                       <span className="font-semibold text-stone-800">${breakdown.basePrice}</span>
                     </div>
                     <div className="flex justify-between text-stone-600">

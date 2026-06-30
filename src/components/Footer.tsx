@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { MapPin, Phone, Mail, Clock, Ship, Compass, Award } from "lucide-react";
 
 interface FooterProps {
@@ -9,6 +9,31 @@ interface FooterProps {
 }
 
 export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSelectDining }: FooterProps) {
+  const [logoSrc, setLogoSrc] = useState<string | null>(null);
+
+  // Auto-detect logo files
+  useEffect(() => {
+    const paths = ["/assets/logo.png", "/assets/logo.svg", "/logo.png", "/logo.svg"];
+    let currentIdx = 0;
+
+    const checkNextPath = () => {
+      if (currentIdx >= paths.length) {
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        setLogoSrc(paths[currentIdx]);
+      };
+      img.onerror = () => {
+        currentIdx++;
+        checkNextPath();
+      };
+      img.src = paths[currentIdx];
+    };
+
+    checkNextPath();
+  }, []);
+
   const handleSuiteClick = (id: string) => {
     onSelectApartment(id);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -69,9 +94,19 @@ export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSele
         {/* Brand details */}
         <div className="space-y-6">
           <div className="flex items-center gap-3 cursor-pointer" onClick={onGoHome}>
-            <div className="w-9 h-9 bg-brand-teal text-white rounded-none flex items-center justify-center font-serif text-base font-bold">
-              TV
-            </div>
+            {logoSrc ? (
+              <img 
+                src={logoSrc} 
+                alt="Tamarind Village Mombasa" 
+                className="h-9 object-contain max-w-[110px]"
+                referrerPolicy="no-referrer"
+                onError={() => setLogoSrc(null)}
+              />
+            ) : (
+              <div className="w-9 h-9 bg-brand-teal text-white rounded-none flex items-center justify-center font-serif text-base font-bold">
+                TV
+              </div>
+            )}
             <div>
               <span className="font-serif text-base font-bold text-white tracking-tight block leading-none">
                 TAMARIND <span className="text-brand-teal">VILLAGE</span>

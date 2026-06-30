@@ -12,6 +12,30 @@ interface NavbarProps {
 export default function Navbar({ onNavigate, onOpenBooking, activeView, onGoHome }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [logoSrc, setLogoSrc] = useState<string | null>(null);
+
+  // Auto-detect logo files
+  useEffect(() => {
+    const paths = ["/assets/logo.png", "/assets/logo.svg", "/logo.png", "/logo.svg"];
+    let currentIdx = 0;
+
+    const checkNextPath = () => {
+      if (currentIdx >= paths.length) {
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        setLogoSrc(paths[currentIdx]);
+      };
+      img.onerror = () => {
+        currentIdx++;
+        checkNextPath();
+      };
+      img.src = paths[currentIdx];
+    };
+
+    checkNextPath();
+  }, []);
 
   // Monitor scrolling to add background blur/shadow
   useEffect(() => {
@@ -75,9 +99,19 @@ export default function Navbar({ onNavigate, onOpenBooking, activeView, onGoHome
               className="flex items-center gap-3 cursor-pointer group"
               id="brand-logo"
             >
-              <div className="w-10 h-10 bg-brand-dark text-white rounded-none flex items-center justify-center font-serif text-lg font-bold group-hover:bg-brand-teal transition-colors duration-300">
-                TV
-              </div>
+              {logoSrc ? (
+                <img 
+                  src={logoSrc} 
+                  alt="Tamarind Village Mombasa" 
+                  className="h-10 object-contain max-w-[120px]"
+                  referrerPolicy="no-referrer"
+                  onError={() => setLogoSrc(null)}
+                />
+              ) : (
+                <div className="w-10 h-10 bg-brand-dark text-white rounded-none flex items-center justify-center font-serif text-lg font-bold group-hover:bg-brand-teal transition-colors duration-300">
+                  TV
+                </div>
+              )}
               <div>
                 <span className="font-serif text-xl font-bold tracking-tight text-[#1A1A1A] block leading-none">
                   TAMARIND <span className="text-brand-teal">VILLAGE</span>

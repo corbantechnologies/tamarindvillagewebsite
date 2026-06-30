@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ApartmentType, PackageType } from "../types";
+import { useLiveRates } from "../utils/profitroom";
 import { PACKAGES } from "../data";
 import { 
   ArrowLeft, Maximize2, Users, Bed, Bath, Eye, CheckCircle2, 
@@ -22,6 +23,9 @@ export default function ApartmentDetail({
   allApartments,
   onBookNow 
 }: ApartmentDetailProps) {
+  const { getLivePrice } = useLiveRates();
+  const { price: livePrice, isLive: isPriceLive } = getLivePrice(apartment.id, apartment.pricePerNight);
+
   const [activeImage, setActiveImage] = useState(apartment.image);
   const [selectedPackage, setSelectedPackage] = useState<string>("bb");
   const [checkIn, setCheckIn] = useState<string>("");
@@ -79,7 +83,7 @@ export default function ApartmentDetail({
     if (timeDiff <= 0) return null;
     
     const nights = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    const basePrice = apartment.pricePerNight * nights;
+    const basePrice = livePrice * nights;
     
     const pkg = PACKAGES.find(p => p.id === selectedPackage);
     const packageRate = pkg ? pkg.pricePerPersonPerDay : 0;
@@ -269,11 +273,20 @@ export default function ApartmentDetail({
             
             <div className="mt-6 p-4 bg-brand-teal/5 border border-brand-teal/15 rounded-none flex justify-between items-center">
               <div>
-                <p className="text-[10px] text-brand-teal font-bold uppercase tracking-widest">Base Rate per Night</p>
-                <p className="text-xs text-stone-500 font-light">Self-catering base price</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[10px] text-brand-teal font-bold uppercase tracking-widest">Base Rate per Night</p>
+                  {isPriceLive && (
+                    <span className="inline-flex items-center gap-0.5 px-1 py-0.2 text-[8px] font-bold text-white bg-emerald-600 rounded-none uppercase tracking-wider">
+                      ● Live
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-stone-500 font-light">
+                  {isPriceLive ? "Real-time Profitroom rate" : "Self-catering base price"}
+                </p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-serif text-brand-dark font-bold">${apartment.pricePerNight}</p>
+                <p className="text-2xl font-serif text-brand-dark font-bold">${livePrice}</p>
                 <p className="text-[10px] text-brand-teal font-bold uppercase tracking-wider">USD / room</p>
               </div>
             </div>

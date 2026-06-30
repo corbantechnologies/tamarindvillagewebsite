@@ -827,6 +827,7 @@ export default function App() {
         isOpen={isBookingOpen} 
         onClose={() => setIsBookingOpen(false)}
         initialApartmentId={selectedApartmentId}
+        initialPackageId={preSelectedPkg}
       />
 
       {/* Luxury Footer component */}
