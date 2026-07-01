@@ -48,6 +48,8 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
   const [phone, setPhone] = useState("");
   const [requests, setRequests] = useState("");
   const [promocode, setPromocode] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Profitroom booking launcher (Option B: Custom Form Integration)
@@ -110,13 +112,52 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
 
   const breakdown = calculateCostBreakdown();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !phone) {
       alert("Please enter your contact details.");
       return;
     }
-    setIsSubmitted(true);
+    
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const selectedApartment = APARTMENTS.find(a => a.id === apartmentId) || APARTMENTS[0];
+      const response = await fetch("/api/inquire", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "apartment",
+          payload: {
+            name,
+            email,
+            phone,
+            apartmentName: selectedApartment.name,
+            checkIn: checkIn || "Flexible / Not specified",
+            checkOut: checkOut || "Flexible / Not specified",
+            guests,
+            packageId,
+            requests,
+            totalCost: breakdown?.total || selectedApartment.pricePerNight,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit booking inquiry.");
+      }
+
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error("Error submitting booking inquiry:", err);
+      setSubmitError(err.message || "An error occurred while sending your request. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -453,22 +494,31 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      type="button"
-                      onClick={handleClose}
-                      className="sm:w-1/3 py-3 border border-brand-dark hover:bg-stone-50 text-brand-dark font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 cursor-pointer text-center"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="sm:w-2/3 py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer"
-                      id="btn-modal-submit"
-                    >
-                      <span>Submit Proposal Inquiry</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                  <div className="space-y-4">
+                    {submitError && (
+                      <div className="p-3 bg-red-50 text-red-700 text-xs font-medium border-l-2 border-red-600">
+                        {submitError}
+                      </div>
+                    )}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button
+                        type="button"
+                        onClick={handleClose}
+                        disabled={isSubmitting}
+                        className="sm:w-1/3 py-3 border border-brand-dark hover:bg-stone-50 text-brand-dark font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 cursor-pointer text-center disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="sm:w-2/3 py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+                        id="btn-modal-submit"
+                      >
+                        <span>{isSubmitting ? "Submitting Inquiry..." : "Submit Proposal Inquiry"}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

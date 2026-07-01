@@ -38,6 +38,8 @@ export default function ApartmentDetail({
   const [inquiryEmail, setInquiryEmail] = useState("");
   const [inquiryPhone, setInquiryPhone] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
+  const [isInquirySubmitting, setIsInquirySubmitting] = useState(false);
+  const [inquiryError, setInquiryError] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [promocode, setPromocode] = useState("");
   const [bookingMode, setBookingMode] = useState<"live" | "inquiry">("live");
@@ -106,13 +108,51 @@ export default function ApartmentDetail({
 
   const cost = calculateCost();
 
-  const handleInquirySubmit = (e: React.FormEvent) => {
+  const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inquiryName || !inquiryEmail || !inquiryPhone) {
       alert("Please fill in all contact information.");
       return;
     }
-    setIsSubmitted(true);
+    
+    setIsInquirySubmitting(true);
+    setInquiryError("");
+
+    try {
+      const response = await fetch("/api/inquire", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "apartment",
+          payload: {
+            name: inquiryName,
+            email: inquiryEmail,
+            phone: inquiryPhone,
+            apartmentName: apartment.name,
+            checkIn: checkIn || "Flexible / Not specified",
+            checkOut: checkOut || "Flexible / Not specified",
+            guests: guestCount,
+            packageId: selectedPackage,
+            requests: specialRequests,
+            totalCost: cost.total,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit booking inquiry.");
+      }
+
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error("Error submitting apartment inquiry:", err);
+      setInquiryError(err.message || "An error occurred while sending your inquiry. Please try again.");
+    } finally {
+      setIsInquirySubmitting(false);
+    }
   };
 
   const handleRecommendClick = (id: string) => {
@@ -543,19 +583,25 @@ export default function ApartmentDetail({
                     ) : null}
                   </div>
                 ) : (
-                  <>
+                  <div className="space-y-4">
+                    {inquiryError && (
+                      <div className="p-3 bg-red-50 text-red-700 text-xs font-medium border-l-2 border-red-600">
+                        {inquiryError}
+                      </div>
+                    )}
                     <button 
                       type="submit"
-                      className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs transition-colors duration-200 uppercase tracking-widest shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                      disabled={isInquirySubmitting}
+                      className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs transition-colors duration-200 uppercase tracking-widest shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
                       id="btn-submit-inquiry"
                     >
-                      <span>Submit Booking Proposal</span>
+                      <span>{isInquirySubmitting ? "Submitting Proposal..." : "Submit Booking Proposal"}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                     <p className="text-[10px] text-stone-400 text-center font-light leading-snug">
                       *This triggers an official booking proposal. A reservation executive from Tamarind Village Mombasa will contact you via email/phone within 2 hours to confirm availability and process final billing.
                     </p>
-                  </>
+                  </div>
                 )}
               </form>
             ) : (

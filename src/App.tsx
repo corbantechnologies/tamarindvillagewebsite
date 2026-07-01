@@ -138,6 +138,9 @@ export default function App() {
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactMessage, setContactMessage] = useState("");
+  const [contactDept, setContactDept] = useState("village");
+  const [isContactSubmitting, setIsContactSubmitting] = useState(false);
+  const [contactSubmitError, setContactSubmitError] = useState("");
   const [isContactSubmitted, setIsContactSubmitted] = useState(false);
 
   // FAQ interactive state
@@ -174,18 +177,45 @@ export default function App() {
     setIsBookingOpen(true);
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName || !contactEmail || !contactMessage) {
       alert("Please fill out all fields.");
       return;
     }
-    setIsContactSubmitted(true);
-    setTimeout(() => {
-      setContactName("");
-      setContactEmail("");
-      setContactMessage("");
-    }, 3000);
+    
+    setIsContactSubmitting(true);
+    setContactSubmitError("");
+
+    try {
+      const response = await fetch("/api/inquire", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "general",
+          payload: {
+            name: contactName,
+            email: contactEmail,
+            message: contactMessage,
+            department: contactDept,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit inquiry.");
+      }
+
+      setIsContactSubmitted(true);
+    } catch (err: any) {
+      console.error("Error submitting general inquiry:", err);
+      setContactSubmitError(err.message || "Unable to send inquiry. Please try again later.");
+    } finally {
+      setIsContactSubmitting(false);
+    }
   };
 
   const activeApartment = APARTMENTS.find(a => a.id === selectedApartmentId) || APARTMENTS[0];
@@ -812,43 +842,70 @@ export default function App() {
                               placeholder="e.g., Corban Technologies"
                               value={contactName}
                               onChange={(e) => setContactName(e.target.value)}
-                              className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
+                              className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
                               id="contact-name"
+                              disabled={isContactSubmitting}
                             />
                           </div>
 
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Email Address</label>
-                            <input 
-                              type="email" 
-                              required
-                              placeholder="e.g., corbantechnologies@gmail.com"
-                              value={contactEmail}
-                              onChange={(e) => setContactEmail(e.target.value)}
-                              className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
-                              id="contact-email"
-                            />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Email Address</label>
+                              <input 
+                                type="email" 
+                                required
+                                placeholder="e.g., corbantechnologies@gmail.com"
+                                value={contactEmail}
+                                onChange={(e) => setContactEmail(e.target.value)}
+                                className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
+                                id="contact-email"
+                                disabled={isContactSubmitting}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Select Department</label>
+                              <select 
+                                value={contactDept}
+                                onChange={(e) => setContactDept(e.target.value)}
+                                className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
+                                id="contact-dept"
+                                disabled={isContactSubmitting}
+                              >
+                                <option value="village">Tamarind Village (Apartments)</option>
+                                <option value="restaurant">Tamarind Mombasa Restaurant</option>
+                                <option value="dhow">Tamarind Dhow Cruise</option>
+                              </select>
+                            </div>
                           </div>
 
                           <div>
                             <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Message Inquiry</label>
                             <textarea 
                               required
-                              placeholder="How can our accommodation concierge assist you today?"
+                              placeholder="How can our accommodation concierge or dining team assist you today?"
                               rows={4}
                               value={contactMessage}
                               onChange={(e) => setContactMessage(e.target.value)}
-                              className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal resize-none"
+                              className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal resize-none bg-stone-50"
                               id="contact-message"
+                              disabled={isContactSubmitting}
                             />
                           </div>
 
+                          {contactSubmitError && (
+                            <div className="p-3 bg-red-50 text-red-700 text-xs font-medium border-l-2 border-red-600">
+                              {contactSubmitError}
+                            </div>
+                          )}
+
                           <button 
                             type="submit"
-                            className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest shadow-xs transition-colors cursor-pointer"
+                            disabled={isContactSubmitting}
+                            className={`w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest shadow-xs transition-colors cursor-pointer ${isContactSubmitting ? "opacity-75 cursor-not-allowed" : ""}`}
                             id="btn-contact-submit"
                           >
-                            Send General Inquiry
+                            {isContactSubmitting ? "Sending Inquiry..." : "Send General Inquiry"}
                           </button>
                         </form>
                       ) : (

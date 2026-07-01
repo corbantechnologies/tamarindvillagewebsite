@@ -56,6 +56,8 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
   const [guestPhone, setGuestPhone] = useState("");
   const [dietary, setDietary] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
+  const [isDiningSubmitting, setIsDiningSubmitting] = useState(false);
+  const [diningSubmitError, setDiningSubmitError] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Additional data based on dining ID
@@ -162,13 +164,57 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
 
   const estimate = calculateEstimate();
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestName || !guestEmail || !guestPhone || !reserveDate || !reserveTime) {
       alert("Please fill out all mandatory guest contact and booking details.");
       return;
     }
-    setIsSubmitted(true);
+    
+    setIsDiningSubmitting(true);
+    setDiningSubmitError("");
+
+    try {
+      const extraDetails = [
+        `Seating preference: ${seatingPreference}`,
+        dietary ? `Dietary constraints: ${dietary}` : "",
+        specialRequests ? `Special notes: ${specialRequests}` : "",
+        dining.id === "tamarind-dhow" ? `Cruise selection: ${cruiseType} cruise, ${charterType} charter` : "",
+      ].filter(Boolean).join("\n");
+
+      const response = await fetch("/api/inquire", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "dining",
+          payload: {
+            name: guestName,
+            email: guestEmail,
+            phone: guestPhone,
+            diningName: dining.name,
+            date: reserveDate,
+            time: reserveTime,
+            guests: reserveGuests,
+            details: extraDetails,
+            totalCost: estimate.total,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to submit dining reservation inquiry.");
+      }
+
+      setIsSubmitted(true);
+    } catch (err: any) {
+      console.error("Error submitting dining inquiry:", err);
+      setDiningSubmitError(err.message || "An error occurred while sending your request. Please try again.");
+    } finally {
+      setIsDiningSubmitting(false);
+    }
   };
 
   const otherDinings = allDinings.filter(d => d.id !== dining.id);
@@ -535,13 +581,19 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                 </div>
 
                 {/* Submit */}
+                {diningSubmitError && (
+                  <div className="p-3 bg-red-50 text-red-700 text-xs font-medium border-l-2 border-red-600 mb-3">
+                    {diningSubmitError}
+                  </div>
+                )}
                 <button 
                   type="submit"
-                  className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs transition-colors duration-200 uppercase tracking-widest shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isDiningSubmitting}
+                  className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs transition-colors duration-200 uppercase tracking-widest shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
                   id="btn-submit-dining-inquiry"
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>Submit Dining Reservation</span>
+                  <span>{isDiningSubmitting ? "Submitting Reservation..." : "Submit Dining Reservation"}</span>
                 </button>
               </form>
             ) : (
