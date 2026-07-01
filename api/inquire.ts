@@ -239,6 +239,95 @@ export default async function handler(req: any, res: any) {
       return res.status(500).json({ error: emailResponse.error.message });
     }
 
+    // Try sending a confirmation copy to the inquirer (guest)
+    const guestEmail = payload.email;
+    const guestName = payload.name || "Valued Guest";
+    if (guestEmail) {
+      let guestSubject = "Inquiry Received - Tamarind Mombasa";
+      let guestBodyHeader = "Thank you for contacting Tamarind Mombasa";
+      let guestBodyIntro = "We have received your inquiry and our desk team is currently reviewing it. We will be in touch with you shortly to assist with your request.";
+      let detailsListHtml = "";
+
+      if (type === "general") {
+        guestSubject = "Thank you for reaching out - Tamarind Mombasa";
+        guestBodyHeader = "Your Inquiry is Received";
+        guestBodyIntro = `Thank you for contacting our team. We have received your message regarding our hospitality services and are preparing a response for you.`;
+        detailsListHtml = `
+          <div style="background-color: #FAF6F0; padding: 15px; border-left: 3px solid #821124; margin: 20px 0; font-size: 13px; color: #1F1615;">
+            <strong>Your Message:</strong><br/>
+            <span style="font-style: italic;">"${payload.message}"</span>
+          </div>
+        `;
+      } else if (type === "apartment") {
+        guestSubject = `Apartment Stay Request Acknowledged - Tamarind Village`;
+        guestBodyHeader = "Thank You for Your Stay Proposal";
+        guestBodyIntro = `We are delighted that you are considering a luxurious coastal retreat at Tamarind Village Mombasa. Our reservations office has received your apartment booking proposal and is verifying availability for your preferred dates.`;
+        detailsListHtml = `
+          <div style="background-color: #FAF6F0; padding: 15px; border-left: 3px solid #821124; margin: 20px 0; font-size: 13px; color: #1F1615;">
+            <strong>Requested Stay Details:</strong><br/>
+            • <strong>Apartment Type:</strong> ${payload.apartmentName}<br/>
+            • <strong>Dates:</strong> ${payload.checkIn} to ${payload.checkOut}<br/>
+            • <strong>Guests:</strong> ${payload.guests || 1} Guests<br/>
+            • <strong>Estimated Total:</strong> $${payload.totalCost || "N/A"}
+          </div>
+        `;
+      } else if (type === "dining") {
+        const isDhow = payload.diningName?.toLowerCase().includes("dhow");
+        guestSubject = isDhow 
+          ? "Reservation Inquiry Received - Tamarind Dhow Cruise" 
+          : "Table Inquiry Received - Tamarind Mombasa Restaurant";
+        guestBodyHeader = isDhow ? "Your Dhow Cruise Request is Under Review" : "Your Dining Request is Under Review";
+        guestBodyIntro = `Thank you for choosing Tamarind for your culinary experience. We have received your seating reservation request for ${payload.diningName} and are currently checking table availability for your requested date.`;
+        detailsListHtml = `
+          <div style="background-color: #FAF6F0; padding: 15px; border-left: 3px solid #821124; margin: 20px 0; font-size: 13px; color: #1F1615;">
+            <strong>Requested Seating Details:</strong><br/>
+            • <strong>Dining Option:</strong> ${payload.diningName}<br/>
+            • <strong>Preferred Date:</strong> ${payload.date} at ${payload.time}<br/>
+            • <strong>Guests:</strong> ${payload.guests} Guests
+          </div>
+        `;
+      }
+
+      const guestHtmlContent = `
+        <div style="font-family: sans-serif; max-width: 600px; color: #1F1615; line-height: 1.5;">
+          <div style="background-color: #821124; padding: 25px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-family: Georgia, serif; font-size: 22px; tracking: 0.05em;">Tamarind Mombasa</h1>
+            <p style="color: #C59B27; margin: 5px 0 0 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em;">coastal luxury & fine dining</p>
+          </div>
+          <div style="padding: 30px; border: 1px solid #FAF6F0; background-color: #ffffff;">
+            <h2 style="color: #821124; font-family: Georgia, serif; font-size: 18px; border-bottom: 2px solid #FAF6F0; padding-bottom: 12px; margin-top: 0;">${guestBodyHeader}</h2>
+            <p style="font-size: 14px; color: #1F1615;">Dear ${guestName},</p>
+            <p style="font-size: 14px; color: #1F1615; line-height: 1.6;">${guestBodyIntro}</p>
+            
+            ${detailsListHtml}
+
+            <p style="font-size: 14px; color: #1F1615; line-height: 1.6;">Please note that this is an acknowledgment of your request and not a finalized booking confirmation. A member of our dedicated guest experience desk will contact you via email or phone within 12-24 hours with your invoice, payment instructions, or further confirmation details.</p>
+            
+            <p style="font-size: 14px; color: #1F1615; margin-top: 30px;">Warm regards,</p>
+            <p style="font-size: 14px; color: #821124; font-weight: bold; margin: 0;">Guest Experience Team</p>
+            <p style="font-size: 12px; color: #7F7372; margin: 0;">Tamarind Mombasa</p>
+          </div>
+          <div style="background-color: #1F1615; color: #a1918a; font-size: 11px; text-align: center; padding: 15px;">
+            Tamarind Mombasa • Silo Park Road, Nyali Creek, Mombasa, Kenya<br/>
+            This is an automated acknowledgment. Please do not reply directly to this email.
+          </div>
+        </div>
+      `;
+
+      try {
+        console.log(`[Vercel Serverless] Attempting to send confirmation copy to guest: ${guestEmail}`);
+        await resend.emails.send({
+          from: fromEmail,
+          to: guestEmail,
+          subject: guestSubject,
+          html: guestHtmlContent,
+        });
+        console.log(`[Vercel Serverless] Guest confirmation email successfully sent to: ${guestEmail}`);
+      } catch (guestErr: any) {
+        console.warn("Failed to send copy to guest (this is expected if Resend is in Sandbox/Onboarding mode with unverified domains):", guestErr.message || guestErr);
+      }
+    }
+
     return res.status(200).json({ success: true, data: emailResponse.data });
   } catch (error: any) {
     console.error("Error in serverless api handler:", error);
