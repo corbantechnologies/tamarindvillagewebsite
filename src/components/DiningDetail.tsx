@@ -21,7 +21,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
       case "tamarind-restaurant":
         return [
           "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80",
+          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782929875/food1_kxukhp.jpg",
           "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80"
         ];
       case "dawa-terrace":
@@ -32,7 +32,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
         ];
       case "tamarind-dhow":
         return [
-          "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80",
+          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg",
           "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
           "https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=800&q=80"
         ];

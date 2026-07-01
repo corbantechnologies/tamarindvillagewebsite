@@ -138,7 +138,7 @@ export const PACKAGES: PackageType[] = [
     name: "Bed & Breakfast",
     description: "Start each day of your stay with a fresh coastal breeze and a magnificent breakfast served poolside or right in the comfort of your apartment.",
     priceMarkupPercentage: 0,
-    pricePerPersonPerDay: 18,
+    pricePerPersonPerDay: 21,
     highlights: [
       "Freshly squeezed Mombasa tropical juices & seasonal fruits",
       "Eggs cooked to order, Swahili 'mahri' pastries, and local pancakes",
@@ -161,13 +161,12 @@ export const PACKAGES: PackageType[] = [
   },
   {
     id: "hbp",
-    name: "Half Board Premium & Dhow Cruise",
-    description: "The absolute pinnacle of luxury and coastal romance. Includes daily breakfast, gourmet dinners, and an unforgettable evening cruising Tudor Creek aboard the Tamarind Dhow.",
+    name: "Seafood Half Board Premium",
+    description: "The absolute pinnacle of luxury and coastal romance. Includes daily breakfast, and an unforgettable seafood dinner experience at the Tamarind Restaurant.",
     priceMarkupPercentage: 30,
     pricePerPersonPerDay: 95,
     highlights: [
       "Daily gourmet breakfast plus premium dinner at the Tamarind Restaurant",
-      "One (1) complimentary Sunset Seafood Dinner Cruise on the legendary floating Tamarind Dhow",
       "A complimentary signature 'Dawa' cocktail at the Dawa Terrace every evening on arrival",
       "VIP dining reservations and premium creekside table placement"
     ]
@@ -201,7 +200,7 @@ export const DINING: DiningExperience[] = [
     ],
     hours: "4:00 PM – Midnight Daily",
     image: "https://images.unsplash.com/photo-1574096079513-d8259312b785?auto=format&fit=crop&w=800&q=80",
-    reservationLinkText: "Inquire for Dawa Lounge Table"
+    reservationLinkText: "Inquire for Dawa Terrace Table"
   },
   {
     id: "tamarind-dhow",

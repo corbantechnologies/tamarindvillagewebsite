@@ -78,7 +78,7 @@ export default async function handler(req: any, res: any) {
             </div>
           </div>
           <div style="background-color: #1F1615; color: #a1918a; font-size: 11px; text-align: center; padding: 15px;">
-            Tamarind Mombasa • Silo Park Road, Nyali Creek, Mombasa, Kenya
+            Tamarind Mombasa • Silos Mkomani Cement Road, Mombasa, Kenya
           </div>
         </div>
       `;
