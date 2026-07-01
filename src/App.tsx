@@ -8,7 +8,8 @@ import { APARTMENTS, PACKAGES, DINING, FACILITIES } from "./data";
 import { 
   Waves, Users, Maximize2, Coffee, Utensils, Ship, 
   MapPin, Phone, Mail, Sparkles, ArrowRight, Clock, ChevronRight,
-  ShieldCheck, HelpCircle, CheckCircle2, Star, Calendar, MessageSquare
+  ShieldCheck, HelpCircle, CheckCircle2, Star, Calendar, MessageSquare,
+  ChevronLeft, Image as ImageIcon, Settings, Plus, Trash2, RotateCcw, Check
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -18,6 +19,114 @@ export default function App() {
   const [selectedDiningId, setSelectedDiningId] = useState<string>("tamarind-restaurant");
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [preSelectedPkg, setPreSelectedPkg] = useState<string>("bb");
+
+  const defaultHeroImages = [
+    "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898650/village2_w4ue4b.jpg", // Pool luxury overlooking sea
+    "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898655/village3_kiqnc0.jpg", // Beautiful coastal resort
+    "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898868/pool_mega5r.jpg", // Coastal rooms / suites
+    "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg"  // Stunning oceanside sunset deck
+  ];
+
+  const [heroImages, setHeroImages] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("tamarind_hero_images");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load hero images from localStorage:", e);
+    }
+    return defaultHeroImages;
+  });
+
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
+  const [newUrlInput, setNewUrlInput] = useState("");
+  const [pasteListInput, setPasteListInput] = useState("");
+  const [urlError, setUrlError] = useState("");
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [heroImages]);
+
+  // When opening customizer modal, pre-fill the raw list paste textarea
+  const openCustomizer = () => {
+    setPasteListInput(heroImages.join("\n"));
+    setUrlError("");
+    setIsCustomizerOpen(true);
+  };
+
+  const handleSavePasteList = () => {
+    const lines = pasteListInput
+      .split(/[\n,]+/)
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    if (lines.length === 0) {
+      setUrlError("Please provide at least one valid image URL link.");
+      return;
+    }
+
+    const invalidLines = lines.filter(line => !line.startsWith("http://") && !line.startsWith("https://") && !line.startsWith("/"));
+    if (invalidLines.length > 0) {
+      setUrlError("Some URLs seem invalid. Ensure they start with https:// or http://");
+      return;
+    }
+
+    setHeroImages(lines);
+    localStorage.setItem("tamarind_hero_images", JSON.stringify(lines));
+    setCurrentHeroIndex(0);
+    setUrlError("");
+    setShowSuccessToast(true);
+    setTimeout(() => setShowSuccessToast(false), 3000);
+  };
+
+  const handleAddSingleUrl = () => {
+    if (!newUrlInput.trim()) return;
+    if (!newUrlInput.startsWith("http://") && !newUrlInput.startsWith("https://") && !newUrlInput.startsWith("/")) {
+      setUrlError("Invalid URL format. Ensure it starts with https:// or http://");
+      return;
+    }
+
+    const updated = [...heroImages, newUrlInput.trim()];
+    setHeroImages(updated);
+    localStorage.setItem("tamarind_hero_images", JSON.stringify(updated));
+    setPasteListInput(updated.join("\n"));
+    setNewUrlInput("");
+    setUrlError("");
+    setCurrentHeroIndex(updated.length - 1); // switch to newly added slide!
+  };
+
+  const handleDeleteUrl = (indexToDelete: number) => {
+    if (heroImages.length <= 1) {
+      setUrlError("You must keep at least one background image.");
+      return;
+    }
+    const updated = heroImages.filter((_, idx) => idx !== indexToDelete);
+    setHeroImages(updated);
+    localStorage.setItem("tamarind_hero_images", JSON.stringify(updated));
+    setPasteListInput(updated.join("\n"));
+    if (currentHeroIndex >= updated.length) {
+      setCurrentHeroIndex(0);
+    }
+    setUrlError("");
+  };
+
+  const handleResetDefaults = () => {
+    setHeroImages(defaultHeroImages);
+    localStorage.setItem("tamarind_hero_images", JSON.stringify(defaultHeroImages));
+    setPasteListInput(defaultHeroImages.join("\n"));
+    setCurrentHeroIndex(0);
+    setUrlError("");
+  };
 
   const handleSelectDining = (id: string) => {
     setSelectedDiningId(id);
@@ -128,20 +237,74 @@ export default function App() {
               
               {/* 1. HERO SECTION */}
               <section className="relative min-h-[85vh] flex items-center justify-center bg-brand-dark overflow-hidden" id="hero-section">
-                {/* Visual Backdrop (Curated Luxury resort / pool overlooking sea) */}
+                {/* Visual Backdrop (Curated Luxury resort / pool overlooking sea with smooth fade-in) */}
                 <div className="absolute inset-0 z-0">
-                  <img 
-                    src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=1920&q=85" 
-                    alt="Tamarind Village Ocean Pool at Dusk" 
-                    className="w-full h-full object-cover opacity-45 transform scale-102 filter brightness-90"
-                    referrerPolicy="no-referrer"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent"></div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-brand-dark/85 via-transparent to-brand-dark/25"></div>
+                  <AnimatePresence mode="popLayout">
+                    <motion.img 
+                      key={currentHeroIndex}
+                      src={heroImages[currentHeroIndex]} 
+                      alt={`Tamarind Village Coastal Backdrop ${currentHeroIndex + 1}`} 
+                      initial={{ opacity: 0, scale: 1.05 }}
+                      animate={{ opacity: 0.45, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 1.2, ease: "easeInOut" }}
+                      className="absolute inset-0 w-full h-full object-cover filter brightness-90"
+                      referrerPolicy="no-referrer"
+                    />
+                  </AnimatePresence>
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent pointer-events-none"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-brand-dark/85 via-transparent to-brand-dark/25 pointer-events-none"></div>
+                </div>
+
+                {/* Left Carousel Arrow */}
+                {heroImages.length > 1 && (
+                  <button 
+                    onClick={() => setCurrentHeroIndex((prev) => (prev - 1 + heroImages.length) % heroImages.length)}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2.5 bg-black/30 hover:bg-brand-teal border border-white/10 text-white transition-all cursor-pointer rounded-none group"
+                    aria-label="Previous slide"
+                  >
+                    <ChevronLeft className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  </button>
+                )}
+
+                {/* Right Carousel Arrow */}
+                {heroImages.length > 1 && (
+                  <button 
+                    onClick={() => setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2.5 bg-black/30 hover:bg-brand-teal border border-white/10 text-white transition-all cursor-pointer rounded-none group"
+                    aria-label="Next slide"
+                  >
+                    <ChevronRight className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  </button>
+                )}
+
+                {/* Slide indicator dots */}
+                {heroImages.length > 1 && (
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+                    {heroImages.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentHeroIndex(idx)}
+                        className={`h-1.5 transition-all duration-300 ${currentHeroIndex === idx ? "w-8 bg-brand-gold" : "w-2 bg-white/40 hover:bg-white/70"}`}
+                        aria-label={`Go to slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Slides Customize Button (Bottom Left Overlay) */}
+                <div className="absolute bottom-6 left-6 z-20 hidden sm:block">
+                  <button 
+                    onClick={openCustomizer}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-black/50 hover:bg-brand-teal text-white border border-white/10 text-[11px] font-bold uppercase tracking-wider transition-all duration-300 backdrop-blur-md hover:border-brand-teal cursor-pointer"
+                  >
+                    <Settings className="w-3.5 h-3.5 text-brand-gold" />
+                    <span>Manage Slides</span>
+                  </button>
                 </div>
 
                 {/* Content Overlay */}
-                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-12">
+                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-12 w-full">
                   <div className="max-w-3xl space-y-6">
                     {/* Floating Core Business Badge */}
                     <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-teal/15 border border-brand-teal/30 text-brand-teal text-xs font-bold uppercase tracking-widest animate-pulse">
@@ -829,6 +992,178 @@ export default function App() {
         initialApartmentId={selectedApartmentId}
         initialPackageId={preSelectedPkg}
       />
+
+      {/* Carousel Customizer Modal (For pasting or managing list of hero image links) */}
+      <AnimatePresence>
+        {isCustomizerOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCustomizerOpen(false)}
+              className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm"
+            />
+
+            {/* Modal Content */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.3 }}
+              className="relative w-full max-w-2xl bg-white text-brand-dark border border-stone-200 p-6 sm:p-8 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col z-10"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="font-serif text-2xl text-brand-teal font-semibold tracking-tight">
+                    Manage Hero Images
+                  </h3>
+                  <p className="text-stone-500 text-xs mt-1 font-light">
+                    Customize your homepage header with coastal imagery. Images rotate automatically every 6 seconds.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setIsCustomizerOpen(false)}
+                  className="p-1 hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+                >
+                  <span className="text-2xl font-light">&times;</span>
+                </button>
+              </div>
+
+              {urlError && (
+                <div className="mb-4 p-3 bg-red-50 border-l-2 border-red-500 text-red-700 text-xs font-medium">
+                  {urlError}
+                </div>
+              )}
+
+              {showSuccessToast && (
+                <div className="mb-4 p-3 bg-emerald-50 border-l-2 border-emerald-500 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  <span>Successfully updated background images and saved to local storage!</span>
+                </div>
+              )}
+
+              <div className="space-y-6">
+                {/* Paste Raw Links Textarea */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark mb-2">
+                    Paste Image Link List (one URL per line)
+                  </label>
+                  <textarea
+                    value={pasteListInput}
+                    onChange={(e) => setPasteListInput(e.target.value)}
+                    placeholder="https://images.unsplash.com/...&#10;https://another-image-link.com/..."
+                    className="w-full h-32 px-3 py-2 text-xs border border-stone-300 rounded-none bg-stone-50 font-mono focus:outline-none focus:border-brand-teal leading-relaxed resize-none"
+                  />
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-[10px] text-stone-500">
+                      Total images: <strong className="font-semibold text-brand-teal">{heroImages.length}</strong>
+                    </span>
+                    <button
+                      onClick={handleSavePasteList}
+                      className="px-4 py-1.5 bg-brand-teal hover:bg-brand-teal-dark text-white font-bold text-xs tracking-wider uppercase transition-all cursor-pointer"
+                    >
+                      Apply & Save List
+                    </button>
+                  </div>
+                </div>
+
+                {/* Decorative Divider */}
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-stone-200"></div>
+                  <span className="flex-shrink mx-4 text-stone-400 text-[10px] uppercase font-bold tracking-wider">Or manage individual slides</span>
+                  <div className="flex-grow border-t border-stone-200"></div>
+                </div>
+
+                {/* Individual additions & preview list review */}
+                <div className="space-y-4">
+                  {/* Add single link input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add a single image URL starting with https://"
+                      value={newUrlInput}
+                      onChange={(e) => setNewUrlInput(e.target.value)}
+                      className="flex-1 px-3 py-2 text-xs border border-stone-300 rounded-none focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-800"
+                    />
+                    <button
+                      onClick={handleAddSingleUrl}
+                      className="px-4 py-2 bg-stone-900 text-white font-bold text-xs uppercase tracking-wider hover:bg-stone-800 transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add</span>
+                    </button>
+                  </div>
+
+                  {/* Previews Grid with individual removal options */}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark mb-2.5">
+                      Current Slides Preview
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[220px] overflow-y-auto pr-1">
+                      {heroImages.map((img, index) => (
+                        <div 
+                          key={index} 
+                          className={`relative border group aspect-video overflow-hidden ${currentHeroIndex === index ? "border-brand-gold ring-1 ring-brand-gold" : "border-stone-200"}`}
+                        >
+                          <img
+                            src={img}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover filter brightness-95"
+                            onError={(e) => {
+                              // Fallback placeholder image if URL is invalid or blocked
+                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=120&q=40";
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 pointer-events-none">
+                            <span className="text-[10px] text-white font-bold bg-black/60 px-1.5 py-0.5 rounded-sm">Slide {index + 1}</span>
+                          </div>
+                          
+                          {/* Active indicator badge */}
+                          {currentHeroIndex === index && (
+                            <span className="absolute top-1 left-1 bg-brand-gold text-white text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-widest shadow-sm">
+                              Active
+                            </span>
+                          )}
+
+                          {/* Delete button */}
+                          <button
+                            onClick={() => handleDeleteUrl(index)}
+                            className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white shadow-md transition-colors cursor-pointer"
+                            title="Delete this image"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions Bottom Bar */}
+                <div className="pt-4 border-t border-stone-100 flex justify-between items-center">
+                  <button
+                    onClick={handleResetDefaults}
+                    className="flex items-center gap-1.5 text-stone-500 hover:text-brand-teal text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset to Defaults</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsCustomizerOpen(false)}
+                    className="px-6 py-2 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs uppercase tracking-widest transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Luxury Footer component */}
       <Footer 
