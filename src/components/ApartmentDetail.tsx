@@ -23,7 +23,7 @@ export default function ApartmentDetail({
   allApartments,
   onBookNow 
 }: ApartmentDetailProps) {
-  const { getLivePrice } = useLiveRates();
+  const { getLivePrice, getLivePackagePrice } = useLiveRates();
   const { price: livePrice, isLive: isPriceLive } = getLivePrice(apartment.id, apartment.pricePerNight);
 
   const [activeImage, setActiveImage] = useState(apartment.image);
@@ -31,6 +31,9 @@ export default function ApartmentDetail({
   const [checkIn, setCheckIn] = useState<string>("");
   const [checkOut, setCheckOut] = useState<string>("");
   const [guestCount, setGuestCount] = useState<number>(apartment.maxGuests);
+
+  const selPkgData = PACKAGES.find(p => p.id === selectedPackage) || PACKAGES[0];
+  const { rate: livePackageRate, isLive: isPackageLive } = getLivePackagePrice(selectedPackage, selPkgData.pricePerPersonPerDay);
   const [inquiryName, setInquiryName] = useState("");
   const [inquiryEmail, setInquiryEmail] = useState("");
   const [inquiryPhone, setInquiryPhone] = useState("");
@@ -85,8 +88,7 @@ export default function ApartmentDetail({
     const nights = Math.ceil(timeDiff / (1000 * 3600 * 24));
     const basePrice = livePrice * nights;
     
-    const pkg = PACKAGES.find(p => p.id === selectedPackage);
-    const packageRate = pkg ? pkg.pricePerPersonPerDay : 0;
+    const packageRate = livePackageRate;
     const packagePrice = packageRate * guestCount * nights;
     
     const subtotal = basePrice + packagePrice;
@@ -372,11 +374,14 @@ export default function ApartmentDetail({
                     className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 bg-stone-50/50 focus:outline-none focus:border-brand-teal"
                     id="calc-package"
                   >
-                    {PACKAGES.map(pkg => (
-                      <option key={pkg.id} value={pkg.id}>
-                        {pkg.name} (+${pkg.pricePerPersonPerDay}/person/day)
-                      </option>
-                    ))}
+                    {PACKAGES.map(p => {
+                      const { rate, isLive } = getLivePackagePrice(p.id, p.pricePerPersonPerDay);
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (+${rate}/person/day){isLive ? " ✦ Live Offer" : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
 
@@ -424,11 +429,21 @@ export default function ApartmentDetail({
                     id="cost-breakdown-panel"
                   >
                     <div className="flex justify-between text-stone-600">
-                      <span>Apartment Base ({cost.nights} nights x ${apartment.pricePerNight})</span>
+                      <span className="flex items-center gap-1">
+                        Apartment Base ({cost.nights} nights x ${livePrice})
+                        {isPriceLive && (
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live rate from Profitroom"></span>
+                        )}
+                      </span>
                       <span className="font-semibold text-stone-800">${cost.basePrice}</span>
                     </div>
                     <div className="flex justify-between text-stone-600">
-                      <span>{PACKAGES.find(p => p.id === selectedPackage)?.name} upgrade</span>
+                      <span className="flex items-center gap-1">
+                        {PACKAGES.find(p => p.id === selectedPackage)?.name} upgrade ({guestCount} guests x ${livePackageRate}/day)
+                        {isPackageLive && (
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live package rate from Profitroom Offers"></span>
+                        )}
+                      </span>
                       <span className="font-semibold text-stone-800">${cost.packagePrice}</span>
                     </div>
                     <div className="flex justify-between text-stone-600">

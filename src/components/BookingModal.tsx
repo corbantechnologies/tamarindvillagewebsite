@@ -22,8 +22,10 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
   const selectedApartment = APARTMENTS.find(a => a.id === apartmentId) || APARTMENTS[0];
   const [guests, setGuests] = useState(selectedApartment.maxGuests);
 
-  const { getLivePrice } = useLiveRates();
+  const { getLivePrice, getLivePackagePrice } = useLiveRates();
   const { price: livePrice, isLive: isPriceLive } = getLivePrice(apartmentId, selectedApartment.pricePerNight);
+  const selectedPkgData = PACKAGES.find(p => p.id === packageId) || PACKAGES[0];
+  const { rate: livePackageRate, isLive: isPackageLive } = getLivePackagePrice(packageId, selectedPkgData.pricePerPersonPerDay);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -90,8 +92,7 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
     const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const basePrice = livePrice * nights;
     
-    const pkg = PACKAGES.find(p => p.id === packageId) || PACKAGES[0];
-    const packageRate = pkg.pricePerPersonPerDay;
+    const packageRate = livePackageRate;
     const packageCost = packageRate * guests * nights;
     
     const subtotal = basePrice + packageCost;
@@ -224,11 +225,14 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
                       className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 bg-stone-50 font-medium focus:outline-none focus:border-brand-teal"
                       id="modal-select-package"
                     >
-                      {PACKAGES.map(pkg => (
-                        <option key={pkg.id} value={pkg.id}>
-                          {pkg.name} (+${pkg.pricePerPersonPerDay}/p/day)
-                        </option>
-                      ))}
+                      {PACKAGES.map(p => {
+                        const { rate, isLive } = getLivePackagePrice(p.id, p.pricePerPersonPerDay);
+                        return (
+                          <option key={p.id} value={p.id}>
+                            {p.name} (+${rate}/p/day){isLive ? " ✦ Live Offer" : ""}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
@@ -320,7 +324,12 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
                       <span className="font-semibold text-stone-800">${breakdown.basePrice}</span>
                     </div>
                     <div className="flex justify-between text-stone-600">
-                      <span>{PACKAGES.find(p => p.id === packageId)?.name} Package ({guests} guests x ${PACKAGES.find(p => p.id === packageId)?.pricePerPersonPerDay}/day)</span>
+                      <span className="flex items-center gap-1">
+                        {PACKAGES.find(p => p.id === packageId)?.name} Package ({guests} guests x ${livePackageRate}/day)
+                        {isPackageLive && (
+                          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live package price connected to booking engine"></span>
+                        )}
+                      </span>
                       <span className="font-semibold text-stone-800">${breakdown.packageCost}</span>
                     </div>
                     <div className="flex justify-between text-stone-600">

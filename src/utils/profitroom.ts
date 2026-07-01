@@ -179,8 +179,9 @@ export async function fetchLiveOffers(): Promise<LiveOfferData[]> {
   }
 }
 
-// Global caching for rooms to prevent multiple triggers in different components
+// Global caching for rooms and offers to prevent multiple triggers in different components
 let cachedRooms: LiveRoomData[] | null = null;
+let cachedOffers: LiveOfferData[] | null = null;
 
 export async function getLiveRoomsCached(): Promise<LiveRoomData[]> {
   if (cachedRooms && cachedRooms.length > 0) {
@@ -211,18 +212,51 @@ export async function getLiveRoomsCached(): Promise<LiveRoomData[]> {
   return rooms || [];
 }
 
+export async function getLiveOffersCached(): Promise<LiveOfferData[]> {
+  if (cachedOffers && cachedOffers.length > 0) {
+    return cachedOffers;
+  }
+  
+  try {
+    const saved = sessionStorage.getItem("profitroom_offers_cache");
+    if (saved) {
+      cachedOffers = JSON.parse(saved);
+      if (cachedOffers && cachedOffers.length > 0) {
+        return cachedOffers;
+      }
+    }
+  } catch (e) {
+    console.error("Cache read error:", e);
+  }
+
+  const offers = await fetchLiveOffers();
+  if (offers && offers.length > 0) {
+    cachedOffers = offers;
+    try {
+      sessionStorage.setItem("profitroom_offers_cache", JSON.stringify(offers));
+    } catch (e) {
+      console.error("Cache write error:", e);
+    }
+  }
+  return offers || [];
+}
+
 /**
  * Custom React hook to connect any component to Profitroom's live rates.
  */
 export function useLiveRates() {
   const [liveRooms, setLiveRooms] = useState<LiveRoomData[]>([]);
+  const [liveOffers, setLiveOffers] = useState<LiveOfferData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getLiveRoomsCached()
-      .then(rooms => {
+    Promise.all([getLiveRoomsCached(), getLiveOffersCached()])
+      .then(([rooms, offers]) => {
         if (rooms && rooms.length > 0) {
           setLiveRooms(rooms);
+        }
+        if (offers && offers.length > 0) {
+          setLiveOffers(offers);
         }
         setLoading(false);
       })
@@ -254,5 +288,36 @@ export function useLiveRates() {
     return { price: defaultPrice, isLive: false };
   };
 
-  return { liveRooms, loading, getLivePrice };
+  const getLivePackagePrice = (packageId: string, defaultRate: number): { rate: number; isLive: boolean; name?: string } => {
+    if (!liveOffers || liveOffers.length === 0) {
+      return { rate: defaultRate, isLive: false };
+    }
+
+    const cleanPkgId = packageId.toLowerCase();
+    // Try to match standard packages: "bb" (Bed and Breakfast), "hb" (Half Board), "fb" (Full Board)
+    let keyword = "";
+    if (cleanPkgId === "bb" || cleanPkgId.includes("breakfast")) {
+      keyword = "breakfast";
+    } else if (cleanPkgId === "hb" || cleanPkgId.includes("half")) {
+      keyword = "half board";
+    } else if (cleanPkgId === "fb" || cleanPkgId.includes("full")) {
+      keyword = "full board";
+    } else {
+      keyword = cleanPkgId;
+    }
+
+    const matchingOffer = liveOffers.find(o => 
+      o.id.toLowerCase() === cleanPkgId || 
+      o.name.toLowerCase().includes(keyword) || 
+      o.name.toLowerCase().includes(cleanPkgId)
+    );
+
+    if (matchingOffer && matchingOffer.minPrice !== undefined && matchingOffer.minPrice > 0) {
+      return { rate: matchingOffer.minPrice, isLive: true, name: matchingOffer.name };
+    }
+
+    return { rate: defaultRate, isLive: false };
+  };
+
+  return { liveRooms, liveOffers, loading, getLivePrice, getLivePackagePrice };
 }
