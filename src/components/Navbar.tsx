@@ -52,8 +52,8 @@ export default function Navbar({ onNavigate, onOpenBooking, activeView, onGoHome
 
   const menuItems = [
     { label: "Apartments", href: "apartments-section" },
-    { label: "Boarding Packages", href: "packages-section" },
-    { label: "Tamarind Dining", href: "dining-section" },
+    { label: "Packages", href: "packages-section" },
+    { label: "Dining", href: "dining-section" },
     { label: "Facilities", href: "facilities-section" },
     { label: "Location", href: "contact-section" },
   ];
