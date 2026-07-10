@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { MapPin, Phone, Mail, Clock, Ship, Compass, Award } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Ship, Compass, Award, MessageSquare } from "lucide-react";
 
 interface FooterProps {
   onNavigate: (sectionId: string) => void;
@@ -118,11 +118,11 @@ export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSele
           </div>
           
           <p className="text-stone-400 text-xs font-light leading-relaxed">
-            Our core business is providing premium fully services apartments, offering luxurious coastal living with the service level of a high-end boutique resort. Designed around Swahili coastal charm.
+            Tamarind Village provides premium fully serviced apartments, offering luxurious coastal living with the service level of a high-end boutique resort. Designed around Swahili coastal charm.
           </p>
 
           <div className="pt-2">
-            <span className="text-xs font-semibold text-white block uppercase tracking-wider mb-2">Our Core Focus:</span>
+            <span className="text-xs font-semibold text-white block uppercase tracking-wider mb-2">Our Signature:</span>
             <span className="inline-block bg-brand-teal/15 text-brand-teal border border-brand-teal/30 px-3 py-1 rounded-none text-xs font-bold uppercase tracking-wider">
               Serviced Accommodations & Apartments
             </span>
@@ -229,6 +229,18 @@ export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSele
             <li className="flex items-center gap-3">
               <Phone className="w-4 h-4 text-brand-gold flex-shrink-0" />
               <span>+254 (0) 733 623 477 / +254 (0) 41 447 3000</span>
+            </li>
+            <li className="flex items-center gap-3">
+              <MessageSquare className="w-4 h-4 text-emerald-500 flex-shrink-0 fill-emerald-500/10" />
+              <a 
+                href="https://wa.me/254725959552?text=Hello%20Tamarind%20Village%20Mombasa%2C%20I%20would%20like%20to%20inquire%20about%20booking%20an%20apartment."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-brand-teal text-emerald-500 hover:underline transition-colors font-medium flex items-center gap-1.5"
+              >
+                <span>WhatsApp: +254 725 959 552</span>
+                <span className="text-[9px] font-sans font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 px-1.5 py-0.5 animate-pulse">Chat Live</span>
+              </a>
             </li>
             <li className="flex items-center gap-3">
               <Mail className="w-4 h-4 text-brand-gold flex-shrink-0" />

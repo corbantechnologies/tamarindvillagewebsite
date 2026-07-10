@@ -48,6 +48,18 @@ export default function App() {
   const [pasteListInput, setPasteListInput] = useState("");
   const [urlError, setUrlError] = useState("");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("admin") === "true") {
+        setIsAdmin(true);
+      }
+    } catch (e) {
+      console.error("Failed to parse URL search parameters:", e);
+    }
+  }, []);
 
   useEffect(() => {
     if (heroImages.length <= 1) return;
@@ -323,23 +335,25 @@ export default function App() {
                 )}
 
                 {/* Slides Customize Button (Bottom Left Overlay) */}
-                <div className="absolute bottom-6 left-6 z-20 hidden sm:block">
-                  <button 
-                    onClick={openCustomizer}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-black/50 hover:bg-brand-teal text-white border border-white/10 text-[11px] font-bold uppercase tracking-wider transition-all duration-300 backdrop-blur-md hover:border-brand-teal cursor-pointer"
-                  >
-                    <Settings className="w-3.5 h-3.5 text-brand-gold" />
-                    <span>Manage Slides</span>
-                  </button>
-                </div>
+                {isAdmin && (
+                  <div className="absolute bottom-6 left-6 z-20 hidden sm:block">
+                    <button 
+                      onClick={openCustomizer}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-black/50 hover:bg-brand-teal text-white border border-white/10 text-[11px] font-bold uppercase tracking-wider transition-all duration-300 backdrop-blur-md hover:border-brand-teal cursor-pointer"
+                    >
+                      <Settings className="w-3.5 h-3.5 text-brand-gold" />
+                      <span>Manage Slides</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Content Overlay */}
                 <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-12 w-full">
                   <div className="max-w-3xl space-y-6">
-                    {/* Floating Core Business Badge */}
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-teal/15 border border-brand-teal/30 text-brand-teal text-xs font-bold uppercase tracking-widest animate-pulse">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Primary Focus: Luxury Serviced Apartments</span>
+                    {/* Floating Luxury Hospitality Badge */}
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-teal/15 border border-brand-teal/30 text-brand-teal text-xs font-bold uppercase tracking-widest">
+                      <Sparkles className="w-3.5 h-3.5 text-brand-gold animate-pulse" />
+                      <span>Luxury Coastal Serviced Residences</span>
                     </div>
 
                     <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif text-white leading-tight tracking-tight">
@@ -425,12 +439,12 @@ export default function App() {
                 </div>
               </section>
 
-              {/* 3. APARTMENTS SHOWCASE (PRIMARY FOCUS) */}
+              {/* 3. APARTMENTS SHOWCASE */}
               <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-12" id="apartments-section">
                 <div className="text-center max-w-3xl mx-auto mb-16">
                   <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-brand-teal/10 border border-brand-teal/25 text-brand-teal text-xs font-bold uppercase tracking-widest mb-3">
                     <ShieldCheck className="w-3.5 h-3.5 text-brand-teal" />
-                    <span>Primary Business Focus</span>
+                    <span>Exclusive Residences</span>
                   </div>
                   <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark tracking-tight">
                     Luxury Serviced Residences
@@ -839,7 +853,7 @@ export default function App() {
                             <input 
                               type="text" 
                               required
-                              placeholder="e.g., Corban Technologies"
+                              placeholder="e.g., Jane Doe"
                               value={contactName}
                               onChange={(e) => setContactName(e.target.value)}
                               className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
@@ -854,7 +868,7 @@ export default function App() {
                               <input 
                                 type="email" 
                                 required
-                                placeholder="e.g., corbantechnologies@gmail.com"
+                                placeholder="e.g., janedoe@example.com"
                                 value={contactEmail}
                                 onChange={(e) => setContactEmail(e.target.value)}
                                 className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
@@ -1232,6 +1246,29 @@ export default function App() {
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
       />
+
+      {/* Sticky Floating WhatsApp Button */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1, duration: 0.5 }}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 group"
+      >
+        <span className="hidden sm:inline-block bg-white text-stone-800 text-[10px] font-bold px-3 py-1.5 shadow-md border border-stone-100 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300 pointer-events-none uppercase tracking-wider font-sans">
+          Chat with Us
+        </span>
+        <a 
+          href="https://wa.me/254725959552?text=Hello%20Tamarind%20Village%20Mombasa%2C%20I%20would%20like%20to%20inquire%20about%20booking%20an%20apartment."
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-12 h-12 bg-[#25D366] text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all duration-300 rounded-full relative cursor-pointer"
+          aria-label="Chat on WhatsApp"
+        >
+          {/* Subtle ping pulse */}
+          <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-30"></span>
+          <MessageSquare className="w-5 h-5 relative z-10 fill-white" />
+        </a>
+      </motion.div>
 
     </div>
   );

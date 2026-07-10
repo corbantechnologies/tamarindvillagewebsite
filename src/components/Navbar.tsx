@@ -78,7 +78,7 @@ export default function Navbar({ onNavigate, onOpenBooking, activeView, onGoHome
           </span>
         </div>
         <div className="flex items-center gap-3 font-medium">
-          <span className="text-brand-gold">Core focus:</span>
+          <span className="text-brand-gold">Exclusive:</span>
           <span className="text-stone-100">Fully Serviced Apartments</span>
         </div>
       </div>

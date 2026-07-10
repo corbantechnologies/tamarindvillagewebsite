@@ -62,7 +62,7 @@ export default function ApartmentDetail({
       });
     } else {
       // Fallback: build a direct secure booking URL if the script is still loading or iframe sandbox blocks direct action
-      const fallbackUrl = `https://wis.upperbooking.com/tamarindvillage/booking?locale=en&checkin=${checkIn}&checkout=${checkOut}&occupancy=${guestCount}${promocode ? `&promocode=${encodeURIComponent(promocode)}` : ""}`;
+      const fallbackUrl = `https://upperbooking.com/en/booking/start/tamarindvillage?checkin=${checkIn}&checkout=${checkOut}&occupancy=${guestCount}${promocode ? `&promocode=${encodeURIComponent(promocode)}` : ""}`;
       window.open(fallbackUrl, "_blank", "noopener,noreferrer");
     }
   };
