@@ -13,7 +13,7 @@ interface BookingModalProps {
 
 export default function BookingModal({ isOpen, onClose, initialApartmentId, initialPackageId }: BookingModalProps) {
   const [apartmentId, setApartmentId] = useState(initialApartmentId || "1-bedroom");
-  const [packageId, setPackageId] = useState("bb");
+  const [packageId, setPackageId] = useState("ro");
   const [bookingMode, setBookingMode] = useState<"live" | "inquiry">("live");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");

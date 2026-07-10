@@ -18,7 +18,7 @@ export default function App() {
   const [selectedApartmentId, setSelectedApartmentId] = useState<string>("1-bedroom");
   const [selectedDiningId, setSelectedDiningId] = useState<string>("tamarind-restaurant");
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [preSelectedPkg, setPreSelectedPkg] = useState<string>("bb");
+  const [preSelectedPkg, setPreSelectedPkg] = useState<string>("ro");
 
   const defaultHeroImages = [
     "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898650/village2_w4ue4b.jpg", // Pool luxury overlooking sea
@@ -171,7 +171,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleOpenBookingWithParams = (aptId: string = "1-bedroom", pkgId: string = "bb") => {
+  const handleOpenBookingWithParams = (aptId: string = "1-bedroom", pkgId: string = "ro") => {
     setSelectedApartmentId(aptId);
     setPreSelectedPkg(pkgId);
     setIsBookingOpen(true);

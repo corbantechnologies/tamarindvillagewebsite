@@ -27,7 +27,7 @@ export default function ApartmentDetail({
   const { price: livePrice, isLive: isPriceLive } = getLivePrice(apartment.id, apartment.pricePerNight);
 
   const [activeImage, setActiveImage] = useState(apartment.image);
-  const [selectedPackage, setSelectedPackage] = useState<string>("bb");
+  const [selectedPackage, setSelectedPackage] = useState<string>("ro");
   const [checkIn, setCheckIn] = useState<string>("");
   const [checkOut, setCheckOut] = useState<string>("");
   const [guestCount, setGuestCount] = useState<number>(apartment.maxGuests);
