@@ -35,41 +35,63 @@ const CORS_PROXIES = [
 ];
 
 /**
- * Helper to fetch content, trying direct call first, then falling back to CORS proxies
+ * Helper to fetch content, trying local secure server-side proxy first, then falling back to direct and CORS proxies
  */
 async function fetchXmlContent(url: string): Promise<string> {
+  const isRooms = url.toLowerCase().includes("rooms.xml");
+  const localProxyPath = isRooms ? "/api/rooms" : "/api/offers";
+
   try {
-    // Try direct fetch first with a short timeout
+    console.log(`[Profitroom] Attempting to fetch via secure server-side proxy: ${localProxyPath}`);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-    const response = await fetch(url, { signal: controller.signal });
+    const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seconds timeout for server proxy
+    const response = await fetch(localProxyPath, { signal: controller.signal });
     clearTimeout(timeoutId);
-    if (response.ok) {
-      return await response.text();
-    }
-    throw new Error(`Direct fetch failed with status ${response.status}`);
-  } catch (directError) {
-    console.warn(`Direct fetch to ${url} failed due to CORS/network. Trying CORS proxies...`, directError);
     
-    // Try proxies sequentially
-    for (const proxyFn of CORS_PROXIES) {
-      try {
-        const proxiedUrl = proxyFn(url);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-        const response = await fetch(proxiedUrl, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (response.ok) {
-          const text = await response.text();
-          if (text && text.trim().startsWith("<")) {
-            return text;
-          }
-        }
-      } catch (proxyError) {
-        console.error("CORS proxy fetch failed:", proxyError);
+    if (response.ok) {
+      const text = await response.text();
+      if (text && text.trim().startsWith("<")) {
+        console.log(`[Profitroom] Secure server proxy fetch succeeded for ${localProxyPath}`);
+        return text;
       }
     }
-    throw new Error("All attempts to fetch XML failed.");
+    throw new Error(`Local proxy responded with status ${response.status}`);
+  } catch (proxyError: any) {
+    console.warn(`[Profitroom] Local server proxy fetch to ${localProxyPath} failed. Reason: ${proxyError.message || proxyError}. Falling back to direct/CORS methods...`);
+    
+    try {
+      // Try direct fetch next with a short timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        return await response.text();
+      }
+      throw new Error(`Direct fetch failed with status ${response.status}`);
+    } catch (directError: any) {
+      console.warn(`[Profitroom] Direct fetch to ${url} failed due to CORS or network (${directError.message || directError}). Trying public CORS proxies...`);
+      
+      // Try proxies sequentially
+      for (const proxyFn of CORS_PROXIES) {
+        try {
+          const proxiedUrl = proxyFn(url);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s for proxy
+          const response = await fetch(proxiedUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (response.ok) {
+            const text = await response.text();
+            if (text && text.trim().startsWith("<")) {
+              return text;
+            }
+          }
+        } catch (proxyError: any) {
+          console.error(`[Profitroom] Public CORS proxy fetch failed:`, proxyError.message || proxyError);
+        }
+      }
+      throw new Error("All attempts to fetch XML failed.");
+    }
   }
 }
 

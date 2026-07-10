@@ -12,6 +12,50 @@ async function startServer() {
 
   app.use(express.json());
 
+  // API Route for Rooms Proxy (CORS Bypass)
+  app.get("/api/rooms", async (req, res) => {
+    try {
+      const url = "https://wis.upperbooking.com/tamarindvillage/Rooms.xml?locale=en";
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Upperbooking responded with status ${response.status}`);
+      }
+
+      const text = await response.text();
+      res.set("Content-Type", "application/xml; charset=utf-8");
+      return res.send(text);
+    } catch (error: any) {
+      console.error("Express proxy /api/rooms failed:", error);
+      return res.status(500).json({ error: error.message || "Internal Server Error" });
+    }
+  });
+
+  // API Route for Offers Proxy (CORS Bypass)
+  app.get("/api/offers", async (req, res) => {
+    try {
+      const url = "https://wis.upperbooking.com/tamarindvillage/Offers.xml?locale=en";
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Upperbooking responded with status ${response.status}`);
+      }
+
+      const text = await response.text();
+      res.set("Content-Type", "application/xml; charset=utf-8");
+      return res.send(text);
+    } catch (error: any) {
+      console.error("Express proxy /api/offers failed:", error);
+      return res.status(500).json({ error: error.message || "Internal Server Error" });
+    }
+  });
+
   // API Route for Inquiry Submissions
   app.post("/api/inquire", async (req, res) => {
     try {
