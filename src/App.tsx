@@ -568,7 +568,7 @@ export default function App() {
                   </div>
 
                   {/* Packages Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
                     {PACKAGES.map((pkg) => {
                       const { rate: liveRate, isLive, name: liveName } = getLivePackagePrice(pkg.id, pkg.pricePerPersonPerDay);
                       
@@ -586,7 +586,7 @@ export default function App() {
                       return (
                         <div 
                           key={pkg.id}
-                          className="bg-[#2D2926] border border-stone-800 rounded-none p-6 flex flex-col justify-between hover:border-brand-teal/80 transition-all duration-300 shadow-md group relative"
+                          className="bg-[#2D2926] border border-stone-800 rounded-none p-8 flex flex-col justify-between hover:border-brand-teal/80 transition-all duration-300 shadow-md group relative"
                           id={`package-card-${pkg.id}`}
                         >
                           {pkg.id === "hbp" && (
