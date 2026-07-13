@@ -111,28 +111,44 @@ export async function fetchLiveRooms(): Promise<LiveRoomData[]> {
       throw new Error("XML parsing error");
     }
     
-    const roomElements = xmlDoc.getElementsByTagName("room");
+    let roomElements = xmlDoc.getElementsByTagName("Room");
+    if (roomElements.length === 0) {
+      roomElements = xmlDoc.getElementsByTagName("room");
+    }
     const rooms: LiveRoomData[] = [];
     
     for (let i = 0; i < roomElements.length; i++) {
       const roomEl = roomElements[i];
-      const id = roomEl.getAttribute("id") || "";
+      const id = roomEl.querySelector("RoomID")?.textContent || roomEl.getAttribute("id") || "";
       
-      const name = roomEl.querySelector("name")?.textContent || roomEl.getAttribute("name") || "Tamarind Suite";
+      const name = roomEl.querySelector("RoomName")?.textContent || roomEl.querySelector("name")?.textContent || roomEl.getAttribute("name") || "Tamarind Suite";
       
-      const priceText = 
-        roomEl.querySelector("min_price")?.textContent || 
-        roomEl.querySelector("min-price")?.textContent || 
-        roomEl.querySelector("price")?.textContent || 
-        roomEl.getAttribute("min_price") || 
-        "0";
+      const minPriceEl = roomEl.querySelector("MinPrice");
+      let priceText = "0";
+      if (minPriceEl) {
+        const priceEl = minPriceEl.querySelector("Price");
+        if (priceEl && priceEl.textContent) {
+          priceText = priceEl.textContent;
+        } else {
+          priceText = minPriceEl.childNodes[0]?.textContent || minPriceEl.textContent || "0";
+        }
+      } else {
+        priceText = 
+          roomEl.querySelector("min_price")?.textContent || 
+          roomEl.querySelector("min-price")?.textContent || 
+          roomEl.querySelector("price")?.textContent || 
+          roomEl.getAttribute("min_price") || 
+          "0";
+      }
         
       const currency = 
+        roomEl.querySelector("MinPrice > Currency")?.textContent ||
+        roomEl.querySelector("Currency")?.textContent ||
         roomEl.querySelector("currency")?.textContent || 
         roomEl.getAttribute("currency") || 
         "USD";
         
-      const description = roomEl.querySelector("description")?.textContent || "";
+      const description = roomEl.querySelector("RoomDescription")?.textContent || roomEl.querySelector("description")?.textContent || "";
       const minPrice = parseFloat(priceText) || 0;
       
       if (id) {
@@ -168,20 +184,34 @@ export async function fetchLiveOffers(): Promise<LiveOfferData[]> {
       throw new Error("XML parsing error");
     }
     
-    const offerElements = xmlDoc.getElementsByTagName("offer");
+    let offerElements = xmlDoc.getElementsByTagName("Offer");
+    if (offerElements.length === 0) {
+      offerElements = xmlDoc.getElementsByTagName("offer");
+    }
     const offers: LiveOfferData[] = [];
     
     for (let i = 0; i < offerElements.length; i++) {
       const offerEl = offerElements[i];
-      const id = offerEl.getAttribute("id") || "";
-      const name = offerEl.querySelector("name")?.textContent || offerEl.getAttribute("name") || "Special Offer";
+      const id = offerEl.querySelector("OfferID")?.textContent || offerEl.getAttribute("id") || "";
+      const name = offerEl.querySelector("OfferName")?.textContent || offerEl.querySelector("name")?.textContent || offerEl.getAttribute("name") || "Special Offer";
       
-      const priceText = 
-        offerEl.querySelector("min_price")?.textContent || 
-        offerEl.querySelector("price")?.textContent || 
-        offerEl.getAttribute("min_price");
+      const minPriceEl = offerEl.querySelector("MinPrice");
+      let priceText = "";
+      if (minPriceEl) {
+        const priceEl = minPriceEl.querySelector("Price");
+        if (priceEl && priceEl.textContent) {
+          priceText = priceEl.textContent;
+        } else {
+          priceText = minPriceEl.childNodes[0]?.textContent || minPriceEl.textContent || "";
+        }
+      } else {
+        priceText = 
+          offerEl.querySelector("min_price")?.textContent || 
+          offerEl.querySelector("price")?.textContent || 
+          offerEl.getAttribute("min_price") || "";
+      }
         
-      const description = offerEl.querySelector("description")?.textContent || "";
+      const description = offerEl.querySelector("OfferDescription")?.textContent || offerEl.querySelector("description")?.textContent || "";
       const minPrice = priceText ? parseFloat(priceText) : undefined;
       
       if (id) {
@@ -290,18 +320,30 @@ export function useLiveRates() {
       return { price: defaultPrice, isLive: false };
     }
     
-    // Map local IDs to XML names/IDs
+    // Map local IDs/descriptions to XML names (e.g. "one bedroom suite" vs "One Bedroom Apartment")
     const cleanId = apartmentId.toLowerCase();
-    const keyword = cleanId.includes("1") || cleanId.includes("one") ? "1" : 
-                    cleanId.includes("2") || cleanId.includes("two") ? "2" : "3";
-                    
-    const matchingRoom = liveRooms.find(r => 
-      r.id.toLowerCase() === cleanId || 
-      r.name.toLowerCase().includes(`${keyword} bedroom`) || 
-      r.name.toLowerCase().includes(`${keyword}-bedroom`) ||
-      r.name.toLowerCase().includes(`suite ${keyword}`) ||
-      r.name.toLowerCase().includes(cleanId)
-    );
+    const isOne = cleanId.includes("1") || cleanId.includes("one");
+    const isTwo = cleanId.includes("2") || cleanId.includes("two");
+    const isThree = cleanId.includes("3") || cleanId.includes("three");
+
+    const matchingRoom = liveRooms.find(r => {
+      const roomNameClean = r.name.toLowerCase();
+      const roomIdClean = r.id.toLowerCase();
+      
+      if (roomIdClean === cleanId || roomNameClean.includes(cleanId)) {
+        return true;
+      }
+      if (isOne && (roomNameClean.includes("one") || roomNameClean.includes("1"))) {
+        return true;
+      }
+      if (isTwo && (roomNameClean.includes("two") || roomNameClean.includes("2"))) {
+        return true;
+      }
+      if (isThree && (roomNameClean.includes("three") || roomNameClean.includes("3"))) {
+        return true;
+      }
+      return false;
+    });
 
     if (matchingRoom && matchingRoom.minPrice > 0) {
       return { price: matchingRoom.minPrice, isLive: true };
@@ -316,23 +358,35 @@ export function useLiveRates() {
     }
 
     const cleanPkgId = packageId.toLowerCase();
-    // Try to match standard packages: "bb" (Bed and Breakfast), "hb" (Half Board), "fb" (Full Board)
-    let keyword = "";
-    if (cleanPkgId === "bb" || cleanPkgId.includes("breakfast")) {
-      keyword = "breakfast";
-    } else if (cleanPkgId === "hb" || cleanPkgId.includes("half")) {
-      keyword = "half board";
-    } else if (cleanPkgId === "fb" || cleanPkgId.includes("full")) {
-      keyword = "full board";
-    } else {
-      keyword = cleanPkgId;
-    }
+    
+    const matchingOffer = liveOffers.find(o => {
+      const offerIdClean = o.id.toLowerCase();
+      const offerNameClean = o.name.toLowerCase();
+      
+      if (offerIdClean === cleanPkgId) return true;
+      
+      if ((cleanPkgId === "ro" || cleanPkgId.includes("room") || cleanPkgId.includes("self") || cleanPkgId.includes("catering")) && 
+          (offerNameClean.includes("room only") || offerNameClean.includes("self") || offerNameClean.includes("flexible rate"))) {
+        return true;
+      }
+      
+      if ((cleanPkgId === "bb" || cleanPkgId.includes("breakfast")) && 
+          (offerNameClean.includes("breakfast") || offerNameClean.includes("b&b") || offerNameClean.includes("bed &"))) {
+        return true;
+      }
+      
+      if ((cleanPkgId === "hb" || cleanPkgId.includes("half")) && 
+          (offerNameClean.includes("half board") || offerNameClean.includes("half-board") || offerNameClean.includes("dine"))) {
+        return true;
+      }
 
-    const matchingOffer = liveOffers.find(o => 
-      o.id.toLowerCase() === cleanPkgId || 
-      o.name.toLowerCase().includes(keyword) || 
-      o.name.toLowerCase().includes(cleanPkgId)
-    );
+      if ((cleanPkgId === "fb" || cleanPkgId.includes("full")) && 
+          (offerNameClean.includes("full board") || offerNameClean.includes("full-board"))) {
+        return true;
+      }
+      
+      return offerNameClean.includes(cleanPkgId);
+    });
 
     if (matchingOffer && matchingOffer.minPrice !== undefined && matchingOffer.minPrice > 0) {
       return { rate: matchingOffer.minPrice, isLive: true, name: matchingOffer.name };

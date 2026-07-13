@@ -767,7 +767,7 @@ export default function App() {
                       <span className="text-xs font-semibold uppercase tracking-widest text-brand-teal block mb-2">Prime Harbor-Frontage</span>
                       <h3 className="font-serif text-3xl text-brand-dark tracking-tight">Our Location on Tudor Creek</h3>
                       <p className="text-stone-500 font-light mt-2 text-xs sm:text-sm leading-relaxed">
-                        Tamarind Village is situated on Silo Road, Nyali, directly on the cliffside shores of Tudor Creek in Mombasa, Kenya. We face the historical Old Port, overlooking Mombasa Island and Old Town.
+                        Tamarind Village is situated on Cement Silos Road, Nyali, directly on the cliffside shores of Tudor Creek in Mombasa, Kenya. We face the historical Old Port, overlooking Mombasa Island and Old Town.
                       </p>
                     </div>
 
@@ -806,7 +806,7 @@ export default function App() {
                           <div className="bg-brand-dark border border-brand-teal/60 text-white p-3 rounded-none mt-2 shadow-lg text-left w-56 space-y-1">
                             <p className="text-[11px] font-bold text-brand-gold uppercase tracking-widest leading-none">Tamarind Village</p>
                             <p className="text-[10px] text-stone-300 font-light">Tamarind Restaurant & Dawa Terrace Adjacent</p>
-                            <p className="text-[9px] text-stone-400 font-mono italic">Silo Road, Nyali Coast</p>
+                            <p className="text-[9px] text-stone-400 font-mono italic">Cement Silos Road, Nyali Coast</p>
                           </div>
                         </div>
 
@@ -946,12 +946,11 @@ export default function App() {
                     <div className="pt-6 border-t border-stone-200 grid grid-cols-2 gap-4 text-left text-[10px] text-stone-500">
                       <div>
                         <p className="font-bold text-brand-dark uppercase">Resort Reception</p>
-                        <p>+254 (0) 733 623 477</p>
-                        <p>+254 (0) 41 447 3000</p>
+                        <p>+254 725 959 552</p>
                       </div>
                       <div>
                         <p className="font-bold text-brand-dark uppercase">Direct Booking</p>
-                        <p className="truncate" title="reservations.mombasa@tamarind.co.ke">reservations.mombasa@...</p>
+                        <p className="truncate" title="reservations.village@tamarind.co.ke">reservations.village@...</p>
                         <p>Mombasa, Kenya</p>
                       </div>
                     </div>

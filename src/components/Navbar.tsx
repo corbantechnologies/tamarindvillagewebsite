@@ -74,7 +74,7 @@ export default function Navbar({ onNavigate, onOpenBooking, activeView, onGoHome
           </span>
           <span className="hidden sm:flex items-center gap-1">
             <Phone className="w-3 h-3 text-brand-gold" />
-            +254 (0) 733 623 477
+            +254 725 959 552
           </span>
         </div>
         <div className="flex items-center gap-3 font-medium">

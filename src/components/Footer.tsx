@@ -221,14 +221,14 @@ export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSele
             <li className="flex items-start gap-3">
               <MapPin className="w-4 h-4 text-brand-gold mt-0.5 flex-shrink-0" />
               <span>
-                Tamarind Village, Nyali Road,<br />
+                Tamarind Village, along Cement Silos Road,<br />
                 P.O. Box 95805-80106,<br />
                 Mombasa, Kenya
               </span>
             </li>
             <li className="flex items-center gap-3">
               <Phone className="w-4 h-4 text-brand-gold flex-shrink-0" />
-              <span>+254 (0) 733 623 477 / +254 (0) 41 447 3000</span>
+              <span>+254 725 959 552</span>
             </li>
             <li className="flex items-center gap-3">
               <MessageSquare className="w-4 h-4 text-emerald-500 flex-shrink-0 fill-emerald-500/10" />
@@ -242,9 +242,13 @@ export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSele
                 <span className="text-[9px] font-sans font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-500 border border-emerald-500/30 px-1.5 py-0.5 animate-pulse">Chat Live</span>
               </a>
             </li>
-            <li className="flex items-center gap-3">
-              <Mail className="w-4 h-4 text-brand-gold flex-shrink-0" />
-              <span className="break-all">reservations.mombasa@tamarind.co.ke</span>
+            <li className="flex items-start gap-3">
+              <Mail className="w-4 h-4 text-brand-gold mt-1 flex-shrink-0" />
+              <div className="space-y-1.5 text-xs text-stone-400">
+                <p><span className="text-stone-300 font-semibold block sm:inline">Tamarind Village:</span> <a href="mailto:reservations.village@tamarind.co.ke" className="hover:underline hover:text-brand-teal">reservations.village@tamarind.co.ke</a></p>
+                <p><span className="text-stone-300 font-semibold block sm:inline">Tamarind Restaurant:</span> <a href="mailto:reservations.mombasa@tamarind.co.ke" className="hover:underline hover:text-brand-teal">reservations.mombasa@tamarind.co.ke</a></p>
+                <p><span className="text-stone-300 font-semibold block sm:inline">Tamarind Dhow:</span> <a href="mailto:reservations.dhow@tamarind.co.ke" className="hover:underline hover:text-brand-teal">reservations.dhow@tamarind.co.ke</a></p>
+              </div>
             </li>
             <li className="flex items-start gap-3">
               <Clock className="w-4 h-4 text-brand-gold mt-0.5 flex-shrink-0" />

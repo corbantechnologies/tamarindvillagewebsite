@@ -88,13 +88,13 @@ async function startServer() {
         
         let deptName = "General / Guest Experience";
         if (department === "restaurant") {
-          toEmail = process.env.EMAIL_RESTAURANT || "mombasa@tamarind.co.ke";
+          toEmail = process.env.EMAIL_RESTAURANT || "reservations.mombasa@tamarind.co.ke";
           deptName = "Tamarind Mombasa Restaurant";
         } else if (department === "dhow") {
-          toEmail = process.env.EMAIL_DHOW || "dhow@tamarind.co.ke";
+          toEmail = process.env.EMAIL_DHOW || "reservations.dhow@tamarind.co.ke";
           deptName = "Tamarind Dhow Cruise";
         } else {
-          toEmail = process.env.EMAIL_VILLAGE || "reservation.village@tamarind.co.ke";
+          toEmail = process.env.EMAIL_VILLAGE || "reservations.village@tamarind.co.ke";
           deptName = "Tamarind Village Mombasa Apartments";
         }
 
@@ -135,7 +135,7 @@ async function startServer() {
         `;
       } else if (type === "apartment") {
         const { name, email, phone, apartmentName, checkIn, checkOut, guests, packageId, requests, totalCost } = payload;
-        toEmail = process.env.EMAIL_VILLAGE || "reservation.village@tamarind.co.ke";
+        toEmail = process.env.EMAIL_VILLAGE || "reservations.village@tamarind.co.ke";
         subject = `[Tamarind Village] Booking Inquiry for ${apartmentName} - ${name}`;
         
         htmlContent = `
@@ -207,8 +207,8 @@ async function startServer() {
         
         const isDhow = diningName.toLowerCase().includes("dhow");
         toEmail = isDhow 
-          ? (process.env.EMAIL_DHOW || "dhow@tamarind.co.ke")
-          : (process.env.EMAIL_RESTAURANT || "mombasa@tamarind.co.ke");
+          ? (process.env.EMAIL_DHOW || "reservations.dhow@tamarind.co.ke")
+          : (process.env.EMAIL_RESTAURANT || "reservations.mombasa@tamarind.co.ke");
 
         subject = `[${isDhow ? "Tamarind Dhow" : "Tamarind Restaurant"}] Seating / Reservation Inquiry - ${name}`;
 
