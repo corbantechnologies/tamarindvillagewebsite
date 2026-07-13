@@ -4,6 +4,7 @@ import Footer from "./components/Footer";
 import ApartmentDetail from "./components/ApartmentDetail";
 import DiningDetail from "./components/DiningDetail";
 import BookingModal from "./components/BookingModal";
+import { useLiveRates } from "./utils/profitroom";
 import { APARTMENTS, PACKAGES, DINING, FACILITIES } from "./data";
 import { 
   Waves, Users, Maximize2, Coffee, Utensils, Ship, 
@@ -14,6 +15,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 
 export default function App() {
+  const { getLivePrice } = useLiveRates();
   const [activeView, setActiveView] = useState<"home" | "detail" | "dining">("home");
   const [selectedApartmentId, setSelectedApartmentId] = useState<string>("1-bedroom");
   const [selectedDiningId, setSelectedDiningId] = useState<string>("tamarind-restaurant");
@@ -456,87 +458,99 @@ export default function App() {
 
                 {/* Apartments Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {APARTMENTS.map((apt) => (
-                    <div 
-                      key={apt.id} 
-                      className="bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
-                      id={`card-${apt.id}`}
-                    >
-                      {/* Image Thumbnail Container */}
-                      <div className="relative aspect-[16/10] overflow-hidden bg-stone-100">
-                        <img 
-                          src={apt.image} 
-                          alt={apt.name} 
-                          className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute top-4 right-4 bg-brand-dark/90 backdrop-blur-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-gold">
-                          {apt.viewType.split(" ")[0]} View
-                        </div>
-                      </div>
-
-                      {/* Specs and details */}
-                      <div className="p-6 flex-1 flex flex-col justify-between space-y-6">
-                        <div>
-                          <div className="flex justify-between items-start gap-4 mb-3">
-                            <h3 className="font-serif text-xl text-brand-dark group-hover:text-brand-teal transition-colors">
-                              {apt.name}
-                            </h3>
-                          </div>
-                          
-                          <p className="text-stone-500 text-xs font-light leading-relaxed mb-4 line-clamp-3">
-                            {apt.description}
-                          </p>
-
-                          {/* Quick Specs Icons Row */}
-                          <div className="grid grid-cols-3 gap-2 py-3 border-y border-stone-200 text-stone-600 font-medium">
-                            <div className="flex items-center gap-1.5 justify-center">
-                              <Maximize2 className="w-4 h-4 text-brand-teal" />
-                              <span className="text-[11px] font-mono">{apt.size}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 justify-center">
-                              <Users className="w-4 h-4 text-brand-teal" />
-                              <span className="text-[11px] font-mono">Max {apt.maxGuests}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 justify-center">
-                              <span className="text-[11px] font-serif font-bold text-brand-teal">{apt.bedrooms} Bed</span>
-                            </div>
-                          </div>
-
-                          {/* Inclusions List */}
-                          <div className="mt-4 space-y-2">
-                            <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-1">Key Highlights:</span>
-                            {apt.highlights.slice(0, 2).map((hl, idx) => (
-                              <div key={idx} className="flex gap-2 items-start text-[11px] text-stone-600">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-brand-teal flex-shrink-0 mt-0.5" />
-                                <span className="font-light">{hl}</span>
-                              </div>
-                            ))}
+                  {APARTMENTS.map((apt) => {
+                    const { price: livePrice, isLive } = getLivePrice(apt.id, apt.pricePerNight);
+                    return (
+                      <div 
+                        key={apt.id} 
+                        className="bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
+                        id={`card-${apt.id}`}
+                      >
+                        {/* Image Thumbnail Container */}
+                        <div className="relative aspect-[16/10] overflow-hidden bg-stone-100">
+                          <img 
+                            src={apt.image} 
+                            alt={apt.name} 
+                            className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
+                            referrerPolicy="no-referrer"
+                          />
+                          <div className="absolute top-4 right-4 bg-brand-dark/90 backdrop-blur-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-gold">
+                            {apt.viewType.split(" ")[0]} View
                           </div>
                         </div>
 
-                        {/* Cost & Action footer */}
-                        <div className="pt-4 border-t border-stone-200 flex items-center justify-between">
+                        {/* Specs and details */}
+                        <div className="p-6 flex-1 flex flex-col justify-between space-y-6">
                           <div>
-                            <span className="text-[10px] text-stone-400 uppercase tracking-widest font-bold">Base Rate</span>
-                            <p className="text-xl font-serif text-brand-dark font-extrabold">
-                              ${apt.pricePerNight} <span className="text-xs font-sans text-stone-500 font-light">/ night</span>
+                            <div className="flex justify-between items-start gap-4 mb-3">
+                              <h3 className="font-serif text-xl text-brand-dark group-hover:text-brand-teal transition-colors">
+                                {apt.name}
+                              </h3>
+                            </div>
+                            
+                            <p className="text-stone-500 text-xs font-light leading-relaxed mb-4 line-clamp-3">
+                              {apt.description}
                             </p>
+
+                            {/* Quick Specs Icons Row */}
+                            <div className="grid grid-cols-3 gap-2 py-3 border-y border-stone-200 text-stone-600 font-medium">
+                              <div className="flex items-center gap-1.5 justify-center">
+                                <Maximize2 className="w-4 h-4 text-brand-teal" />
+                                <span className="text-[11px] font-mono">{apt.size}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 justify-center">
+                                <Users className="w-4 h-4 text-brand-teal" />
+                                <span className="text-[11px] font-mono">Max {apt.maxGuests}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 justify-center">
+                                <span className="text-[11px] font-serif font-bold text-brand-teal">{apt.bedrooms} Bed</span>
+                              </div>
+                            </div>
+
+                            {/* Inclusions List */}
+                            <div className="mt-4 space-y-2">
+                              <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-1">Key Highlights:</span>
+                              {apt.highlights.slice(0, 2).map((hl, idx) => (
+                                <div key={idx} className="flex gap-2 items-start text-[11px] text-stone-600">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-brand-teal flex-shrink-0 mt-0.5" />
+                                  <span className="font-light">{hl}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                          
-                          <div className="flex flex-col gap-2">
-                            <button 
-                              onClick={() => handleSelectApartment(apt.id)}
-                              className="px-5 py-2.5 border border-brand-dark text-brand-dark hover:bg-stone-50 rounded-none text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer text-center"
-                              id={`btn-details-${apt.id}`}
-                            >
-                              View Details
-                            </button>
+
+                          {/* Cost & Action footer */}
+                          <div className="pt-4 border-t border-stone-200 flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-[10px] text-stone-400 uppercase tracking-widest font-bold">
+                                  {isLive ? "Live Rate" : "Base Rate"}
+                                </span>
+                                {isLive && (
+                                  <span className="inline-flex items-center gap-0.5 px-1 py-0.2 text-[8px] font-bold text-white bg-emerald-600 rounded-none uppercase tracking-wider">
+                                    ● Live
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xl font-serif text-brand-dark font-extrabold">
+                                ${livePrice} <span className="text-xs font-sans text-stone-500 font-light">/ night</span>
+                              </p>
+                            </div>
+                            
+                            <div className="flex flex-col gap-2">
+                              <button 
+                                onClick={() => handleSelectApartment(apt.id)}
+                                className="px-5 py-2.5 border border-brand-dark text-brand-dark hover:bg-stone-50 rounded-none text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer text-center"
+                                id={`btn-details-${apt.id}`}
+                              >
+                                View Details
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
 
