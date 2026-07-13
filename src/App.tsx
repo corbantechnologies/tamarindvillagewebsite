@@ -15,7 +15,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 
 export default function App() {
-  const { getLivePrice } = useLiveRates();
+  const { getLivePrice, getLivePackagePrice } = useLiveRates();
   const [activeView, setActiveView] = useState<"home" | "detail" | "dining">("home");
   const [selectedApartmentId, setSelectedApartmentId] = useState<string>("1-bedroom");
   const [selectedDiningId, setSelectedDiningId] = useState<string>("tamarind-restaurant");
@@ -568,61 +568,85 @@ export default function App() {
                   </div>
 
                   {/* Packages Grid */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {PACKAGES.map((pkg) => (
-                      <div 
-                        key={pkg.id}
-                        className="bg-[#2D2926] border border-stone-800 rounded-none p-8 flex flex-col justify-between hover:border-brand-teal/80 transition-all duration-300 shadow-md group relative"
-                        id={`package-card-${pkg.id}`}
-                      >
-                        {pkg.id === "hbp" && (
-                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-teal text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-none border border-brand-teal/40 shadow-sm">
-                            Highly Recommended
-                          </div>
-                        )}
-                        
-                        <div>
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="p-2 bg-stone-800 rounded-none text-brand-teal">
-                              {pkg.id === "bb" ? <Coffee className="w-5 h-5" /> : <Utensils className="w-5 h-5" />}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                    {PACKAGES.map((pkg) => {
+                      const { rate: liveRate, isLive, name: liveName } = getLivePackagePrice(pkg.id, pkg.pricePerPersonPerDay);
+                      
+                      // Assign elegant icons based on package type
+                      const getPackageIcon = (id: string) => {
+                        switch (id) {
+                          case "ro": return <Sparkles className="w-5 h-5" />;
+                          case "bb": return <Coffee className="w-5 h-5" />;
+                          case "hb": return <Utensils className="w-5 h-5" />;
+                          case "hbp": return <Ship className="w-5 h-5" />;
+                          default: return <Utensils className="w-5 h-5" />;
+                        }
+                      };
+
+                      return (
+                        <div 
+                          key={pkg.id}
+                          className="bg-[#2D2926] border border-stone-800 rounded-none p-6 flex flex-col justify-between hover:border-brand-teal/80 transition-all duration-300 shadow-md group relative"
+                          id={`package-card-${pkg.id}`}
+                        >
+                          {pkg.id === "hbp" && (
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-teal text-white text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-none border border-brand-teal/40 shadow-sm whitespace-nowrap">
+                              Highly Recommended
                             </div>
-                            <h3 className="font-serif text-lg sm:text-xl font-bold text-white group-hover:text-brand-teal transition-colors">
-                              {pkg.name}
-                            </h3>
-                          </div>
-
-                          <p className="text-stone-400 text-xs font-light leading-relaxed mb-6">
-                            {pkg.description}
-                          </p>
-
-                          <div className="space-y-3 mb-8">
-                            <span className="text-[10px] uppercase font-bold text-stone-500 tracking-wider block">What's Included:</span>
-                            {pkg.highlights.map((highlight, idx) => (
-                              <div key={idx} className="flex gap-2.5 items-start text-xs text-stone-300">
-                                <CheckCircle2 className="w-4 h-4 text-brand-teal flex-shrink-0 mt-0.5" />
-                                <span className="font-light leading-snug">{highlight}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="pt-6 border-t border-stone-800/80 flex items-center justify-between">
-                          <div>
-                            <span className="text-[9px] text-stone-500 uppercase font-bold block">Upgrade Cost</span>
-                            <span className="text-lg font-serif font-bold text-white">${pkg.pricePerPersonPerDay}</span>
-                            <span className="text-[10px] text-stone-400 font-light block">/ Adult / Day</span>
-                          </div>
+                          )}
                           
-                          <button 
-                            onClick={() => handleOpenBookingWithParams("1-bedroom", pkg.id)}
-                            className="px-5 py-2.5 bg-brand-teal hover:bg-brand-teal-dark text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer"
-                            id={`btn-pkg-select-${pkg.id}`}
-                          >
-                            Inquire Package
-                          </button>
+                          <div>
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="p-2 bg-stone-800 rounded-none text-brand-teal">
+                                {getPackageIcon(pkg.id)}
+                              </div>
+                              <h3 className="font-serif text-base sm:text-lg font-bold text-white group-hover:text-brand-teal transition-colors">
+                                {liveName || pkg.name}
+                              </h3>
+                            </div>
+
+                            <p className="text-stone-400 text-xs font-light leading-relaxed mb-6">
+                              {pkg.description}
+                            </p>
+
+                            <div className="space-y-3 mb-8">
+                              <span className="text-[10px] uppercase font-bold text-stone-500 tracking-wider block">What's Included:</span>
+                              {pkg.highlights.map((highlight, idx) => (
+                                <div key={idx} className="flex gap-2.5 items-start text-xs text-stone-300">
+                                  <CheckCircle2 className="w-4 h-4 text-brand-teal flex-shrink-0 mt-0.5" />
+                                  <span className="font-light leading-snug">{highlight}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="pt-6 border-t border-stone-800/80 flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="text-[9px] text-stone-500 uppercase font-bold block">
+                                  {isLive ? "Live Upgrade Cost" : "Upgrade Cost"}
+                                </span>
+                                {isLive && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 text-[7px] font-bold text-white bg-emerald-600 rounded-none uppercase tracking-wider">
+                                    ● Live
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-lg font-serif font-bold text-white">${liveRate}</span>
+                              <span className="text-[10px] text-stone-400 font-light block">/ Adult / Day</span>
+                            </div>
+                            
+                            <button 
+                              onClick={() => handleOpenBookingWithParams("1-bedroom", pkg.id)}
+                              className="px-4 py-2 bg-brand-teal hover:bg-brand-teal-dark text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer"
+                              id={`btn-pkg-select-${pkg.id}`}
+                            >
+                              Inquire Package
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </section>

@@ -159,18 +159,18 @@ export const PACKAGES: PackageType[] = [
       "Includes water, fresh juices, and soft drinks with meals"
     ]
   },
-  {
-    id: "hbp",
-    name: "Seafood Half Board Premium",
-    description: "The absolute pinnacle of luxury and coastal romance. Includes daily breakfast, and an unforgettable seafood dinner experience at the Tamarind Restaurant.",
-    priceMarkupPercentage: 30,
-    pricePerPersonPerDay: 95,
-    highlights: [
-      "Daily gourmet breakfast plus premium dinner at the Tamarind Restaurant",
-      "A complimentary signature 'Dawa' cocktail at the Dawa Terrace every evening on arrival",
-      "VIP dining reservations and premium creekside table placement"
-    ]
-  }
+  // {
+  //   id: "hbp",
+  //   name: "Seafood Half Board Premium",
+  //   description: "The absolute pinnacle of luxury and coastal romance. Includes daily breakfast, and an unforgettable seafood dinner experience at the Tamarind Restaurant.",
+  //   priceMarkupPercentage: 30,
+  //   pricePerPersonPerDay: 95,
+  //   highlights: [
+  //     "Daily gourmet breakfast plus premium dinner at the Tamarind Restaurant",
+  //     "A complimentary signature 'Dawa' cocktail at the Dawa Terrace every evening on arrival",
+  //     "VIP dining reservations and premium creekside table placement"
+  //   ]
+  // }
 ];
 
 export const DINING: DiningExperience[] = [
