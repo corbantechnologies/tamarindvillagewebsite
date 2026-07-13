@@ -620,8 +620,8 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="pt-6 border-t border-stone-800/80 flex items-center justify-between">
-                            <div>
+                          <div className="pt-6 border-t border-stone-800/80 flex flex-col gap-4">
+                            <div className="w-full">
                               <div className="flex items-center gap-1.5 mb-0.5">
                                 <span className="text-[9px] text-stone-500 uppercase font-bold block">
                                   {isLive ? "Live Upgrade Cost" : "Upgrade Cost"}
@@ -638,7 +638,7 @@ export default function App() {
                             
                             <button 
                               onClick={() => handleOpenBookingWithParams("1-bedroom", pkg.id)}
-                              className="px-4 py-2 bg-brand-teal hover:bg-brand-teal-dark text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer"
+                              className="w-full py-3 bg-brand-teal hover:bg-brand-teal-dark text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer text-center"
                               id={`btn-pkg-select-${pkg.id}`}
                             >
                               Inquire Package
