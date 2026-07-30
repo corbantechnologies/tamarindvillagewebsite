@@ -185,7 +185,7 @@ export const DINING: DiningExperience[] = [
       "Premium selection of international wines curated by our resident sommelier"
     ],
     hours: "12:00 PM – 11:00 PM Daily",
-    image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399230/PXL_20260721_145415867_zlb785.jpg",
     reservationLinkText: "Inquire for Restaurant Table"
   },
   {
@@ -213,7 +213,7 @@ export const DINING: DiningExperience[] = [
       "The perfect setting for anniversaries, proposals, or unforgettable group celebrations"
     ],
     hours: "Lunch Cruise: 1:00 PM – 3:00 PM | Dinner Cruise: 6:30 PM – 10:30 PM",
-    image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=800&q=80",
+    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg",
     reservationLinkText: "Inquire for Dhow Charter & Cruise"
   }
 ];
@@ -224,7 +224,7 @@ export const FACILITIES: FacilityType[] = [
     name: "Creekside Infinity & Leisure Pools",
     description: "Our harbor-front swimming pools offer a spectacular sanctuary from the tropical warmth of Mombasa. Perfectly positioned on the cliff edge of Tudor Creek, these fresh-water pools are surrounded by tall coconut palms, tropical greenery, and comfortable loungers.",
     iconName: "Waves",
-    image: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=800&q=80",
+    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898868/pool_mega5r.jpg",
     details: [
       "Stunning oceanfront infinity-edge pool looking out towards the creek and boat channels",
       "Separate shallow swimming area safely designed for children and families",
