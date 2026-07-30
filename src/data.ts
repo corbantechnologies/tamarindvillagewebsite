@@ -15,7 +15,7 @@ import { ApartmentType, PackageType, DiningExperience, FacilityType } from "./ty
 export const APARTMENTS: ApartmentType[] = [
   {
     id: "1-bedroom",
-    name: "Luxury 1-Bedroom Ocean Suite",
+    name: "Luxury 1-Bedroom Apartment",
     description: "Perfect for couples, executive business travelers, or solo adventurers looking for a serene coastal getaway. This spacious suite features an air-conditioned master bedroom with a handcrafted Swahili four-poster canopy bed, a deluxe en-suite bathroom, and an expansive living area.",
     size: "95 m²",
     maxGuests: 2,
@@ -50,7 +50,7 @@ export const APARTMENTS: ApartmentType[] = [
   },
   {
     id: "2-bedroom",
-    name: "Premium 2-Bedroom Coastal Residence",
+    name: "2-Bedroom Apartment",
     description: "Ideal for families or friends traveling together, this exceptionally spacious residence seamlessly combines Swahili elegance with modern comfort. It features two fully air-conditioned bedrooms, a magnificent living room, a dining area, and an extra-large private balcony.",
     size: "145 m²",
     maxGuests: 4,
@@ -85,7 +85,7 @@ export const APARTMENTS: ApartmentType[] = [
   },
   {
     id: "3-bedroom",
-    name: "Grand 3-Bedroom Apartment",
+    name: "3-Bedroom Apartment",
     description: "The ultimate expression of coastal luxury. This palatial apartment boasts double-height vaulted ceilings, three gorgeous bedrooms, multiple sun-drenched private balconies, and an elite dining lounge.",
     size: "220 m²",
     maxGuests: 6,
