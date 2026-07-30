@@ -57,9 +57,9 @@ export const APARTMENTS: ApartmentType[] = [
     pricePerNight: 240,
     image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783683956/3_y4yy1f.jpg",
     gallery: [
-      "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1540518614846-7eded433c457?auto=format&fit=crop&w=800&q=80"
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399444/IMG-20260728-WA0067_zddl3j.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399619/IMG-20260728-WA0082_sgufrn.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399453/IMG-20260728-WA0072_dyahqk.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -85,16 +85,16 @@ export const APARTMENTS: ApartmentType[] = [
   },
   {
     id: "3-bedroom",
-    name: "Grand 3-Bedroom Duplex Penthouse",
-    description: "The ultimate expression of coastal luxury. Spanning two floors, this palatial duplex penthouse boasts double-height vaulted ceilings, three gorgeous en-suite bedrooms, multiple sun-drenched private balconies, and an elite Swahili-inspired rooftop dining lounge.",
+    name: "Grand 3-Bedroom Apartment",
+    description: "The ultimate expression of coastal luxury. This palatial apartment boasts double-height vaulted ceilings, three gorgeous bedrooms, multiple sun-drenched private balconies, and an elite dining lounge.",
     size: "220 m²",
     maxGuests: 6,
     pricePerNight: 350,
     image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783685440/11_te7vun.jpg",
     gallery: [
-      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80"
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399398/IMG-20260728-WA0056_npidaf.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399397/IMG-20260728-WA0054_yiazz1.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399396/IMG-20260728-WA0053_vplcb1.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
