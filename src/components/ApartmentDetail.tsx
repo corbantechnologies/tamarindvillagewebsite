@@ -679,48 +679,54 @@ export default function ApartmentDetail({
       <div className="pt-8 border-t border-stone-200">
         <h3 className="text-2xl font-serif text-brand-dark mb-6 text-center">Compare Alternative Suite Categories</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {otherApartments.map((apt) => (
-            <div 
-              key={apt.id}
-              onClick={() => handleRecommendClick(apt.id)}
-              className="bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row cursor-pointer group"
-              id={`recommend-${apt.id}`}
-            >
-              <div className="sm:w-2/5 aspect-[4/3] sm:aspect-auto relative overflow-hidden bg-stone-100">
-                <img 
-                  src={apt.image} 
-                  alt={apt.name} 
-                  className="w-full h-full object-cover transform duration-500 group-hover:scale-102"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              <div className="p-6 sm:w-3/5 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-serif text-lg text-brand-dark group-hover:text-brand-teal transition-colors">
-                      {apt.name}
-                    </h4>
-                  </div>
-                  <p className="text-stone-500 text-xs font-light line-clamp-2 mb-4 leading-relaxed">
-                    {apt.description}
-                  </p>
-                  <div className="flex gap-4 text-[10px] text-stone-500 font-bold uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><Maximize2 className="w-3.5 h-3.5 text-brand-teal" /> {apt.size}</span>
-                    <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-brand-teal" /> Max {apt.maxGuests}</span>
-                  </div>
+          {otherApartments.map((apt) => {
+            const { price: aptLivePrice, isLive: isAptPriceLive } = getLivePrice(apt.id, apt.pricePerNight);
+            return (
+              <div 
+                key={apt.id}
+                onClick={() => handleRecommendClick(apt.id)}
+                className="bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row cursor-pointer group"
+                id={`recommend-${apt.id}`}
+              >
+                <div className="sm:w-2/5 aspect-[4/3] sm:aspect-auto relative overflow-hidden bg-stone-100">
+                  <img 
+                    src={apt.image} 
+                    alt={apt.name} 
+                    className="w-full h-full object-cover transform duration-500 group-hover:scale-102"
+                    referrerPolicy="no-referrer"
+                  />
                 </div>
-                <div className="mt-6 pt-4 border-t border-stone-100/80 flex items-center justify-between">
+                <div className="p-6 sm:w-3/5 flex flex-col justify-between">
                   <div>
-                    <span className="text-stone-400 text-[9px] uppercase font-bold tracking-widest block">Base Rate</span>
-                    <span className="text-brand-dark font-serif font-bold text-sm">${apt.pricePerNight} / Night</span>
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-serif text-lg text-brand-dark group-hover:text-brand-teal transition-colors">
+                        {apt.name}
+                      </h4>
+                    </div>
+                    <p className="text-stone-500 text-xs font-light line-clamp-2 mb-4 leading-relaxed">
+                      {apt.description}
+                    </p>
+                    <div className="flex gap-4 text-[10px] text-stone-500 font-bold uppercase tracking-wider">
+                      <span className="flex items-center gap-1"><Maximize2 className="w-3.5 h-3.5 text-brand-teal" /> {apt.size}</span>
+                      <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-brand-teal" /> Max {apt.maxGuests}</span>
+                    </div>
                   </div>
-                  <span className="text-xs text-brand-teal font-bold flex items-center gap-1 group-hover:underline uppercase tracking-wider">
-                    View Details <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
+                  <div className="mt-6 pt-4 border-t border-stone-100/80 flex items-center justify-between">
+                    <div>
+                      <span className="text-stone-400 text-[9px] uppercase font-bold tracking-widest block flex items-center gap-1">
+                        {isAptPriceLive ? "Live Rate" : "Base Rate"}
+                        {isAptPriceLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />}
+                      </span>
+                      <span className="text-brand-dark font-serif font-bold text-sm">${aptLivePrice} / Night</span>
+                    </div>
+                    <span className="text-xs text-brand-teal font-bold flex items-center gap-1 group-hover:underline uppercase tracking-wider">
+                      View Details <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </motion.div>

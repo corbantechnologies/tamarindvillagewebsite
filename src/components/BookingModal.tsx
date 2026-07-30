@@ -248,11 +248,14 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
                       className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 bg-stone-50 font-medium focus:outline-none focus:border-brand-teal"
                       id="modal-select-apartment"
                     >
-                      {APARTMENTS.map(apt => (
-                        <option key={apt.id} value={apt.id}>
-                          {apt.name} (Base: ${apt.pricePerNight}/nt)
-                        </option>
-                      ))}
+                      {APARTMENTS.map(apt => {
+                        const { price: aptLiveRate } = getLivePrice(apt.id, apt.pricePerNight);
+                        return (
+                          <option key={apt.id} value={apt.id}>
+                            {apt.name} (Base: ${aptLiveRate}/nt)
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
