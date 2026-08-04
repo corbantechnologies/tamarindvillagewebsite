@@ -197,16 +197,21 @@ export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSele
               </button>
             </li>
             <li className="pt-2">
-              <span className="text-[10px] uppercase font-bold text-brand-gold block">Resort Services</span>
+              <span className="text-[10px] uppercase font-bold text-brand-gold block">Resort Services & Experiences</span>
             </li>
             <li>
-              <button onClick={() => onNavigate("facilities-section")} className="hover:text-brand-teal transition-colors cursor-pointer text-left">
-                Infinity Swimming Pools
+              <button onClick={() => onNavigate("transfers-section")} className="hover:text-brand-teal transition-colors cursor-pointer text-left">
+                Airport & SGR Private Transfers
+              </button>
+            </li>
+            <li>
+              <button onClick={() => onNavigate("events-charters-section")} className="hover:text-brand-teal transition-colors cursor-pointer text-left">
+                Weddings, Events & Dhow Charters
               </button>
             </li>
             <li>
               <button onClick={() => onNavigate("facilities-section")} className="hover:text-brand-teal transition-colors cursor-pointer text-left">
-                Executive Conferences & Banquets
+                Infinity Swimming Pools & Lounge
               </button>
             </li>
           </ul>

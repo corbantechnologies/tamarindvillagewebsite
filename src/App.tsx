@@ -4,13 +4,18 @@ import Footer from "./components/Footer";
 import ApartmentDetail from "./components/ApartmentDetail";
 import DiningDetail from "./components/DiningDetail";
 import BookingModal from "./components/BookingModal";
+import TransferModal from "./components/TransferModal";
+import EventsAndChartersSection from "./components/EventsAndChartersSection";
+import ExtrasCustomizerModal from "./components/ExtrasCustomizerModal";
+import { loadTransferVehicles, loadEventPackages } from "./utils/extrasStore";
 import { useLiveRates } from "./utils/profitroom";
 import { APARTMENTS, PACKAGES, DINING, FACILITIES } from "./data";
 import { 
   Waves, Users, Maximize2, Coffee, Utensils, Ship, 
   MapPin, Phone, Mail, Sparkles, ArrowRight, Clock, ChevronRight,
   ShieldCheck, HelpCircle, CheckCircle2, Star, Calendar, MessageSquare,
-  ChevronLeft, Image as ImageIcon, Settings, Plus, Trash2, RotateCcw, Check
+  ChevronLeft, Image as ImageIcon, Settings, Plus, Trash2, RotateCcw, Check,
+  Car, Plane, Train
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -20,7 +25,12 @@ export default function App() {
   const [selectedApartmentId, setSelectedApartmentId] = useState<string>("1-bedroom");
   const [selectedDiningId, setSelectedDiningId] = useState<string>("tamarind-restaurant");
   const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [preSelectedPkg, setPreSelectedPkg] = useState<string>("ro");
+
+  // Dynamic state for extras (Transfers & Events)
+  const [transferVehiclesList, setTransferVehiclesList] = useState(() => loadTransferVehicles());
+  const [eventPackagesList, setEventPackagesList] = useState(() => loadEventPackages());
 
   const defaultHeroImages = [
     "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898650/village2_w4ue4b.jpg", // Pool luxury overlooking sea
@@ -260,6 +270,7 @@ export default function App() {
       <Navbar 
         onNavigate={navigateToSection}
         onOpenBooking={() => setIsBookingOpen(true)}
+        onOpenTransferModal={() => setIsTransferModalOpen(true)}
         activeView={activeView}
         onGoHome={() => {
           setActiveView("home");
@@ -795,6 +806,50 @@ export default function App() {
                 </div>
               </section>
 
+              {/* 6B. PRIVATE AIRPORT & SGR TRANSFERS HIGHLIGHT BANNER */}
+              <section className="py-16 bg-[#1f1d1b] text-white border-y border-stone-800 scroll-mt-12" id="transfers-section">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="bg-gradient-to-r from-[#2a2624] to-[#1c1918] border border-stone-800 p-8 sm:p-12 relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-8 shadow-xl">
+                    <div className="max-w-2xl space-y-4 text-center lg:text-left">
+                      <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 text-brand-gold text-xs font-mono font-bold uppercase tracking-widest">
+                        <span className="flex items-center gap-1.5"><Plane className="w-4 h-4" /> Moi Int'l Airport (MBA)</span>
+                        <span className="text-stone-600">•</span>
+                        <span className="flex items-center gap-1.5"><Train className="w-4 h-4" /> Miritini SGR Terminus</span>
+                      </div>
+                      <h3 className="font-serif text-3xl sm:text-4xl text-white font-bold tracking-tight">
+                        Private Chauffeured Airport & SGR Transfers
+                      </h3>
+                      <p className="text-stone-300 text-xs sm:text-sm font-light leading-relaxed">
+                        Arrive in luxury with our private chauffeured transfer service. From personalized flight/train tracking and meet-and-greet baggage assistance to executive Alphards and chilled Tamarind Dawa refreshments on arrival.
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center lg:justify-start gap-6 text-xs text-stone-400 font-mono pt-2">
+                        <span>✓ Executive Saloons ($25)</span>
+                        <span>✓ VIP Alphard Captain Seats ($50)</span>
+                        <span>✓ Group Minivans ($65)</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto flex-shrink-0">
+                      <button
+                        onClick={() => setIsTransferModalOpen(true)}
+                        className="px-8 py-4 bg-brand-gold hover:bg-amber-500 text-brand-dark font-bold text-xs uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md"
+                        id="btn-banner-book-transfer"
+                      >
+                        <Car className="w-4 h-4" />
+                        <span>Book Private Transfer</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* 6C. WEDDINGS, PRIVATE EVENTS & DHOW CHARTERS */}
+              <EventsAndChartersSection 
+                onOpenTransferModal={() => setIsTransferModalOpen(true)} 
+                onOpenCustomizer={() => setIsCustomizerOpen(true)}
+                eventPackagesList={eventPackagesList}
+              />
+
               {/* 7. CUSTOM GEOGRAPHIC MAP & CONTACT SECTION */}
               <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-12" id="contact-section">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
@@ -1101,177 +1156,37 @@ export default function App() {
         initialPackageId={preSelectedPkg}
       />
 
-      {/* Carousel Customizer Modal (For pasting or managing list of hero image links) */}
-      <AnimatePresence>
-        {isCustomizerOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsCustomizerOpen(false)}
-              className="absolute inset-0 bg-brand-dark/80 backdrop-blur-sm"
-            />
+      {/* Chauffeur & Private Transfer Modal */}
+      <TransferModal 
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        vehiclesList={transferVehiclesList}
+      />
 
-            {/* Modal Content */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.3 }}
-              className="relative w-full max-w-2xl bg-white text-brand-dark border border-stone-200 p-6 sm:p-8 max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col z-10"
-            >
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="font-serif text-2xl text-brand-teal font-semibold tracking-tight">
-                    Manage Hero Images
-                  </h3>
-                  <p className="text-stone-500 text-xs mt-1 font-light">
-                    Customize your homepage header with coastal imagery. Images rotate automatically every 6 seconds.
-                  </p>
-                </div>
-                <button 
-                  onClick={() => setIsCustomizerOpen(false)}
-                  className="p-1 hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
-                >
-                  <span className="text-2xl font-light">&times;</span>
-                </button>
-              </div>
-
-              {urlError && (
-                <div className="mb-4 p-3 bg-red-50 border-l-2 border-red-500 text-red-700 text-xs font-medium">
-                  {urlError}
-                </div>
-              )}
-
-              {showSuccessToast && (
-                <div className="mb-4 p-3 bg-emerald-50 border-l-2 border-emerald-500 text-emerald-800 text-xs font-semibold flex items-center gap-2">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Successfully updated background images and saved to local storage!</span>
-                </div>
-              )}
-
-              <div className="space-y-6">
-                {/* Paste Raw Links Textarea */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark mb-2">
-                    Paste Image Link List (one URL per line)
-                  </label>
-                  <textarea
-                    value={pasteListInput}
-                    onChange={(e) => setPasteListInput(e.target.value)}
-                    placeholder="https://images.unsplash.com/...&#10;https://another-image-link.com/..."
-                    className="w-full h-32 px-3 py-2 text-xs border border-stone-300 rounded-none bg-stone-50 font-mono focus:outline-none focus:border-brand-teal leading-relaxed resize-none"
-                  />
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-[10px] text-stone-500">
-                      Total images: <strong className="font-semibold text-brand-teal">{heroImages.length}</strong>
-                    </span>
-                    <button
-                      onClick={handleSavePasteList}
-                      className="px-4 py-1.5 bg-brand-teal hover:bg-brand-teal-dark text-white font-bold text-xs tracking-wider uppercase transition-all cursor-pointer"
-                    >
-                      Apply & Save List
-                    </button>
-                  </div>
-                </div>
-
-                {/* Decorative Divider */}
-                <div className="relative flex py-2 items-center">
-                  <div className="flex-grow border-t border-stone-200"></div>
-                  <span className="flex-shrink mx-4 text-stone-400 text-[10px] uppercase font-bold tracking-wider">Or manage individual slides</span>
-                  <div className="flex-grow border-t border-stone-200"></div>
-                </div>
-
-                {/* Individual additions & preview list review */}
-                <div className="space-y-4">
-                  {/* Add single link input */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Add a single image URL starting with https://"
-                      value={newUrlInput}
-                      onChange={(e) => setNewUrlInput(e.target.value)}
-                      className="flex-1 px-3 py-2 text-xs border border-stone-300 rounded-none focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-800"
-                    />
-                    <button
-                      onClick={handleAddSingleUrl}
-                      className="px-4 py-2 bg-stone-900 text-white font-bold text-xs uppercase tracking-wider hover:bg-stone-800 transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add</span>
-                    </button>
-                  </div>
-
-                  {/* Previews Grid with individual removal options */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-brand-dark mb-2.5">
-                      Current Slides Preview
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[220px] overflow-y-auto pr-1">
-                      {heroImages.map((img, index) => (
-                        <div 
-                          key={index} 
-                          className={`relative border group aspect-video overflow-hidden ${currentHeroIndex === index ? "border-brand-gold ring-1 ring-brand-gold" : "border-stone-200"}`}
-                        >
-                          <img
-                            src={img}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-full object-cover filter brightness-95"
-                            onError={(e) => {
-                              // Fallback placeholder image if URL is invalid or blocked
-                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=120&q=40";
-                            }}
-                          />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 pointer-events-none">
-                            <span className="text-[10px] text-white font-bold bg-black/60 px-1.5 py-0.5 rounded-sm">Slide {index + 1}</span>
-                          </div>
-                          
-                          {/* Active indicator badge */}
-                          {currentHeroIndex === index && (
-                            <span className="absolute top-1 left-1 bg-brand-gold text-white text-[8px] font-bold px-1.5 py-0.5 uppercase tracking-widest shadow-sm">
-                              Active
-                            </span>
-                          )}
-
-                          {/* Delete button */}
-                          <button
-                            onClick={() => handleDeleteUrl(index)}
-                            className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white shadow-md transition-colors cursor-pointer"
-                            title="Delete this image"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions Bottom Bar */}
-                <div className="pt-4 border-t border-stone-100 flex justify-between items-center">
-                  <button
-                    onClick={handleResetDefaults}
-                    className="flex items-center gap-1.5 text-stone-500 hover:text-brand-teal text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Reset to Defaults</span>
-                  </button>
-
-                  <button
-                    onClick={() => setIsCustomizerOpen(false)}
-                    className="px-6 py-2 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs uppercase tracking-widest transition-colors cursor-pointer"
-                  >
-                    Close
-                  </button>
-                </div>
-
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Resort Extras & Content Customizer Modal */}
+      <ExtrasCustomizerModal 
+        isOpen={isCustomizerOpen}
+        onClose={() => setIsCustomizerOpen(false)}
+        heroImages={heroImages}
+        onSaveHeroImages={(imgs) => {
+          setHeroImages(imgs);
+          try {
+            localStorage.setItem("tamarind_hero_images", JSON.stringify(imgs));
+          } catch (e) {
+            console.error("Failed to save hero images:", e);
+          }
+        }}
+        onResetHeroImages={() => {
+          setHeroImages(defaultHeroImages);
+          try {
+            localStorage.removeItem("tamarind_hero_images");
+          } catch (e) {
+            console.error("Failed to reset hero images:", e);
+          }
+        }}
+        onVehiclesUpdated={(vehicles) => setTransferVehiclesList(vehicles)}
+        onEventsUpdated={(events) => setEventPackagesList(events)}
+      />
 
       {/* Luxury Footer component */}
       <Footer 

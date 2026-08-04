@@ -26,9 +26,9 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
         ];
       case "dawa-terrace":
         return [
-          "https://images.unsplash.com/photo-1574096079513-d8259312b785?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=800&q=80"
+          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844614/PXL_20260731_125647779_hfyoag.jpg",
+          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844584/PXL_20260729_123521019.PORTRAIT_s1z8wz.jpg"
         ];
       case "tamarind-dhow":
         return [

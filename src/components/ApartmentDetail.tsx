@@ -713,7 +713,7 @@ export default function ApartmentDetail({
                   </div>
                   <div className="mt-6 pt-4 border-t border-stone-100/80 flex items-center justify-between">
                     <div>
-                      <span className="text-stone-400 text-[9px] uppercase font-bold tracking-widest block flex items-center gap-1">
+                      <span className="text-stone-400 text-[9px] uppercase font-bold tracking-widest flex items-center gap-1">
                         {isAptPriceLive ? "Live Rate" : "Base Rate"}
                         {isAptPriceLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />}
                       </span>
