@@ -10,11 +10,25 @@ export async function initAndMigrateDatabase() {
     console.warn("⚠️ DATABASE_URL is missing! Skipping PostgreSQL initialization/migrations. Server will run in local file-store fallback mode.");
     return;
   }
-  console.log("🔄 Starting PostgreSQL Database initialization...");
   const client = getClient();
   const db = getDb();
 
   try {
+    // Check if tables already exist to avoid concurrent DDL lock contention and redundant seeding
+    const tableCheck = await client.unsafe(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'apartments'
+      );
+    `);
+    
+    if (tableCheck[0]?.exists) {
+      console.log("✅ Database schema is already initialized. Skipping migration/seeding.");
+      return;
+    }
+
+    console.log("🔄 Starting PostgreSQL Database initialization...");
     // 1. Create tables if they do not exist
     console.log("🛠️ Creating tables if not exist...");
     await client.unsafe(`

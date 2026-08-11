@@ -17,8 +17,9 @@ export function getDb() {
     }
     
     const isLocal = databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1") || databaseUrl.includes("::1");
+    const isServerless = !!process.env.VERCEL || process.env.NODE_ENV === "production";
     clientInstance = postgres(databaseUrl, {
-      max: 10,
+      max: isServerless ? 2 : 10,
       idle_timeout: 30,
       connect_timeout: 10,
       ssl: isLocal ? false : { rejectUnauthorized: false }
