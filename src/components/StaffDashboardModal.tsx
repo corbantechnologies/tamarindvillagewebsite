@@ -108,41 +108,64 @@ export default function StaffDashboardModal({
   // Fetch all staff dashboard content on open
   const loadAllDashboardData = async () => {
     setLoading(true);
+    console.log("🔍 [StaffDashboard] Opening staff dashboard, loading all live database data...");
     try {
       // 1. Fetch Inquiries
+      console.log("🔍 [StaffDashboard] Fetching inquiries from /api/inquiries...");
       const inquiriesRes = await fetch("/api/inquiries");
+      console.log("🔍 [StaffDashboard] Inquiries response status:", inquiriesRes.status);
       if (inquiriesRes.ok) {
         const data = await inquiriesRes.json();
+        console.log("🔍 [StaffDashboard] Parsed inquiries count:", data.inquiries?.length, data.inquiries);
         setInquiries(data.inquiries || []);
+      } else {
+        console.error("❌ [StaffDashboard] Failed to fetch inquiries, status:", inquiriesRes.status);
       }
 
       // 2. Fetch Apartments
+      console.log("🔍 [StaffDashboard] Fetching apartments from /api/apartments...");
       const aptsRes = await fetch("/api/apartments");
+      console.log("🔍 [StaffDashboard] Apartments response status:", aptsRes.status);
       if (aptsRes.ok) {
         const data = await aptsRes.json();
+        console.log("🔍 [StaffDashboard] Parsed apartments count:", data.apartments?.length, data.apartments);
         setApartments(data.apartments || []);
+      } else {
+        console.error("❌ [StaffDashboard] Failed to fetch apartments, status:", aptsRes.status);
       }
 
       // 3. Fetch Dining Options
+      console.log("🔍 [StaffDashboard] Fetching dining options from /api/dining...");
       const diningRes = await fetch("/api/dining");
+      console.log("🔍 [StaffDashboard] Dining response status:", diningRes.status);
       if (diningRes.ok) {
         const data = await diningRes.json();
+        console.log("🔍 [StaffDashboard] Parsed dining count:", data.dining?.length, data.dining);
         setDining(data.dining || []);
+      } else {
+        console.error("❌ [StaffDashboard] Failed to fetch dining options, status:", diningRes.status);
       }
 
       // 4. Fetch Pricing rules
+      console.log("🔍 [StaffDashboard] Fetching pricing rules from /api/pricing...");
       const pricingRes = await fetch("/api/pricing");
+      console.log("🔍 [StaffDashboard] Pricing response status:", pricingRes.status);
       if (pricingRes.ok) {
         const data = await pricingRes.json();
+        console.log("🔍 [StaffDashboard] Parsed pricing rules:", data.pricing);
         setPricing(data.pricing || { markupMultiplier: 1.0, taxRate: 8, seasonalFactor: "regular" });
+      } else {
+        console.error("❌ [StaffDashboard] Failed to fetch pricing rules, status:", pricingRes.status);
       }
 
       // 5. Load local store transfer vehicles and events
+      console.log("🔍 [StaffDashboard] Loading transfer fleet & event packages...");
       setVehicles(loadTransferVehicles());
       setEvents(loadEventPackages());
       setPasteHeroInput(heroImages.join("\n"));
+      console.log("🔍 [StaffDashboard] Local resources loaded successfully.");
     } catch (err) {
-      console.error("Failed to load dashboard data:", err);
+      console.error("❌ [StaffDashboard] Failed to load dashboard data:", err);
       showToast("Warning: Some dashboard features could not load.");
     } finally {
       setLoading(false);
