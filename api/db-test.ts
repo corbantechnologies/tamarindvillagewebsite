@@ -1,4 +1,4 @@
-import { getDb, isDbConfigured, getClient } from "../src/db/db";
+import { getDb, isDbConfigured, getClient } from "../src/db/db.js";
 
 export default async function handler(req: any, res: any) {
   try {

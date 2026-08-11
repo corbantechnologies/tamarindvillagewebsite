@@ -1,9 +1,9 @@
-import { getDb, getClient } from "./db";
-import { apartments, diningOptions, pricingRules, inquiries, globalSettings } from "./schema";
+import { getDb, getClient } from "./db.js";
+import { apartments, diningOptions, pricingRules, inquiries, globalSettings } from "./schema.js";
 import { sql } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
-import { APARTMENTS, DINING } from "../data";
+import { APARTMENTS, DINING } from "../data.js";
 
 export async function initAndMigrateDatabase() {
   if (!process.env.DATABASE_URL) {
