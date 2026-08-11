@@ -7,7 +7,7 @@ import BookingModal from "./components/BookingModal";
 import TransferModal from "./components/TransferModal";
 import EventsAndChartersSection from "./components/EventsAndChartersSection";
 import StaffDashboardModal from "./components/StaffDashboardModal";
-import { loadTransferVehicles, loadEventPackages } from "./utils/extrasStore";
+import { loadTransferVehicles, loadEventPackages, saveTransferVehicles, saveEventPackages } from "./utils/extrasStore";
 import { useLiveRates } from "./utils/profitroom";
 import { APARTMENTS, PACKAGES, DINING, FACILITIES } from "./data";
 import { 
@@ -72,6 +72,19 @@ export default function App() {
         if (dRes.ok) {
           const d = await dRes.json();
           if (d.dining) setDiningOptions(d.dining);
+        }
+
+        const sRes = await fetch("/api/settings");
+        if (sRes.ok) {
+          const d = await sRes.json();
+          if (d.transfer_vehicles) {
+            setTransferVehiclesList(d.transfer_vehicles);
+            saveTransferVehicles(d.transfer_vehicles);
+          }
+          if (d.event_packages) {
+            setEventPackagesList(d.event_packages);
+            saveEventPackages(d.event_packages);
+          }
         }
       } catch (err) {
         console.warn("Could not sync with live server db, using static defaults.", err);

@@ -41,3 +41,9 @@ export const inquiries = pgTable("inquiries", {
   status: text("status").notNull().default("Pending"),
   createdAt: text("created_at").notNull(),
 });
+
+export const globalSettings = pgTable("global_settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+});
+

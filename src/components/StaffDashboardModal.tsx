@@ -16,6 +16,37 @@ import {
   saveEventPackages 
 } from "../utils/extrasStore";
 
+const DEFAULT_BOARDING_PACKAGES = [
+  {
+    id: "self_catering",
+    name: "Self Catering",
+    slogan: "Prepare your own Swahili feasts using local Mombasa ingredients",
+    rateUsd: 0,
+    features: ["Fully Equipped Modern Kitchen", "Pre-stocked Pantry Option", "Grocery Delivery Available"]
+  },
+  {
+    id: "bed_breakfast",
+    name: "Bed & Breakfast",
+    slogan: "Start each coastal morning with a delicious gourmet breakfast at the restaurant",
+    rateUsd: 15,
+    features: ["Full Tamarind Breakfast", "Fresh Kenyan Coffee & Juices", "Oceanfront Seating Included"]
+  },
+  {
+    id: "half_board",
+    name: "Half Board",
+    slogan: "Indulge in both premium breakfast and your choice of lunch or sunset dinner daily",
+    rateUsd: 45,
+    features: ["Full Breakfast Included", "Multi-Course Seafood Dinner / Lunch", "Non-Alcoholic Dawa Cocktail"]
+  },
+  {
+    id: "full_board",
+    name: "Full Board (VVIP Culinary)",
+    slogan: "Ultimate luxury dining package featuring breakfast, lunch, and spectacular seafood dinner daily",
+    rateUsd: 75,
+    features: ["All Daily Meals", "A La Carte Dining at Tamarind Restaurant", "Signature Tamarind Dhow Seafood Platter", "Priority Seating & Butler Assistance"]
+  }
+];
+
 interface InquiryData {
   id: string;
   type: "general" | "apartment" | "dining";
@@ -95,6 +126,11 @@ export default function StaffDashboardModal({
   // Editing forms state
   const [editingApartment, setEditingApartment] = useState<ApartmentType | null>(null);
   const [editingDining, setEditingDining] = useState<DiningExperience | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<TransferVehicle | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EventPackage | null>(null);
+  const [boardingPackages, setBoardingPackages] = useState<any[]>([]);
+  const [editingBoarding, setEditingBoarding] = useState<any | null>(null);
+  const [extrasSubTab, setExtrasSubTab] = useState<"transfers" | "events" | "boarding">("transfers");
   
   // Transfers/events customizer states (retained and fully integrated)
   const [vehicles, setVehicles] = useState<TransferVehicle[]>([]);
@@ -178,12 +214,34 @@ export default function StaffDashboardModal({
         setDbWarning(activeDbError);
       }
 
-      // 5. Load local store transfer vehicles and events
-      console.log("🔍 [StaffDashboard] Loading transfer fleet & event packages...");
-      setVehicles(loadTransferVehicles());
-      setEvents(loadEventPackages());
+      // 5. Fetch Global Settings
+      console.log("🔍 [StaffDashboard] Fetching dynamic global settings from /api/settings...");
+      try {
+        const settingsRes = await fetch("/api/settings");
+        if (settingsRes.ok) {
+          const sData = await settingsRes.json();
+          if (sData.transfer_vehicles) setVehicles(sData.transfer_vehicles);
+          else setVehicles(loadTransferVehicles());
+
+          if (sData.event_packages) setEvents(sData.event_packages);
+          else setEvents(loadEventPackages());
+
+          if (sData.boarding_packages) setBoardingPackages(sData.boarding_packages);
+          else setBoardingPackages(DEFAULT_BOARDING_PACKAGES);
+        } else {
+          setVehicles(loadTransferVehicles());
+          setEvents(loadEventPackages());
+          setBoardingPackages(DEFAULT_BOARDING_PACKAGES);
+        }
+      } catch (settingsErr) {
+        console.warn("Could not load dynamic settings from API, using local fallbacks:", settingsErr);
+        setVehicles(loadTransferVehicles());
+        setEvents(loadEventPackages());
+        setBoardingPackages(DEFAULT_BOARDING_PACKAGES);
+      }
+
       setPasteHeroInput(heroImages.join("\n"));
-      console.log("🔍 [StaffDashboard] Local resources loaded successfully.");
+      console.log("🔍 [StaffDashboard] Local and cloud resources loaded successfully.");
     } catch (err) {
       console.error("❌ [StaffDashboard] Failed to load dashboard data:", err);
       showToast("Warning: Some dashboard features could not load.");
@@ -381,11 +439,54 @@ export default function StaffDashboardModal({
   };
 
   // --- VEHICLE ACTIONS ---
-  const handleSaveVehiclesList = (updated: TransferVehicle[]) => {
+  const handleSaveVehiclesList = async (updated: TransferVehicle[]) => {
     setVehicles(updated);
     saveTransferVehicles(updated);
     if (onVehiclesUpdated) onVehiclesUpdated(updated);
-    showToast("Transfer fleet saved!");
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "transfer_vehicles", value: updated })
+      });
+      showToast("Transfer fleet updated successfully!");
+    } catch (err) {
+      console.error("Failed to save transfers to database:", err);
+      showToast("Transfer fleet updated locally.");
+    }
+  };
+
+  // --- EVENTS ACTIONS ---
+  const handleSaveEventsList = async (updated: EventPackage[]) => {
+    setEvents(updated);
+    saveEventPackages(updated);
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "event_packages", value: updated })
+      });
+      showToast("Event packages updated successfully!");
+    } catch (err) {
+      console.error("Failed to save event packages to database:", err);
+      showToast("Event packages updated locally.");
+    }
+  };
+
+  // --- BOARDING PACKAGES ACTIONS ---
+  const handleSaveBoardingList = async (updated: any[]) => {
+    setBoardingPackages(updated);
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "boarding_packages", value: updated })
+      });
+      showToast("Boarding packages updated successfully!");
+    } catch (err) {
+      console.error("Failed to save boarding packages to database:", err);
+      showToast("Boarding packages updated locally.");
+    }
   };
 
   // --- HERO SLIDESHOW ACTIONS ---
@@ -1459,74 +1560,649 @@ export default function StaffDashboardModal({
                 </div>
               )}
 
-              {/* --- TAB 5: FLEET & EVENTS (FROM PREVIOUS CUSTOMIZER) --- */}
+              {/* --- TAB 5: EXTRAS & PACKAGES MANAGER --- */}
               {activeTab === "transfers" && (
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">Chauffeur Transfer Fleet Manager</h3>
-                    <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">Manage operational vehicles, passenger luggage caps, and private airport pick-up tariffs</p>
-                  </div>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-stone-200 pb-4 gap-4">
+                    <div>
+                      <h3 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">Extras & Packages Manager</h3>
+                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">Edit transfers chauffeur fleet, private events, and boarding plans in real-time</p>
+                    </div>
 
-                  <div className="bg-white p-6 border border-stone-200">
-                    <p className="text-stone-600 text-xs mb-4 leading-relaxed">
-                      Custom fleet additions, rates, and detailed passenger capacity settings. This module operates and syncs directly with local client caches.
-                    </p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {vehicles.map((v, idx) => (
-                        <div key={idx} className="flex gap-4 p-4 bg-stone-50 border border-stone-200 text-xs">
-                          <img src={v.image} alt={v.name} className="w-20 h-20 object-cover border" referrerPolicy="no-referrer" />
-                          <div className="flex-1 space-y-1">
-                            <p className="font-bold text-stone-900 uppercase">{v.name}</p>
-                            <p className="text-[10px] text-stone-500">{v.tagline}</p>
-                            <div className="text-[10px] font-semibold text-stone-600">
-                              Cap: {v.maxPassengers} Pax • {v.maxLuggage} Bags • Rate: ${v.rateUsd}/trip
-                            </div>
-                            <button
-                              onClick={() => {
-                                const list = vehicles.filter((_, i) => i !== idx);
-                                handleSaveVehiclesList(list);
-                              }}
-                              className="text-[9px] text-rose-600 font-bold uppercase hover:underline mt-1.5 block cursor-pointer"
-                            >
-                              Remove Vehicle
-                            </button>
-                          </div>
-                        </div>
+                    {/* SUB TABS NAVIGATION */}
+                    <div className="flex border border-stone-200 bg-stone-50 p-1 text-[10px] font-bold uppercase tracking-wider">
+                      {(["transfers", "events", "boarding"] as const).map(sub => (
+                        <button
+                          key={sub}
+                          type="button"
+                          onClick={() => {
+                            setExtrasSubTab(sub);
+                            setEditingVehicle(null);
+                            setEditingEvent(null);
+                            setEditingBoarding(null);
+                          }}
+                          className={`px-3 py-1.5 transition-colors cursor-pointer ${
+                            extrasSubTab === sub
+                              ? "bg-stone-900 text-brand-teal font-black"
+                              : "text-stone-500 hover:text-stone-900"
+                          }`}
+                        >
+                          {sub === "transfers" ? "Airport Fleet" : sub === "events" ? "Private Events" : "Boarding Plans"}
+                        </button>
                       ))}
                     </div>
-
-                    <div className="h-px bg-stone-100 my-6" />
-
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => {
-                          const name = prompt("Enter vehicle brand/model:");
-                          const image = prompt("Enter image URL:");
-                          const tagline = prompt("Enter vehicle tagline/description:");
-                          const rateUsd = Number(prompt("Enter USD transfer charge per way:"));
-                          if (name && image) {
-                            const newV: TransferVehicle = {
-                              id: "vehicle_" + Date.now(),
-                              name,
-                              image,
-                              tagline: tagline || "Coastal Standard Comfort",
-                              maxPassengers: 4,
-                              maxLuggage: 3,
-                              rateUsd: rateUsd || 35,
-                              rateKes: (rateUsd || 35) * 140,
-                              features: ["Air-conditioned", "Complimentary Water"]
-                            };
-                            handleSaveVehiclesList([...vehicles, newV]);
-                          }
-                        }}
-                        className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Add New Vehicle</span>
-                      </button>
-                    </div>
                   </div>
+
+                  {/* === SUB TAB 1: AIRPORT CHAUFFEUR FLEET === */}
+                  {extrasSubTab === "transfers" && (
+                    <div className="space-y-6">
+                      {editingVehicle ? (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!editingVehicle) return;
+                            let updatedList;
+                            if (vehicles.some(v => v.id === editingVehicle.id)) {
+                              updatedList = vehicles.map(v => v.id === editingVehicle.id ? editingVehicle : v);
+                            } else {
+                              updatedList = [...vehicles, editingVehicle];
+                            }
+                            handleSaveVehiclesList(updatedList);
+                            setEditingVehicle(null);
+                          }}
+                          className="bg-white p-6 border border-stone-200 space-y-4 max-w-3xl"
+                        >
+                          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                            <span className="font-bold text-stone-700 uppercase tracking-widest text-[10px] flex items-center gap-1">
+                              <Car className="w-4 h-4 text-brand-teal" /> {vehicles.some(v => v.id === editingVehicle.id) ? "Editing" : "Adding"} Vehicle
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingVehicle(null)}
+                              className="text-stone-400 hover:text-stone-700 font-bold text-xs uppercase cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Vehicle Brand / Model</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingVehicle.name}
+                                onChange={(e) => setEditingVehicle({ ...editingVehicle, name: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="VIP Alphard / Vellfire"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Vehicle Image Link</label>
+                              <input
+                                type="url"
+                                required
+                                value={editingVehicle.image}
+                                onChange={(e) => setEditingVehicle({ ...editingVehicle, image: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="https://images.unsplash.com/photo-..."
+                              />
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Tagline / Short Descriptor</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingVehicle.tagline}
+                                onChange={(e) => setEditingVehicle({ ...editingVehicle, tagline: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="First-class executive seating with extra legroom & luxury finish"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Max Passengers</label>
+                              <input
+                                type="number"
+                                required
+                                min="1"
+                                value={editingVehicle.maxPassengers}
+                                onChange={(e) => setEditingVehicle({ ...editingVehicle, maxPassengers: Number(e.target.value) })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Max Luggage Bags</label>
+                              <input
+                                type="number"
+                                required
+                                min="0"
+                                value={editingVehicle.maxLuggage}
+                                onChange={(e) => setEditingVehicle({ ...editingVehicle, maxLuggage: Number(e.target.value) })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">One-Way Tariff (USD)</label>
+                              <input
+                                type="number"
+                                required
+                                min="0"
+                                value={editingVehicle.rateUsd}
+                                onChange={(e) => setEditingVehicle({ 
+                                  ...editingVehicle, 
+                                  rateUsd: Number(e.target.value),
+                                  rateKes: Number(e.target.value) * 140 
+                                })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Onboard Features (Comma-separated)</label>
+                              <input
+                                type="text"
+                                value={(editingVehicle.features || []).join(", ")}
+                                onChange={(e) => setEditingVehicle({ 
+                                  ...editingVehicle, 
+                                  features: e.target.value.split(",").map(s => s.trim()).filter(Boolean) 
+                                })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Air-Conditioned, Complimentary Water, Free Wi-Fi"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-3 pt-3 border-t border-stone-100">
+                            <button
+                              type="button"
+                              onClick={() => setEditingVehicle(null)}
+                              className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold uppercase tracking-wider text-[10px] cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-5 py-2 bg-brand-teal text-brand-dark font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
+                            >
+                              Save Vehicle Details
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center bg-stone-50 p-4 border border-stone-200">
+                            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Dynamic transfer fleet: {vehicles.length} Active Vehicles</span>
+                            <button
+                              onClick={() => setEditingVehicle({
+                                id: "vehicle_" + Date.now(),
+                                name: "",
+                                tagline: "",
+                                maxPassengers: 4,
+                                maxLuggage: 3,
+                                rateUsd: 35,
+                                rateKes: 4900,
+                                image: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
+                                features: ["Air-Conditioned", "Complimentary Water"]
+                              })}
+                              className="px-3 py-1.5 bg-stone-900 text-brand-teal font-bold uppercase text-[9px] tracking-widest flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add New Vehicle</span>
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {vehicles.map((v, idx) => (
+                              <div key={v.id || idx} className="flex gap-4 p-4 bg-white border border-stone-200 text-xs shadow-sm">
+                                <img src={v.image} alt={v.name} className="w-20 h-20 object-cover border border-stone-100 shrink-0" referrerPolicy="no-referrer" />
+                                <div className="flex-1 space-y-1 min-w-0">
+                                  <p className="font-bold text-stone-900 uppercase truncate">{v.name}</p>
+                                  <p className="text-[10px] text-stone-500 leading-tight line-clamp-2">{v.tagline}</p>
+                                  <div className="text-[10px] font-semibold text-stone-600 pt-1">
+                                    Cap: {v.maxPassengers} Pax • {v.maxLuggage} Bags • Rate: ${v.rateUsd}/trip
+                                  </div>
+                                  <div className="flex gap-3 pt-2 text-[9px] font-bold uppercase">
+                                    <button
+                                      onClick={() => setEditingVehicle({ ...v })}
+                                      className="text-stone-700 hover:text-brand-teal transition-colors"
+                                    >
+                                      Edit Details
+                                    </button>
+                                    <span className="text-stone-200">|</span>
+                                    <button
+                                      onClick={() => {
+                                        if (confirm("Are you sure you want to remove this vehicle?")) {
+                                          const list = vehicles.filter((_, i) => i !== idx);
+                                          handleSaveVehiclesList(list);
+                                        }
+                                      }}
+                                      className="text-rose-600 hover:text-rose-800 transition-colors"
+                                    >
+                                      Remove Vehicle
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* === SUB TAB 2: PRIVATE EVENTS & CHARTERS === */}
+                  {extrasSubTab === "events" && (
+                    <div className="space-y-6">
+                      {editingEvent ? (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!editingEvent) return;
+                            let updatedList;
+                            if (events.some(ev => ev.id === editingEvent.id)) {
+                              updatedList = events.map(ev => ev.id === editingEvent.id ? editingEvent : ev);
+                            } else {
+                              updatedList = [...events, editingEvent];
+                            }
+                            handleSaveEventsList(updatedList);
+                            setEditingEvent(null);
+                          }}
+                          className="bg-white p-6 border border-stone-200 space-y-4 max-w-3xl"
+                        >
+                          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                            <span className="font-bold text-stone-700 uppercase tracking-widest text-[10px] flex items-center gap-1">
+                              <Heart className="w-4 h-4 text-brand-teal" /> {events.some(ev => ev.id === editingEvent.id) ? "Editing" : "Adding"} Event Package
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingEvent(null)}
+                              className="text-stone-400 hover:text-stone-700 font-bold text-xs uppercase cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Event Package Title</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingEvent.title}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Cliffside Weddings & Vows"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Presentation Image Link</label>
+                              <input
+                                type="url"
+                                required
+                                value={editingEvent.image}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, image: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="https://images.unsplash.com/photo-..."
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Subheading Tag (e.g., Oceanfront Ceremonies)</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingEvent.tag}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, tag: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Oceanfront Ceremonies"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Tag Icon Style</label>
+                              <select
+                                value={editingEvent.tagIcon}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, tagIcon: e.target.value as any })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                              >
+                                <option value="heart">Heart / Romantic</option>
+                                <option value="ship">Ship / Marine Charter</option>
+                                <option value="briefcase">Briefcase / Corporate</option>
+                                <option value="sparkles">Sparkles / Celebration</option>
+                              </select>
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Package Description</label>
+                              <textarea
+                                required
+                                rows={3}
+                                value={editingEvent.description}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, description: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal leading-relaxed"
+                                placeholder="Exchange vows overlooking Tudor Creek on our cliffside garden lawn..."
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Guest Capacity (e.g. Up to 200 Guests)</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingEvent.capacityText}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, capacityText: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Up to 200 Guests"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Catering Text (e.g. Seafood Buffet)</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingEvent.cateringText}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, cateringText: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Custom Seafood & Swahili Buffet"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Main Highlight Perk (e.g. Honeymoon upgrade)</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingEvent.extraHighlight}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, extraHighlight: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Includes Honeymoon Penthouse Upgrade"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">CTA Button Text (e.g. Book Wedding)</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingEvent.ctaText || "Inquire Dates"}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, ctaText: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                              />
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Features list (Comma-separated)</label>
+                              <input
+                                type="text"
+                                value={(editingEvent.features || []).join(", ")}
+                                onChange={(e) => setEditingEvent({ 
+                                  ...editingEvent, 
+                                  features: e.target.value.split(",").map(s => s.trim()).filter(Boolean) 
+                                })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Lawn capacity 200 guests, Plated seafood, Penthouse accommodation"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-3 pt-3 border-t border-stone-100">
+                            <button
+                              type="button"
+                              onClick={() => setEditingEvent(null)}
+                              className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold uppercase tracking-wider text-[10px] cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-5 py-2 bg-brand-teal text-brand-dark font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
+                            >
+                              Save Event Package
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center bg-stone-50 p-4 border border-stone-200">
+                            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Dynamic Event Offers: {events.length} Packages</span>
+                            <button
+                              onClick={() => setEditingEvent({
+                                id: "event_" + Date.now(),
+                                title: "",
+                                tag: "",
+                                tagIcon: "sparkles",
+                                description: "",
+                                capacityText: "Up to 100 Guests",
+                                cateringText: "Custom Catering",
+                                extraHighlight: "Dedicated Events Coordinator",
+                                ctaText: "Inquire Event",
+                                image: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80",
+                                features: ["Dedicated event venue", "Bespoke Swahili decoration"]
+                              })}
+                              className="px-3 py-1.5 bg-stone-900 text-brand-teal font-bold uppercase text-[9px] tracking-widest flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add New Package</span>
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {events.map((ev, idx) => (
+                              <div key={ev.id || idx} className="bg-white border border-stone-200 flex flex-col shadow-sm">
+                                <img src={ev.image} alt={ev.title} className="w-full h-40 object-cover border-b border-stone-150" referrerPolicy="no-referrer" />
+                                <div className="p-4 flex-1 flex flex-col justify-between space-y-3 min-w-0">
+                                  <div>
+                                    <div className="flex justify-between items-start gap-1">
+                                      <p className="font-bold text-stone-900 uppercase truncate leading-snug">{ev.title}</p>
+                                      <span className="text-[9px] px-1.5 py-0.5 bg-stone-100 text-stone-600 font-bold uppercase tracking-wider shrink-0">{ev.tag}</span>
+                                    </div>
+                                    <p className="text-[10px] text-stone-500 leading-normal line-clamp-3 mt-1.5">{ev.description}</p>
+                                  </div>
+                                  <div className="flex gap-3 text-[9px] font-bold uppercase border-t border-stone-100 pt-2.5">
+                                    <button
+                                      onClick={() => setEditingEvent({ ...ev })}
+                                      className="text-stone-700 hover:text-brand-teal transition-colors"
+                                    >
+                                      Edit Details
+                                    </button>
+                                    <span className="text-stone-200">|</span>
+                                    <button
+                                      onClick={() => {
+                                        if (confirm("Are you sure you want to delete this event package?")) {
+                                          const list = events.filter((_, i) => i !== idx);
+                                          handleSaveEventsList(list);
+                                        }
+                                      }}
+                                      className="text-rose-600 hover:text-rose-800 transition-colors"
+                                    >
+                                      Delete Package
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* === SUB TAB 3: BOARDING UPGRADES === */}
+                  {extrasSubTab === "boarding" && (
+                    <div className="space-y-6">
+                      {editingBoarding ? (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!editingBoarding) return;
+                            let updatedList;
+                            if (boardingPackages.some(bp => bp.id === editingBoarding.id)) {
+                              updatedList = boardingPackages.map(bp => bp.id === editingBoarding.id ? editingBoarding : bp);
+                            } else {
+                              updatedList = [...boardingPackages, editingBoarding];
+                            }
+                            handleSaveBoardingList(updatedList);
+                            setEditingBoarding(null);
+                          }}
+                          className="bg-white p-6 border border-stone-200 space-y-4 max-w-3xl"
+                        >
+                          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                            <span className="font-bold text-stone-700 uppercase tracking-widest text-[10px] flex items-center gap-1">
+                              <Utensils className="w-4 h-4 text-brand-teal" /> {boardingPackages.some(bp => bp.id === editingBoarding.id) ? "Editing" : "Adding"} Boarding Plan
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingBoarding(null)}
+                              className="text-stone-400 hover:text-stone-700 font-bold text-xs uppercase cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Board Plan Name</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingBoarding.name}
+                                onChange={(e) => setEditingBoarding({ ...editingBoarding, name: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Gourmet Half Board"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Daily Tariff Per Adult (USD)</label>
+                              <input
+                                type="number"
+                                required
+                                min="0"
+                                value={editingBoarding.rateUsd}
+                                onChange={(e) => setEditingBoarding({ ...editingBoarding, rateUsd: Number(e.target.value) })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                              />
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Slogan / Short Descriptor</label>
+                              <input
+                                type="text"
+                                required
+                                value={editingBoarding.slogan}
+                                onChange={(e) => setEditingBoarding({ ...editingBoarding, slogan: e.target.value })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Indulge in both premium breakfast and your choice of sunset dinners daily"
+                              />
+                            </div>
+
+                            <div className="md:col-span-2">
+                              <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Included perks & benefits (Comma-separated)</label>
+                              <input
+                                type="text"
+                                value={(editingBoarding.features || []).join(", ")}
+                                onChange={(e) => setEditingBoarding({ 
+                                  ...editingBoarding, 
+                                  features: e.target.value.split(",").map(s => s.trim()).filter(Boolean) 
+                                })}
+                                className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                                placeholder="Full Breakfast, Seafood dinner daily, Signature Dawa cocktail"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end gap-3 pt-3 border-t border-stone-100">
+                            <button
+                              type="button"
+                              onClick={() => setEditingBoarding(null)}
+                              className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold uppercase tracking-wider text-[10px] cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-5 py-2 bg-brand-teal text-brand-dark font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
+                            >
+                              Save Boarding Plan
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center bg-stone-50 p-4 border border-stone-200">
+                            <span className="text-[10px] text-stone-500 font-bold uppercase tracking-wider">Dynamic Boarding Options: {boardingPackages.length} Plans</span>
+                            <button
+                              onClick={() => setEditingBoarding({
+                                id: "board_" + Date.now(),
+                                name: "",
+                                slogan: "",
+                                rateUsd: 25,
+                                features: ["Gourmet Meals", "Beverages included"]
+                              })}
+                              className="px-3 py-1.5 bg-stone-900 text-brand-teal font-bold uppercase text-[9px] tracking-widest flex items-center gap-1 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add Board Plan</span>
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {boardingPackages.map((bp, idx) => (
+                              <div key={bp.id || idx} className="bg-white border border-stone-200 p-4 flex flex-col justify-between shadow-sm text-xs space-y-3">
+                                <div>
+                                  <div className="flex justify-between items-start gap-1">
+                                    <p className="font-bold text-stone-900 uppercase truncate">{bp.name}</p>
+                                    <span className="font-serif text-xs font-bold text-brand-teal shrink-0">
+                                      {bp.rateUsd === 0 ? "Free Supplement" : `${bp.rateUsd}/Day`}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-stone-500 leading-normal mt-1">{bp.slogan}</p>
+                                  <div className="flex flex-wrap gap-1 mt-2.5">
+                                    {(bp.features || []).map((f: string, i: number) => (
+                                      <span key={i} className="bg-stone-50 border border-stone-150 px-2 py-0.5 text-[9px] text-stone-600 font-semibold rounded-none">
+                                        ✓ {f}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="flex gap-3 text-[9px] font-bold uppercase border-t border-stone-100 pt-2.5">
+                                  <button
+                                    onClick={() => setEditingBoarding({ ...bp })}
+                                    className="text-stone-700 hover:text-brand-teal transition-colors"
+                                  >
+                                    Edit Plan
+                                  </button>
+                                  {bp.id !== "self_catering" && (
+                                    <>
+                                      <span className="text-stone-200">|</span>
+                                      <button
+                                        onClick={() => {
+                                          if (confirm("Are you sure you want to remove this boarding option?")) {
+                                            const list = boardingPackages.filter((_, i) => i !== idx);
+                                            handleSaveBoardingList(list);
+                                          }
+                                        }}
+                                        className="text-rose-600 hover:text-rose-800 transition-colors"
+                                      >
+                                        Delete Plan
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
