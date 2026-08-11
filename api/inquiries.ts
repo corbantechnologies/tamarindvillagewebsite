@@ -1,9 +1,11 @@
 import { getDb, isDbConfigured } from "../src/db/db";
+import { ensureDatabaseSynced } from "../src/db/migrate";
 import { inquiries as inquiriesTable } from "../src/db/schema";
 import { eq } from "drizzle-orm";
 
 export default async function handler(req: any, res: any) {
   try {
+    await ensureDatabaseSynced();
     const { method } = req;
 
     if (method === "GET") {
@@ -12,8 +14,8 @@ export default async function handler(req: any, res: any) {
       }
       const db = getDb();
       const data = await db.select().from(inquiriesTable);
-      // Order inquiries so newest show up first
-      const sorted = [...data].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      // Order inquiries so newest show up first (defensively handling null/undefined timestamps)
+      const sorted = [...data].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
       return res.status(200).json({ success: true, inquiries: sorted });
     } 
     

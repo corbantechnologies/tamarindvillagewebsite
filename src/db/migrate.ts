@@ -3,6 +3,7 @@ import { apartments, diningOptions, pricingRules, inquiries } from "./schema";
 import { sql } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
+import { APARTMENTS, DINING } from "../data";
 
 export async function initAndMigrateDatabase() {
   if (!process.env.DATABASE_URL) {
@@ -93,6 +94,21 @@ export async function initAndMigrateDatabase() {
       }
     }
 
+    // Fall back to default static datasets if data_store.json is absent (e.g. on Vercel)
+    if (!seedData) {
+      console.log("🌱 data_store.json not found on serverless runtime. Hydrating database using default datasets.");
+      seedData = {
+        apartments: APARTMENTS,
+        dining: DINING,
+        pricing: {
+          markupMultiplier: 1.0,
+          taxRate: 8,
+          seasonalFactor: "regular"
+        },
+        inquiries: []
+      };
+    }
+
     // A. Seed Apartments
     if (apartmentsCount === 0 && seedData?.apartments?.length > 0) {
       console.log("🌱 Seeding apartments table...");
@@ -171,4 +187,22 @@ export async function initAndMigrateDatabase() {
     console.error("❌ Database initialization / migration failed:", error);
     throw error;
   }
+}
+
+let migrationPromise: Promise<void> | null = null;
+
+export async function ensureDatabaseSynced() {
+  if (!process.env.DATABASE_URL) return;
+  if (!migrationPromise) {
+    migrationPromise = (async () => {
+      try {
+        await initAndMigrateDatabase();
+      } catch (err) {
+        console.error("Lazy database migration failed:", err);
+        migrationPromise = null; // Reset to allow retrying on subsequent requests if it failed
+        throw err;
+      }
+    })();
+  }
+  await migrationPromise;
 }

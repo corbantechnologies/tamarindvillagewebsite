@@ -1,4 +1,5 @@
 import { getDb, isDbConfigured } from "../src/db/db";
+import { ensureDatabaseSynced } from "../src/db/migrate";
 import { apartments as apartmentsTable } from "../src/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -112,6 +113,7 @@ const DEFAULT_APARTMENTS = [
 
 export default async function handler(req: any, res: any) {
   try {
+    await ensureDatabaseSynced();
     const { method } = req;
 
     if (method === "GET") {

@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { getDb, isDbConfigured } from "../src/db/db";
+import { ensureDatabaseSynced } from "../src/db/migrate";
 import { inquiries as inquiriesTable } from "../src/db/schema";
 
 export default async function handler(req: any, res: any) {
@@ -10,6 +11,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    await ensureDatabaseSynced();
     const { type, payload } = req.body;
     if (!type || !payload) {
       return res.status(400).json({ error: "Incomplete request. Type and payload are required." });

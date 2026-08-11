@@ -17,11 +17,13 @@ export function getDb() {
     }
     
     // Configure pool with a connection timeout and max connections
+    const isLocal = databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1") || databaseUrl.includes("::1");
     poolInstance = new pg.Pool({
       connectionString: databaseUrl,
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
+      ssl: isLocal ? false : { rejectUnauthorized: false }
     });
 
     poolInstance.on("error", (err) => {
