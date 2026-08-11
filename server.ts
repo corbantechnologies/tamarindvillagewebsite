@@ -11,7 +11,7 @@ import { apartments as apartmentsTable, diningOptions as diningOptionsTable, pri
 import { initAndMigrateDatabase, ensureDatabaseSynced } from "./src/db/migrate";
 import { eq } from "drizzle-orm";
 
-dotenv.config();
+dotenv.config({ path: fs.existsSync(".env.local") ? ".env.local" : ".env" });
 
 // DATA STORE INITIALIZATION
 const DATA_STORE_PATH = path.join(process.cwd(), "data_store.json");
