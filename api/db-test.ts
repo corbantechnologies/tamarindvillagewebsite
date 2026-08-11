@@ -1,4 +1,4 @@
-import { getDb, isDbConfigured, getPool } from "../src/db/db";
+import { getDb, isDbConfigured, getClient } from "../src/db/db";
 
 export default async function handler(req: any, res: any) {
   try {
@@ -16,17 +16,17 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Try a direct pool query first (raw pg)
-    const pool = getPool();
+    // Try a direct client query first (raw postgres)
+    const client = getClient();
     let pgResult: any = null;
     let pgError: any = null;
     
     try {
       const start = Date.now();
-      const resQuery = await pool.query("SELECT 1 as test_val");
+      const resQuery = await client.unsafe("SELECT 1 as test_val");
       const duration = Date.now() - start;
       pgResult = {
-        rows: resQuery.rows,
+        rows: resQuery,
         durationMs: duration
       };
     } catch (err: any) {
@@ -42,12 +42,12 @@ export default async function handler(req: any, res: any) {
     let drizzleError: any = null;
     try {
       const db = getDb();
-      // Try to query schema if possible, or just a raw sql helper
       const start = Date.now();
+      // Execute standard Drizzle-level raw command
       const result = await db.execute("SELECT 1 + 1 as addition");
       const duration = Date.now() - start;
       drizzleResult = {
-        rows: result.rows,
+        rows: result,
         durationMs: duration
       };
     } catch (err: any) {
@@ -65,7 +65,7 @@ export default async function handler(req: any, res: any) {
         nodeVersion: process.version,
         platform: process.platform,
       },
-      pg: {
+      postgres: {
         result: pgResult,
         error: pgError
       },

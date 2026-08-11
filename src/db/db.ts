@@ -1,9 +1,9 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
 let dbInstance: ReturnType<typeof drizzle<typeof schema>> | null = null;
-let poolInstance: pg.Pool | null = null;
+let clientInstance: ReturnType<typeof postgres> | null = null;
 
 export function isDbConfigured(): boolean {
   return !!process.env.DATABASE_URL;
@@ -16,28 +16,23 @@ export function getDb() {
       throw new Error("DATABASE_URL environment variable is required but not defined.");
     }
     
-    // Configure pool with a connection timeout and max connections
     const isLocal = databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1") || databaseUrl.includes("::1");
-    poolInstance = new pg.Pool({
-      connectionString: databaseUrl,
+    clientInstance = postgres(databaseUrl, {
       max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      idle_timeout: 30,
+      connect_timeout: 10,
       ssl: isLocal ? false : { rejectUnauthorized: false }
     });
 
-    poolInstance.on("error", (err) => {
-      console.error("Unexpected error on idle database client:", err);
-    });
-
-    dbInstance = drizzle(poolInstance, { schema });
+    dbInstance = drizzle(clientInstance, { schema });
   }
   return dbInstance;
 }
 
-export function getPool() {
-  if (!poolInstance) {
+export function getClient() {
+  if (!clientInstance) {
     getDb();
   }
-  return poolInstance!;
+  return clientInstance!;
 }
+

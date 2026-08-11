@@ -1,4 +1,4 @@
-import { getDb, getPool } from "./db";
+import { getDb, getClient } from "./db";
 import { apartments, diningOptions, pricingRules, inquiries } from "./schema";
 import { sql } from "drizzle-orm";
 import * as fs from "fs";
@@ -11,13 +11,13 @@ export async function initAndMigrateDatabase() {
     return;
   }
   console.log("🔄 Starting PostgreSQL Database initialization...");
-  const pool = getPool();
+  const client = getClient();
   const db = getDb();
 
   try {
     // 1. Create tables if they do not exist
     console.log("🛠️ Creating tables if not exist...");
-    await pool.query(`
+    await client.unsafe(`
       CREATE TABLE IF NOT EXISTS apartments (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -36,7 +36,7 @@ export async function initAndMigrateDatabase() {
       );
     `);
 
-    await pool.query(`
+    await client.unsafe(`
       CREATE TABLE IF NOT EXISTS dining_options (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
@@ -48,7 +48,7 @@ export async function initAndMigrateDatabase() {
       );
     `);
 
-    await pool.query(`
+    await client.unsafe(`
       CREATE TABLE IF NOT EXISTS pricing_rules (
         id TEXT PRIMARY KEY,
         markup_multiplier DOUBLE PRECISION NOT NULL,
@@ -57,7 +57,7 @@ export async function initAndMigrateDatabase() {
       );
     `);
 
-    await pool.query(`
+    await client.unsafe(`
       CREATE TABLE IF NOT EXISTS inquiries (
         id TEXT PRIMARY KEY,
         type TEXT NOT NULL,
@@ -70,17 +70,17 @@ export async function initAndMigrateDatabase() {
     console.log("✅ Database schema is up-to-date.");
 
     // 2. Check if tables are empty and seed them
-    const apartmentsCountRes = await pool.query("SELECT COUNT(*) FROM apartments");
-    const apartmentsCount = parseInt(apartmentsCountRes.rows[0].count, 10);
+    const apartmentsCountRes = await client.unsafe("SELECT COUNT(*) FROM apartments");
+    const apartmentsCount = parseInt(apartmentsCountRes[0]?.count || "0", 10);
 
-    const diningCountRes = await pool.query("SELECT COUNT(*) FROM dining_options");
-    const diningCount = parseInt(diningCountRes.rows[0].count, 10);
+    const diningCountRes = await client.unsafe("SELECT COUNT(*) FROM dining_options");
+    const diningCount = parseInt(diningCountRes[0]?.count || "0", 10);
 
-    const pricingCountRes = await pool.query("SELECT COUNT(*) FROM pricing_rules");
-    const pricingCount = parseInt(pricingCountRes.rows[0].count, 10);
+    const pricingCountRes = await client.unsafe("SELECT COUNT(*) FROM pricing_rules");
+    const pricingCount = parseInt(pricingCountRes[0]?.count || "0", 10);
 
-    const inquiriesCountRes = await pool.query("SELECT COUNT(*) FROM inquiries");
-    const inquiriesCount = parseInt(inquiriesCountRes.rows[0].count, 10);
+    const inquiriesCountRes = await client.unsafe("SELECT COUNT(*) FROM inquiries");
+    const inquiriesCount = parseInt(inquiriesCountRes[0]?.count || "0", 10);
 
     // Load original data_store.json if available
     let seedData: any = null;
