@@ -3,14 +3,213 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { Resend } from "resend";
 import dotenv from "dotenv";
+import fs from "fs";
 
 dotenv.config();
+
+// DATA STORE INITIALIZATION
+const DATA_STORE_PATH = path.join(process.cwd(), "data_store.json");
+
+const DEFAULT_PRICING = {
+  markupMultiplier: 1.0,
+  taxRate: 8,
+  seasonalFactor: "regular"
+};
+
+const DEFAULT_APARTMENTS = [
+  {
+    id: "1-bedroom",
+    name: "Luxury 1-Bedroom Apartment",
+    description: "Perfect for couples, executive business travelers, or solo adventurers looking for a serene coastal getaway. This spacious suite features an air-conditioned master bedroom with a handcrafted Swahili four-poster canopy bed, a deluxe en-suite bathroom, and an expansive living area.",
+    size: "95 m²",
+    maxGuests: 2,
+    pricePerNight: 160,
+    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677149/5_mhngcs.jpg",
+    gallery: [
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677149/5_mhngcs.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677148/4_j84vps.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677147/2_jkcobb.jpg"
+    ],
+    amenities: [
+      "High-speed Wi-Fi",
+      "Air conditioning",
+      "Fully equipped granite-top kitchen",
+      "Private sea-facing veranda",
+      "Flat-screen TV with DSTV channels",
+      "Electronic room safe",
+      "Daily housekeeping & turndown",
+      "Premium bath amenities & robes",
+      "Coffee & tea making facilities"
+    ],
+    bedrooms: 1,
+    bathrooms: 1,
+    highlights: [
+      "Handcrafted Swahili woodwork and arabesque detailing",
+      "Sweeping views of Tudor Creek and Mombasa harbor",
+      "Private veranda ideal for breakfast and evening sunsets",
+      "Fully self-catering capable with modern premium appliances"
+    ],
+    bedConfig: "1 King-sized Swahili Canopy Bed",
+    viewType: "Direct Tudor Creek & Sea View"
+  },
+  {
+    id: "2-bedroom",
+    name: "2-Bedroom Apartment",
+    description: "Ideal for families or friends traveling together, this exceptionally spacious residence seamlessly combines Swahili elegance with modern comfort. It features two fully air-conditioned bedrooms, a magnificent living room, a dining area, and an extra-large private balcony.",
+    size: "145 m²",
+    maxGuests: 4,
+    pricePerNight: 240,
+    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783683956/3_y4yy1f.jpg",
+    gallery: [
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399444/IMG-20260728-WA0067_zddl3j.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399619/IMG-20260728-WA0082_sgufrn.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399453/IMG-20260728-WA0072_dyahqk.jpg"
+    ],
+    amenities: [
+      "High-speed Wi-Fi",
+      "Individual climate control in both bedrooms",
+      "Full modern kitchen with laundry facilities",
+      "Double-width oceanfront veranda",
+      "Multiple flat-screen TVs with premium DSTV",
+      "Personal safety deposit box",
+      "Daily housekeeping & room service",
+      "Separate living and dining areas",
+      "Luxury cotton bathrobes & slippers"
+    ],
+    bedrooms: 2,
+    bathrooms: 2,
+    highlights: [
+      "Perfect for families; child-friendly, secure layout",
+      "Direct views overlooking the sparkling resort pools and the creek",
+      "Gourmet kitchen complete with full-sized refrigerator, oven, and washer",
+      "Master en-suite bathroom with custom glass shower and Swahili vanity"
+    ],
+    bedConfig: "1 King Bed & 2 Twin Beds (can be merged)",
+    viewType: "Resort Pool & Harbor View"
+  },
+  {
+    id: "3-bedroom",
+    name: "3-Bedroom Apartment",
+    description: "The ultimate expression of coastal luxury. This palatial apartment boasts double-height vaulted ceilings, three gorgeous bedrooms, multiple sun-drenched private balconies, and an elite dining lounge. Rich mahogany spiral stairs, deep Swahili timber detailing, and grand direct-ocean verandas create an air of absolute exclusivity and luxury.",
+    size: "220 m²",
+    maxGuests: 6,
+    pricePerNight: 350,
+    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783685440/11_te7vun.jpg",
+    gallery: [
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399398/IMG-20260728-WA0056_npidaf.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399397/IMG-20260728-WA0054_yiazz1.jpg",
+      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399396/IMG-20260728-WA0053_vplcb1.jpg"
+    ],
+    amenities: [
+      "High-speed Wi-Fi",
+      "Full house air-conditioning with individual zones",
+      "Ultra-modern kitchen with premium culinary wear",
+      "Rooftop sun terrace & private dining area",
+      "Smart TVs with premium DSTV & streaming capabilities",
+      "In-suite laundry (washing machine & dryer)",
+      "Dedicated concierge service",
+      "Luxury bathtubs & rainfall showers",
+      "Complimentary airport transfers"
+    ],
+    bedrooms: 3,
+    bathrooms: 3.5,
+    highlights: [
+      "Spectacular 270-degree panoramic views of Mombasa Old Town and Tudor Creek",
+      "Bespoke multilevel architecture featuring rich mahogany spiral stairs",
+      "Exclusive private rooftop terrace with loungers and outdoor dining table",
+      "Dedicated chef available upon request for private dining events"
+    ],
+    bedConfig: "2 King Beds & 2 Twin Beds",
+    viewType: "360° Creek, Ocean & Old Town Panoramic View"
+  }
+];
+
+const DEFAULT_DINING = [
+  {
+    id: "tamarind-restaurant",
+    name: "Tamarind Mombasa Restaurant",
+    description: "Widely acclaimed as the finest seafood restaurant in East Africa. Built in elegant Moorish style overlooking the picturesque Tudor Creek, the restaurant features high-arched windows, high ceilings, and a massive copper-domed bar. We serve fresh, marine catches brought in daily by local fishermen, prepared with traditional Swahili seasonings and classic French culinary mastery.",
+    highlights: [
+      "Famous Jumbo Seafood Platter (lobster, crab, prawns, oysters, and local fish)",
+      "Traditional Swahili Fish in rich coconut sauce (Samaki wa Kupaka)",
+      "Live piano accompaniment and ambient coastal acoustics",
+      "Premium selection of international wines curated by our resident sommelier"
+    ],
+    hours: "12:00 PM – 11:00 PM Daily",
+    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399230/PXL_20260721_145415867_zlb785.jpg",
+    reservationLinkText: "Inquire for Restaurant Table"
+  },
+  {
+    id: "dawa-terrace",
+    name: "The Dawa Terrace",
+    description: "Named after Kenya's legendary 'Dawa' (meaning 'medicine') cocktail muddled with fresh lime and honey. This stylish open-air terrace bar extends right over the gentle waters of the creek. It features plush comfortable seating, soft ambient lighting, and is the premier sunset cocktail lounge on Mombasa's coast.",
+    highlights: [
+      "The Original 'Dawa' cocktail made with local vodka, fresh lime, and organic honey",
+      "Delicious tapas, coastal snacks, and wood-fired flatbreads",
+      "Laid-back deep house and coastal chill music played by live DJs on weekends",
+      "Breathtaking night views of the lit-up old town of Mombasa across the bay"
+    ],
+    hours: "4:00 PM – Midnight Daily",
+    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+    reservationLinkText: "Inquire for Dawa Terrace Table"
+  },
+  {
+    id: "tamarind-dhow",
+    name: "The Tamarind Dhow Cruise",
+    description: "An unforgettable, magical dining voyage. Climb aboard the 'Nawalikoni' or 'Babulkher'—two majestic, traditionally hand-crafted wooden Swahili sailing dhows, beautifully converted into luxurious floating restaurants. Under the sails, you will cruise past Mombasa's historical Fort Jesus and Mombasa Old Harbor while enjoying a freshly grilled multi-course seafood meal prepared on traditional charcoal grills.",
+    highlights: [
+      "4-Course candlelit seafood feast cooked fresh on board over charcoal braziers",
+      "Romantic cruise on Tudor Creek, Mombasa Harbor, and around Fort Jesus",
+      "Live Swahili, Afro-fusion, and jazz band playing dance-worthy tunes on board",
+      "The perfect setting for anniversaries, proposals, or unforgettable group celebrations"
+    ],
+    hours: "Lunch Cruise: 1:00 PM – 3:00 PM | Dinner Cruise: 6:30 PM – 10:30 PM",
+    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg",
+    reservationLinkText: "Inquire for Dhow Charter & Cruise"
+  }
+];
+
+function loadStore() {
+  try {
+    if (fs.existsSync(DATA_STORE_PATH)) {
+      const raw = fs.readFileSync(DATA_STORE_PATH, "utf-8");
+      const parsed = JSON.parse(raw);
+      return {
+        inquiries: parsed.inquiries || [],
+        apartments: parsed.apartments || DEFAULT_APARTMENTS,
+        dining: parsed.dining || DEFAULT_DINING,
+        pricing: parsed.pricing || DEFAULT_PRICING
+      };
+    }
+  } catch (err) {
+    console.error("Failed to load store, initializing defaults:", err);
+  }
+  const defaultStore = {
+    inquiries: [],
+    apartments: DEFAULT_APARTMENTS,
+    dining: DEFAULT_DINING,
+    pricing: DEFAULT_PRICING
+  };
+  saveStore(defaultStore);
+  return defaultStore;
+}
+
+function saveStore(data: any) {
+  try {
+    fs.writeFileSync(DATA_STORE_PATH, JSON.stringify(data, null, 2), "utf-8");
+    return true;
+  } catch (err) {
+    console.error("Failed to save store:", err);
+    return false;
+  }
+}
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+
 
   // API Route for Rooms Proxy (CORS Bypass)
   app.get("/api/rooms", async (req, res) => {
@@ -31,6 +230,120 @@ async function startServer() {
     } catch (error: any) {
       console.error("Express proxy /api/rooms failed:", error);
       return res.status(500).json({ error: error.message || "Internal Server Error" });
+    }
+  });
+
+  // STAFF MANAGEMENT PORTAL ENDPOINTS
+  app.get("/api/inquiries", (req, res) => {
+    try {
+      const store = loadStore();
+      return res.json({ success: true, inquiries: store.inquiries });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/inquiries/:id/status", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      if (!status) {
+        return res.status(400).json({ error: "Status is required." });
+      }
+      const store = loadStore();
+      const index = store.inquiries.findIndex((i: any) => i.id === id);
+      if (index === -1) {
+        return res.status(404).json({ error: "Inquiry not found." });
+      }
+      store.inquiries[index].status = status;
+      saveStore(store);
+      return res.json({ success: true, inquiry: store.inquiries[index] });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/inquiries/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const store = loadStore();
+      store.inquiries = store.inquiries.filter((i: any) => i.id !== id);
+      saveStore(store);
+      return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/apartments", (req, res) => {
+    try {
+      const store = loadStore();
+      return res.json({ success: true, apartments: store.apartments });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/apartments", (req, res) => {
+    try {
+      const { apartments } = req.body;
+      if (!Array.isArray(apartments)) {
+        return res.status(400).json({ error: "Apartments must be an array." });
+      }
+      const store = loadStore();
+      store.apartments = apartments;
+      saveStore(store);
+      return res.json({ success: true, apartments: store.apartments });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/dining", (req, res) => {
+    try {
+      const store = loadStore();
+      return res.json({ success: true, dining: store.dining });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/dining", (req, res) => {
+    try {
+      const { dining } = req.body;
+      if (!Array.isArray(dining)) {
+        return res.status(400).json({ error: "Dining experiences must be an array." });
+      }
+      const store = loadStore();
+      store.dining = dining;
+      saveStore(store);
+      return res.json({ success: true, dining: store.dining });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/pricing", (req, res) => {
+    try {
+      const store = loadStore();
+      return res.json({ success: true, pricing: store.pricing });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/pricing", (req, res) => {
+    try {
+      const { pricing } = req.body;
+      if (!pricing) {
+        return res.status(400).json({ error: "Pricing rules object required." });
+      }
+      const store = loadStore();
+      store.pricing = { ...store.pricing, ...pricing };
+      saveStore(store);
+      return res.json({ success: true, pricing: store.pricing });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
     }
   });
 
@@ -64,13 +377,25 @@ async function startServer() {
         return res.status(400).json({ error: "Incomplete request. Type and payload are required." });
       }
 
+      // Live capture to database store
+      const store = loadStore();
+      const newInquiry = {
+        id: "inq_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
+        type,
+        payload,
+        status: "Pending",
+        createdAt: new Date().toISOString()
+      };
+      store.inquiries.unshift(newInquiry);
+      saveStore(store);
+
       const resendApiKey = process.env.RESEND_API_KEY;
       if (!resendApiKey) {
-        console.warn("RESEND_API_KEY not configured. Simulating email send.");
+        console.warn("RESEND_API_KEY not configured. Simulating email send (but saved in store!).");
         return res.json({ 
           success: true, 
           simulated: true, 
-          message: "RESEND_API_KEY not set. Your inquiry was captured successfully in demo mode!" 
+          message: "RESEND_API_KEY not set. Your inquiry was successfully captured on the staff dashboard in demo mode!" 
         });
       }
 
@@ -383,6 +708,120 @@ async function startServer() {
     } catch (error: any) {
       console.error("Error in /api/inquire handler:", error);
       return res.status(500).json({ error: error.message || "Internal Server Error" });
+    }
+  });
+
+  // STAFF MANAGEMENT PORTAL ENDPOINTS
+  app.get("/api/inquiries", (req, res) => {
+    try {
+      const store = loadStore();
+      return res.json({ success: true, inquiries: store.inquiries });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/inquiries/:id/status", (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      if (!status) {
+        return res.status(400).json({ error: "Status is required." });
+      }
+      const store = loadStore();
+      const index = store.inquiries.findIndex((i: any) => i.id === id);
+      if (index === -1) {
+        return res.status(404).json({ error: "Inquiry not found." });
+      }
+      store.inquiries[index].status = status;
+      saveStore(store);
+      return res.json({ success: true, inquiry: store.inquiries[index] });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete("/api/inquiries/:id", (req, res) => {
+    try {
+      const { id } = req.params;
+      const store = loadStore();
+      store.inquiries = store.inquiries.filter((i: any) => i.id !== id);
+      saveStore(store);
+      return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/apartments", (req, res) => {
+    try {
+      const store = loadStore();
+      return res.json({ success: true, apartments: store.apartments });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/apartments", (req, res) => {
+    try {
+      const { apartments } = req.body;
+      if (!Array.isArray(apartments)) {
+        return res.status(400).json({ error: "Apartments must be an array." });
+      }
+      const store = loadStore();
+      store.apartments = apartments;
+      saveStore(store);
+      return res.json({ success: true, apartments: store.apartments });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/dining", (req, res) => {
+    try {
+      const store = loadStore();
+      return res.json({ success: true, dining: store.dining });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/dining", (req, res) => {
+    try {
+      const { dining } = req.body;
+      if (!Array.isArray(dining)) {
+        return res.status(400).json({ error: "Dining experiences must be an array." });
+      }
+      const store = loadStore();
+      store.dining = dining;
+      saveStore(store);
+      return res.json({ success: true, dining: store.dining });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/pricing", (req, res) => {
+    try {
+      const store = loadStore();
+      return res.json({ success: true, pricing: store.pricing });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/pricing", (req, res) => {
+    try {
+      const { pricing } = req.body;
+      if (!pricing) {
+        return res.status(400).json({ error: "Pricing rules object required." });
+      }
+      const store = loadStore();
+      store.pricing = { ...store.pricing, ...pricing };
+      saveStore(store);
+      return res.json({ success: true, pricing: store.pricing });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message });
     }
   });
 

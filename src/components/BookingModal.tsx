@@ -9,9 +9,11 @@ interface BookingModalProps {
   onClose: () => void;
   initialApartmentId?: string;
   initialPackageId?: string;
+  apartmentsList?: any[];
 }
 
-export default function BookingModal({ isOpen, onClose, initialApartmentId, initialPackageId }: BookingModalProps) {
+export default function BookingModal({ isOpen, onClose, initialApartmentId, initialPackageId, apartmentsList }: BookingModalProps) {
+  const activeApartments = apartmentsList || APARTMENTS;
   const [apartmentId, setApartmentId] = useState(initialApartmentId || "1-bedroom");
   const [packageId, setPackageId] = useState("ro");
   const [bookingMode, setBookingMode] = useState<"live" | "inquiry">("live");
@@ -19,7 +21,7 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
   const [checkOut, setCheckOut] = useState("");
   
   // Set guest count default based on selected apartment
-  const selectedApartment = APARTMENTS.find(a => a.id === apartmentId) || APARTMENTS[0];
+  const selectedApartment = activeApartments.find(a => a.id === apartmentId) || activeApartments[0];
   const [guests, setGuests] = useState(selectedApartment.maxGuests);
 
   const { getLivePrice, getLivePackagePrice } = useLiveRates();
@@ -31,7 +33,7 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
     if (isOpen) {
       if (initialApartmentId) {
         setApartmentId(initialApartmentId);
-        const apt = APARTMENTS.find(a => a.id === initialApartmentId);
+        const apt = activeApartments.find(a => a.id === initialApartmentId);
         if (apt) {
           setGuests(apt.maxGuests);
         }
@@ -78,7 +80,7 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
   // Update guests limits if apartment changes
   const handleApartmentChange = (id: string) => {
     setApartmentId(id);
-    const apt = APARTMENTS.find(a => a.id === id);
+    const apt = activeApartments.find(a => a.id === id);
     if (apt) {
       setGuests(apt.maxGuests);
     }
@@ -123,7 +125,7 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
     setSubmitError("");
 
     try {
-      const selectedApartment = APARTMENTS.find(a => a.id === apartmentId) || APARTMENTS[0];
+      const selectedApartment = activeApartments.find(a => a.id === apartmentId) || activeApartments[0];
       const response = await fetch("/api/inquire", {
         method: "POST",
         headers: {
@@ -248,7 +250,7 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
                       className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 bg-stone-50 font-medium focus:outline-none focus:border-brand-teal"
                       id="modal-select-apartment"
                     >
-                      {APARTMENTS.map(apt => {
+                      {activeApartments.map(apt => {
                         const { price: aptLiveRate } = getLivePrice(apt.id, apt.pricePerNight);
                         return (
                           <option key={apt.id} value={apt.id}>

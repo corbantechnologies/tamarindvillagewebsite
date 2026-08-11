@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { MapPin, Phone, Mail, Clock, Ship, Compass, Award, MessageSquare } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Ship, Compass, Award, MessageSquare, Key } from "lucide-react";
 
 interface FooterProps {
   onNavigate: (sectionId: string) => void;
   onSelectApartment: (id: string) => void;
   onGoHome: () => void;
   onSelectDining?: (id: string) => void;
+  onOpenStaffPinModal?: () => void;
 }
 
-export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSelectDining }: FooterProps) {
+export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSelectDining, onOpenStaffPinModal }: FooterProps) {
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
 
   // Auto-detect logo files
@@ -270,7 +271,19 @@ export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSele
       <div className="bg-[#111111] border-t border-stone-800/40 py-8 text-stone-500 text-xs font-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-center md:text-left">
-            <p>© {new Date().getFullYear()} Tamarind Village Mombasa. All rights reserved.</p>
+            <div className="flex items-center justify-center md:justify-start gap-1.5 flex-wrap">
+              <p>© {new Date().getFullYear()} Tamarind Village Mombasa. All rights reserved.</p>
+              {onOpenStaffPinModal && (
+                <button
+                  onClick={onOpenStaffPinModal}
+                  className="text-stone-700 hover:text-brand-teal transition-colors focus:outline-none cursor-pointer"
+                  title="Staff Portal Login"
+                  id="footer-staff-trigger"
+                >
+                  <Key className="w-3 h-3" />
+                </button>
+              )}
+            </div>
             <p className="text-[10px] text-stone-600 mt-1">
               Primary Focus: Accommodation and serviced apartments of Tamarind Group.
             </p>
