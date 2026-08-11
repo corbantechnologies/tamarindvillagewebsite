@@ -60,18 +60,47 @@ export default function App() {
   const [pasteListInput, setPasteListInput] = useState("");
   const [urlError, setUrlError] = useState("");
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
+  const [isAdmin, setIsAdmin] = useState(() => {
     try {
+      const saved = localStorage.getItem("tamarind_staff_unlocked");
+      if (saved === "true") return true;
       const params = new URLSearchParams(window.location.search);
-      if (params.get("admin") === "true") {
-        setIsAdmin(true);
-      }
+      return params.get("admin") === "true" || params.get("staff") === "true";
     } catch (e) {
-      console.error("Failed to parse URL search parameters:", e);
+      return false;
     }
-  }, []);
+  });
+
+  const [isStaffPinModalOpen, setIsStaffPinModalOpen] = useState(false);
+  const [staffPinInput, setStaffPinInput] = useState("");
+  const [staffPinError, setStaffPinError] = useState("");
+
+  const handleVerifyStaffPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (staffPinInput.trim() === "1977" || staffPinInput.trim().toLowerCase() === "admin") {
+      setIsAdmin(true);
+      try {
+        localStorage.setItem("tamarind_staff_unlocked", "true");
+      } catch (e) {
+        console.error("Failed to store staff state:", e);
+      }
+      setIsStaffPinModalOpen(false);
+      setStaffPinInput("");
+      setStaffPinError("");
+      setIsCustomizerOpen(true);
+    } else {
+      setStaffPinError("Invalid Staff Passcode. Default passcode is 1977.");
+    }
+  };
+
+  const handleLockStaffMode = () => {
+    setIsAdmin(false);
+    try {
+      localStorage.removeItem("tamarind_staff_unlocked");
+    } catch (e) {
+      console.error("Failed to clear staff state:", e);
+    }
+  };
 
   useEffect(() => {
     if (heroImages.length <= 1) return;
@@ -264,8 +293,25 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-brand-sand font-sans text-brand-dark selection:bg-brand-teal selection:text-white flex flex-col">
+    <div className="min-h-screen bg-brand-sand font-sans text-brand-dark selection:bg-brand-teal selection:text-white flex flex-col w-full max-w-full overflow-x-hidden">
       
+      {/* Staff Mode Active Indicator Banner */}
+      {isAdmin && (
+        <div className="bg-brand-teal text-white text-xs font-mono py-1.5 px-4 flex justify-between items-center z-50 border-b border-brand-teal-dark shadow-inner">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="font-bold uppercase tracking-wider">Staff Management Mode Active</span>
+            <span className="hidden sm:inline text-brand-sand/80">| Edit Extras & Hero Carousel unlocked</span>
+          </div>
+          <button
+            onClick={handleLockStaffMode}
+            className="bg-black/20 hover:bg-black/40 text-white px-2.5 py-0.5 text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer"
+          >
+            Exit Staff Mode
+          </button>
+        </div>
+      )}
+
       {/* Dynamic Sticky Header */}
       <Navbar 
         onNavigate={navigateToSection}
@@ -453,8 +499,9 @@ export default function App() {
               </section>
 
               {/* 3. APARTMENTS SHOWCASE */}
-              <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-12" id="apartments-section">
-                <div className="text-center max-w-3xl mx-auto mb-16">
+              <section className="py-20 scroll-mt-12 w-full" id="apartments-section">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="text-center max-w-3xl mx-auto mb-16">
                   <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-brand-teal/10 border border-brand-teal/25 text-brand-teal text-xs font-bold uppercase tracking-widest mb-3">
                     <ShieldCheck className="w-3.5 h-3.5 text-brand-teal" />
                     <span>Exclusive Residences</span>
@@ -468,13 +515,15 @@ export default function App() {
                 </div>
 
                 {/* Apartments Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {APARTMENTS.map((apt) => {
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center justify-center">
+                  {APARTMENTS.map((apt, index) => {
                     const { price: livePrice, isLive } = getLivePrice(apt.id, apt.pricePerNight);
                     return (
                       <div 
                         key={apt.id} 
-                        className="bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group"
+                        className={`bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group w-full max-w-sm ${
+                          index === 2 ? "md:col-span-2 lg:col-span-1 mx-auto" : ""
+                        }`}
                         id={`card-${apt.id}`}
                       >
                         {/* Image Thumbnail Container */}
@@ -562,6 +611,7 @@ export default function App() {
                       </div>
                     );
                   })}
+                  </div>
                 </div>
               </section>
 
@@ -579,8 +629,8 @@ export default function App() {
                   </div>
 
                   {/* Packages Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                    {PACKAGES.map((pkg) => {
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto justify-items-center justify-center">
+                    {PACKAGES.map((pkg, index) => {
                       const { rate: liveRate, isLive, name: liveName } = getLivePackagePrice(pkg.id, pkg.pricePerPersonPerDay);
                       
                       // Assign elegant icons based on package type
@@ -597,7 +647,9 @@ export default function App() {
                       return (
                         <div 
                           key={pkg.id}
-                          className="bg-[#2D2926] border border-stone-800 rounded-none p-8 flex flex-col justify-between hover:border-brand-teal/80 transition-all duration-300 shadow-md group relative"
+                          className={`bg-[#2D2926] border border-stone-800 rounded-none p-8 flex flex-col justify-between hover:border-brand-teal/80 transition-all duration-300 shadow-md group relative w-full max-w-sm ${
+                            index === 2 ? "md:col-span-2 lg:col-span-1 mx-auto" : ""
+                          }`}
                           id={`package-card-${pkg.id}`}
                         >
                           {pkg.id === "hbp" && (
@@ -663,8 +715,9 @@ export default function App() {
               </section>
 
               {/* 5. DINING ALLIANCE SECTION */}
-              <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-12" id="dining-section">
-                <div className="text-center max-w-3xl mx-auto mb-16">
+              <section className="py-20 scroll-mt-12 w-full" id="dining-section">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="text-center max-w-3xl mx-auto mb-16">
                   <span className="text-xs font-semibold uppercase tracking-widest text-brand-teal">The Tamarind Culinary Alliance</span>
                   <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark tracking-tight mt-2">
                     Adjacent World-Class Gastronomy
@@ -675,11 +728,13 @@ export default function App() {
                 </div>
 
                 {/* Dining Cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {DINING.map((dining) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center justify-center">
+                  {DINING.map((dining, index) => (
                     <div 
                       key={dining.id}
-                      className="bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer hover:border-brand-teal/40"
+                      className={`bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer hover:border-brand-teal/40 w-full max-w-sm ${
+                        index === 2 ? "md:col-span-2 lg:col-span-1 mx-auto" : ""
+                      }`}
                       onClick={() => handleSelectDining(dining.id)}
                       id={`dining-${dining.id}`}
                     >
@@ -736,6 +791,7 @@ export default function App() {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               </section>
 
@@ -846,13 +902,21 @@ export default function App() {
               {/* 6C. WEDDINGS, PRIVATE EVENTS & DHOW CHARTERS */}
               <EventsAndChartersSection 
                 onOpenTransferModal={() => setIsTransferModalOpen(true)} 
-                onOpenCustomizer={() => setIsCustomizerOpen(true)}
+                onOpenCustomizer={() => {
+                  if (isAdmin) {
+                    setIsCustomizerOpen(true);
+                  } else {
+                    setIsStaffPinModalOpen(true);
+                  }
+                }}
                 eventPackagesList={eventPackagesList}
+                isAdmin={isAdmin}
               />
 
               {/* 7. CUSTOM GEOGRAPHIC MAP & CONTACT SECTION */}
-              <section className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-12" id="contact-section">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
+              <section className="py-20 scroll-mt-12 w-full" id="contact-section">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
                   
                   {/* Left: Custom Vector-CSS Map representation of Mombasa & Coordinates (7 cols) */}
                   <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
@@ -1050,7 +1114,8 @@ export default function App() {
 
                   </div>
                 </div>
-              </section>
+              </div>
+            </section>
 
               {/* 8. FAQ INTERACTIVE SECTION */}
               <section className="py-20 bg-brand-sand border-t border-stone-200" id="faq-section">
@@ -1187,6 +1252,87 @@ export default function App() {
         onVehiclesUpdated={(vehicles) => setTransferVehiclesList(vehicles)}
         onEventsUpdated={(events) => setEventPackagesList(events)}
       />
+
+      {/* Staff Security Verification Modal */}
+      <AnimatePresence>
+        {isStaffPinModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsStaffPinModalOpen(false)}
+              className="absolute inset-0 bg-brand-dark/85 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-md bg-white text-brand-dark border border-stone-200 p-6 sm:p-8 shadow-2xl z-10"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <div className="flex items-center gap-1.5 text-brand-teal text-xs font-mono font-bold uppercase tracking-widest mb-1">
+                    <ShieldCheck className="w-4 h-4 text-brand-gold" />
+                    <span>Staff Authentication</span>
+                  </div>
+                  <h3 className="font-serif text-2xl font-bold text-brand-dark">Resort Content Manager</h3>
+                </div>
+                <button 
+                  onClick={() => setIsStaffPinModalOpen(false)}
+                  className="p-1 hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+                >
+                  <span className="text-xl font-light">&times;</span>
+                </button>
+              </div>
+
+              <p className="text-xs text-stone-500 font-light leading-relaxed mb-6">
+                Please enter the staff passcode to access vehicle fleet, weddings, and customizer controls.
+              </p>
+
+              {staffPinError && (
+                <div className="mb-4 p-3 bg-red-50 border-l-2 border-red-500 text-red-700 text-xs font-semibold">
+                  {staffPinError}
+                </div>
+              )}
+
+              <form onSubmit={handleVerifyStaffPin} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
+                    Staff Passcode
+                  </label>
+                  <input
+                    type="password"
+                    autoFocus
+                    required
+                    placeholder="Enter staff passcode (e.g. 1977)"
+                    value={staffPinInput}
+                    onChange={(e) => setStaffPinInput(e.target.value)}
+                    className="w-full text-sm px-3.5 py-2.5 border border-stone-300 focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-900 font-mono"
+                  />
+                  <span className="text-[10px] text-stone-400 block mt-1">Default staff passcode: <strong>1977</strong></span>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsStaffPinModalOpen(false)}
+                    className="px-4 py-2 text-xs font-bold text-stone-500 uppercase tracking-wider hover:text-stone-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-brand-teal text-white font-bold text-xs uppercase tracking-widest hover:bg-brand-teal-dark transition-colors"
+                  >
+                    Unlock Staff Mode
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Luxury Footer component */}
       <Footer 

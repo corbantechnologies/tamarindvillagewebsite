@@ -7,9 +7,10 @@ interface EventsAndChartersSectionProps {
   onOpenTransferModal?: () => void;
   onOpenCustomizer?: () => void;
   eventPackagesList?: EventPackage[];
+  isAdmin?: boolean;
 }
 
-export default function EventsAndChartersSection({ onOpenTransferModal, onOpenCustomizer, eventPackagesList }: EventsAndChartersSectionProps) {
+export default function EventsAndChartersSection({ onOpenTransferModal, onOpenCustomizer, eventPackagesList, isAdmin }: EventsAndChartersSectionProps) {
   const [packages, setPackages] = useState<EventPackage[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -95,11 +96,11 @@ export default function EventsAndChartersSection({ onOpenTransferModal, onOpenCu
               <Sparkles className="w-3.5 h-3.5 text-brand-gold" />
               Exclusive Celebrations & Charters
             </span>
-            {onOpenCustomizer && (
+            {isAdmin && onOpenCustomizer && (
               <button
                 onClick={onOpenCustomizer}
                 className="text-[10px] text-stone-400 hover:text-brand-gold border border-stone-800 hover:border-brand-gold px-2 py-0.5 transition-colors flex items-center gap-1 cursor-pointer"
-                title="Edit Weddings & Charters"
+                title="Edit Weddings & Charters (Staff Mode)"
               >
                 <Settings className="w-3 h-3" />
                 <span>Edit Extras</span>
