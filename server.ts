@@ -5,6 +5,12 @@ import { Resend } from "resend";
 import dotenv from "dotenv";
 import fs from "fs";
 
+// Drizzle database integration
+import { getDb, isDbConfigured } from "./src/db/db";
+import { apartments as apartmentsTable, diningOptions as diningOptionsTable, pricingRules as pricingRulesTable, inquiries as inquiriesTable } from "./src/db/schema";
+import { initAndMigrateDatabase } from "./src/db/migrate";
+import { eq } from "drizzle-orm";
+
 dotenv.config();
 
 // DATA STORE INITIALIZATION
@@ -169,42 +175,50 @@ const DEFAULT_DINING = [
   }
 ];
 
-function loadStore() {
-  try {
-    if (fs.existsSync(DATA_STORE_PATH)) {
-      const raw = fs.readFileSync(DATA_STORE_PATH, "utf-8");
-      const parsed = JSON.parse(raw);
-      return {
-        inquiries: parsed.inquiries || [],
-        apartments: parsed.apartments || DEFAULT_APARTMENTS,
-        dining: parsed.dining || DEFAULT_DINING,
-        pricing: parsed.pricing || DEFAULT_PRICING
-      };
-    }
-  } catch (err) {
-    console.error("Failed to load store, initializing defaults:", err);
+// Robust local file-based fallback store functions
+function initLocalStore() {
+  if (!fs.existsSync(DATA_STORE_PATH)) {
+    const initialData = {
+      apartments: DEFAULT_APARTMENTS,
+      dining: DEFAULT_DINING,
+      pricing: DEFAULT_PRICING,
+      inquiries: []
+    };
+    fs.writeFileSync(DATA_STORE_PATH, JSON.stringify(initialData, null, 2), "utf-8");
+    console.log("📝 Created default fallback data_store.json");
   }
-  const defaultStore = {
-    inquiries: [],
-    apartments: DEFAULT_APARTMENTS,
-    dining: DEFAULT_DINING,
-    pricing: DEFAULT_PRICING
-  };
-  saveStore(defaultStore);
-  return defaultStore;
 }
 
-function saveStore(data: any) {
+function readLocalStore() {
+  initLocalStore();
+  try {
+    return JSON.parse(fs.readFileSync(DATA_STORE_PATH, "utf-8"));
+  } catch (err) {
+    console.error("Failed to read local store:", err);
+    return {
+      apartments: DEFAULT_APARTMENTS,
+      dining: DEFAULT_DINING,
+      pricing: DEFAULT_PRICING,
+      inquiries: []
+    };
+  }
+}
+
+function writeLocalStore(data: any) {
   try {
     fs.writeFileSync(DATA_STORE_PATH, JSON.stringify(data, null, 2), "utf-8");
-    return true;
   } catch (err) {
-    console.error("Failed to save store:", err);
-    return false;
+    console.error("Failed to write local store:", err);
   }
 }
 
 async function startServer() {
+  // Ensure we always initialize the local fallback store first
+  initLocalStore();
+
+  // Ensure the PostgreSQL schema and seeds are initialized before server starts serving requests
+  await initAndMigrateDatabase();
+
   const app = express();
   const PORT = 3000;
 
@@ -233,116 +247,349 @@ async function startServer() {
     }
   });
 
-  // STAFF MANAGEMENT PORTAL ENDPOINTS
-  app.get("/api/inquiries", (req, res) => {
+  // STAFF MANAGEMENT PORTAL ENDPOINTS (POWERED BY POSTGRES & DRIZZLE WITH LOCAL FALLBACK)
+  app.get("/api/inquiries", async (req, res) => {
     try {
-      const store = loadStore();
-      return res.json({ success: true, inquiries: store.inquiries });
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        const sorted = [...(store.inquiries || [])].sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt));
+        return res.json({ success: true, inquiries: sorted });
+      }
+      const db = getDb();
+      const data = await db.select().from(inquiriesTable);
+      // Order inquiries so newest show up first
+      const sorted = [...data].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      return res.json({ success: true, inquiries: sorted });
     } catch (err: any) {
+      console.error("Failed to fetch inquiries:", err);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  app.post("/api/inquiries/:id/status", (req, res) => {
+  app.post("/api/inquiries/:id/status", async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
       if (!status) {
         return res.status(400).json({ error: "Status is required." });
       }
-      const store = loadStore();
-      const index = store.inquiries.findIndex((i: any) => i.id === id);
-      if (index === -1) {
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        const inquiries = store.inquiries || [];
+        const inq = inquiries.find((i: any) => i.id === id);
+        if (!inq) {
+          return res.status(404).json({ error: "Inquiry not found." });
+        }
+        inq.status = status;
+        writeLocalStore(store);
+        return res.json({ success: true, inquiry: inq });
+      }
+
+      const db = getDb();
+      const updated = await db
+        .update(inquiriesTable)
+        .set({ status })
+        .where(eq(inquiriesTable.id, id))
+        .returning();
+      
+      if (updated.length === 0) {
         return res.status(404).json({ error: "Inquiry not found." });
       }
-      store.inquiries[index].status = status;
-      saveStore(store);
-      return res.json({ success: true, inquiry: store.inquiries[index] });
+      return res.json({ success: true, inquiry: updated[0] });
     } catch (err: any) {
+      console.error("Failed to update inquiry status:", err);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  app.delete("/api/inquiries/:id", (req, res) => {
+  app.delete("/api/inquiries/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const store = loadStore();
-      store.inquiries = store.inquiries.filter((i: any) => i.id !== id);
-      saveStore(store);
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        store.inquiries = (store.inquiries || []).filter((i: any) => i.id !== id);
+        writeLocalStore(store);
+        return res.json({ success: true });
+      }
+
+      const db = getDb();
+      await db.delete(inquiriesTable).where(eq(inquiriesTable.id, id));
       return res.json({ success: true });
     } catch (err: any) {
+      console.error("Failed to delete inquiry:", err);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/apartments", (req, res) => {
+  app.delete("/api/apartments/:id", async (req, res) => {
     try {
-      const store = loadStore();
-      return res.json({ success: true, apartments: store.apartments });
+      const { id } = req.params;
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        store.apartments = (store.apartments || []).filter((a: any) => a.id !== id);
+        writeLocalStore(store);
+        return res.json({ success: true });
+      }
+
+      const db = getDb();
+      await db.delete(apartmentsTable).where(eq(apartmentsTable.id, id));
+      return res.json({ success: true });
     } catch (err: any) {
+      console.error("Failed to delete apartment:", err);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  app.post("/api/apartments", (req, res) => {
+  app.delete("/api/dining/:id", async (req, res) => {
     try {
-      const { apartments } = req.body;
-      if (!Array.isArray(apartments)) {
+      const { id } = req.params;
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        store.dining = (store.dining || []).filter((d: any) => d.id !== id);
+        writeLocalStore(store);
+        return res.json({ success: true });
+      }
+
+      const db = getDb();
+      await db.delete(diningOptionsTable).where(eq(diningOptionsTable.id, id));
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("Failed to delete dining experience:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get("/api/apartments", async (req, res) => {
+    try {
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        return res.json({ success: true, apartments: store.apartments || DEFAULT_APARTMENTS });
+      }
+      const db = getDb();
+      const data = await db.select().from(apartmentsTable);
+      return res.json({ success: true, apartments: data });
+    } catch (err: any) {
+      console.error("Failed to fetch apartments:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/apartments", async (req, res) => {
+    try {
+      const { apartments: aptsBody } = req.body;
+      if (!Array.isArray(aptsBody)) {
         return res.status(400).json({ error: "Apartments must be an array." });
       }
-      const store = loadStore();
-      store.apartments = apartments;
-      saveStore(store);
-      return res.json({ success: true, apartments: store.apartments });
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        const list = store.apartments || [];
+        for (const apt of aptsBody) {
+          const index = list.findIndex((a: any) => a.id === apt.id);
+          const sanitized = {
+            id: apt.id,
+            name: apt.name || "Unnamed Suite",
+            description: apt.description || "",
+            size: apt.size || "85 m²",
+            maxGuests: Number(apt.maxGuests) || 2,
+            pricePerNight: Number(apt.pricePerNight) || 100,
+            image: apt.image || "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+            gallery: apt.gallery || [],
+            amenities: apt.amenities || [],
+            bedrooms: Number(apt.bedrooms) || 1,
+            bathrooms: Number(apt.bathrooms) || 1.0,
+            highlights: apt.highlights || [],
+            bedConfig: apt.bedConfig || "",
+            viewType: apt.viewType || "",
+          };
+          if (index !== -1) {
+            list[index] = sanitized;
+          } else {
+            list.push(sanitized);
+          }
+        }
+        store.apartments = list;
+        writeLocalStore(store);
+        return res.json({ success: true, apartments: store.apartments });
+      }
+
+      const db = getDb();
+      for (const apt of aptsBody) {
+        await db.insert(apartmentsTable).values({
+          id: apt.id,
+          name: apt.name || "Unnamed Suite",
+          description: apt.description || "",
+          size: apt.size || "85 m²",
+          maxGuests: Number(apt.maxGuests) || 2,
+          pricePerNight: Number(apt.pricePerNight) || 100,
+          image: apt.image || "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+          gallery: apt.gallery || [],
+          amenities: apt.amenities || [],
+          bedrooms: Number(apt.bedrooms) || 1,
+          bathrooms: Number(apt.bathrooms) || 1.0,
+          highlights: apt.highlights || [],
+          bedConfig: apt.bedConfig || "",
+          viewType: apt.viewType || "",
+        }).onConflictDoUpdate({
+          target: apartmentsTable.id,
+          set: {
+            name: apt.name || "Unnamed Suite",
+            description: apt.description || "",
+            size: apt.size || "85 m²",
+            maxGuests: Number(apt.maxGuests) || 2,
+            pricePerNight: Number(apt.pricePerNight) || 100,
+            image: apt.image || "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+            gallery: apt.gallery || [],
+            amenities: apt.amenities || [],
+            bedrooms: Number(apt.bedrooms) || 1,
+            bathrooms: Number(apt.bathrooms) || 1.0,
+            highlights: apt.highlights || [],
+            bedConfig: apt.bedConfig || "",
+            viewType: apt.viewType || "",
+          }
+        });
+      }
+      const data = await db.select().from(apartmentsTable);
+      return res.json({ success: true, apartments: data });
     } catch (err: any) {
+      console.error("Failed to update apartments:", err);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/dining", (req, res) => {
+  app.get("/api/dining", async (req, res) => {
     try {
-      const store = loadStore();
-      return res.json({ success: true, dining: store.dining });
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        return res.json({ success: true, dining: store.dining || DEFAULT_DINING });
+      }
+      const db = getDb();
+      const data = await db.select().from(diningOptionsTable);
+      return res.json({ success: true, dining: data });
     } catch (err: any) {
+      console.error("Failed to fetch dining experiences:", err);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  app.post("/api/dining", (req, res) => {
+  app.post("/api/dining", async (req, res) => {
     try {
-      const { dining } = req.body;
-      if (!Array.isArray(dining)) {
+      const { dining: diningBody } = req.body;
+      if (!Array.isArray(diningBody)) {
         return res.status(400).json({ error: "Dining experiences must be an array." });
       }
-      const store = loadStore();
-      store.dining = dining;
-      saveStore(store);
-      return res.json({ success: true, dining: store.dining });
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        const list = store.dining || [];
+        for (const dine of diningBody) {
+          const index = list.findIndex((d: any) => d.id === dine.id);
+          const sanitized = {
+            id: dine.id,
+            name: dine.name || "Unnamed Venue",
+            description: dine.description || "",
+            highlights: dine.highlights || [],
+            hours: dine.hours || "Open Daily",
+            image: dine.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+            reservationLinkText: dine.reservationLinkText || "Inquire Table",
+          };
+          if (index !== -1) {
+            list[index] = sanitized;
+          } else {
+            list.push(sanitized);
+          }
+        }
+        store.dining = list;
+        writeLocalStore(store);
+        return res.json({ success: true, dining: store.dining });
+      }
+
+      const db = getDb();
+      for (const dine of diningBody) {
+        await db.insert(diningOptionsTable).values({
+          id: dine.id,
+          name: dine.name || "Unnamed Venue",
+          description: dine.description || "",
+          highlights: dine.highlights || [],
+          hours: dine.hours || "Open Daily",
+          image: dine.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+          reservationLinkText: dine.reservationLinkText || "Inquire Table",
+        }).onConflictDoUpdate({
+          target: diningOptionsTable.id,
+          set: {
+            name: dine.name || "Unnamed Venue",
+            description: dine.description || "",
+            highlights: dine.highlights || [],
+            hours: dine.hours || "Open Daily",
+            image: dine.image || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+            reservationLinkText: dine.reservationLinkText || "Inquire Table",
+          }
+        });
+      }
+      const data = await db.select().from(diningOptionsTable);
+      return res.json({ success: true, dining: data });
     } catch (err: any) {
+      console.error("Failed to update dining experiences:", err);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  app.get("/api/pricing", (req, res) => {
+  app.get("/api/pricing", async (req, res) => {
     try {
-      const store = loadStore();
-      return res.json({ success: true, pricing: store.pricing });
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        return res.json({ success: true, pricing: store.pricing || DEFAULT_PRICING });
+      }
+      const db = getDb();
+      const data = await db.select().from(pricingRulesTable).where(eq(pricingRulesTable.id, "default"));
+      const pricing = data[0] || { markupMultiplier: 1.0, taxRate: 8, seasonalFactor: "regular" };
+      return res.json({ success: true, pricing });
     } catch (err: any) {
+      console.error("Failed to fetch pricing rules:", err);
       return res.status(500).json({ error: err.message });
     }
   });
 
-  app.post("/api/pricing", (req, res) => {
+  app.post("/api/pricing", async (req, res) => {
     try {
-      const { pricing } = req.body;
-      if (!pricing) {
+      const { pricing: pricingBody } = req.body;
+      if (!pricingBody) {
         return res.status(400).json({ error: "Pricing rules object required." });
       }
-      const store = loadStore();
-      store.pricing = { ...store.pricing, ...pricing };
-      saveStore(store);
-      return res.json({ success: true, pricing: store.pricing });
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        store.pricing = {
+          markupMultiplier: pricingBody.markupMultiplier ?? 1.0,
+          taxRate: pricingBody.taxRate ?? 8,
+          seasonalFactor: pricingBody.seasonalFactor ?? "regular",
+        };
+        writeLocalStore(store);
+        return res.json({ success: true, pricing: store.pricing });
+      }
+
+      const db = getDb();
+      await db.insert(pricingRulesTable).values({
+        id: "default",
+        markupMultiplier: pricingBody.markupMultiplier ?? 1.0,
+        taxRate: pricingBody.taxRate ?? 8,
+        seasonalFactor: pricingBody.seasonalFactor ?? "regular",
+      }).onConflictDoUpdate({
+        target: pricingRulesTable.id,
+        set: {
+          markupMultiplier: pricingBody.markupMultiplier,
+          taxRate: pricingBody.taxRate,
+          seasonalFactor: pricingBody.seasonalFactor,
+        }
+      });
+      const data = await db.select().from(pricingRulesTable).where(eq(pricingRulesTable.id, "default"));
+      return res.json({ success: true, pricing: data[0] });
     } catch (err: any) {
+      console.error("Failed to update pricing rules:", err);
       return res.status(500).json({ error: err.message });
     }
   });
@@ -377,17 +624,31 @@ async function startServer() {
         return res.status(400).json({ error: "Incomplete request. Type and payload are required." });
       }
 
-      // Live capture to database store
-      const store = loadStore();
-      const newInquiry = {
-        id: "inq_" + Date.now() + "_" + Math.floor(Math.random() * 1000),
-        type,
-        payload,
-        status: "Pending",
-        createdAt: new Date().toISOString()
-      };
-      store.inquiries.unshift(newInquiry);
-      saveStore(store);
+      const newInquiryId = "inq_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        const inquiries = store.inquiries || [];
+        inquiries.push({
+          id: newInquiryId,
+          type,
+          payload,
+          status: "Pending",
+          createdAt: new Date().toISOString()
+        });
+        store.inquiries = inquiries;
+        writeLocalStore(store);
+      } else {
+        // Live capture to database store (PostgreSQL via Drizzle)
+        const db = getDb();
+        await db.insert(inquiriesTable).values({
+          id: newInquiryId,
+          type,
+          payload,
+          status: "Pending",
+          createdAt: new Date().toISOString()
+        });
+      }
 
       const resendApiKey = process.env.RESEND_API_KEY;
       if (!resendApiKey) {
@@ -708,120 +969,6 @@ async function startServer() {
     } catch (error: any) {
       console.error("Error in /api/inquire handler:", error);
       return res.status(500).json({ error: error.message || "Internal Server Error" });
-    }
-  });
-
-  // STAFF MANAGEMENT PORTAL ENDPOINTS
-  app.get("/api/inquiries", (req, res) => {
-    try {
-      const store = loadStore();
-      return res.json({ success: true, inquiries: store.inquiries });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.post("/api/inquiries/:id/status", (req, res) => {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      if (!status) {
-        return res.status(400).json({ error: "Status is required." });
-      }
-      const store = loadStore();
-      const index = store.inquiries.findIndex((i: any) => i.id === id);
-      if (index === -1) {
-        return res.status(404).json({ error: "Inquiry not found." });
-      }
-      store.inquiries[index].status = status;
-      saveStore(store);
-      return res.json({ success: true, inquiry: store.inquiries[index] });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.delete("/api/inquiries/:id", (req, res) => {
-    try {
-      const { id } = req.params;
-      const store = loadStore();
-      store.inquiries = store.inquiries.filter((i: any) => i.id !== id);
-      saveStore(store);
-      return res.json({ success: true });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.get("/api/apartments", (req, res) => {
-    try {
-      const store = loadStore();
-      return res.json({ success: true, apartments: store.apartments });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.post("/api/apartments", (req, res) => {
-    try {
-      const { apartments } = req.body;
-      if (!Array.isArray(apartments)) {
-        return res.status(400).json({ error: "Apartments must be an array." });
-      }
-      const store = loadStore();
-      store.apartments = apartments;
-      saveStore(store);
-      return res.json({ success: true, apartments: store.apartments });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.get("/api/dining", (req, res) => {
-    try {
-      const store = loadStore();
-      return res.json({ success: true, dining: store.dining });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.post("/api/dining", (req, res) => {
-    try {
-      const { dining } = req.body;
-      if (!Array.isArray(dining)) {
-        return res.status(400).json({ error: "Dining experiences must be an array." });
-      }
-      const store = loadStore();
-      store.dining = dining;
-      saveStore(store);
-      return res.json({ success: true, dining: store.dining });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.get("/api/pricing", (req, res) => {
-    try {
-      const store = loadStore();
-      return res.json({ success: true, pricing: store.pricing });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.post("/api/pricing", (req, res) => {
-    try {
-      const { pricing } = req.body;
-      if (!pricing) {
-        return res.status(400).json({ error: "Pricing rules object required." });
-      }
-      const store = loadStore();
-      store.pricing = { ...store.pricing, ...pricing };
-      saveStore(store);
-      return res.json({ success: true, pricing: store.pricing });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message });
     }
   });
 

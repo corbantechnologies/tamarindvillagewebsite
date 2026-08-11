@@ -15,6 +15,17 @@ interface DiningDetailProps {
 }
 
 export default function DiningDetail({ dining, onBack, onSelectDining, allDinings }: DiningDetailProps) {
+  if (!dining) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center p-12 text-center bg-stone-50 border border-stone-200">
+        <p className="text-stone-500 font-light text-sm">Dining experience details are temporarily unavailable. Please try again later.</p>
+        <button onClick={onBack} className="mt-4 px-6 py-2 bg-brand-teal text-white text-xs uppercase tracking-widest font-bold">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
   // Gallery images based on dining ID to make it extremely immersive
   const getDiningGallery = (id: string) => {
     switch (id) {

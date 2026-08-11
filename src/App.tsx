@@ -37,6 +37,21 @@ export default function App() {
     seasonalFactor: "regular"
   });
 
+  const [securityNotification, setSecurityNotification] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "info";
+  } | null>(null);
+
+  const triggerNotification = (title: string, message: string, type: "success" | "error" | "info" = "success") => {
+    setSecurityNotification({ show: true, title, message, type });
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      setSecurityNotification(prev => prev && prev.title === title ? null : prev);
+    }, 5000);
+  };
+
   // Sync data with local server database_store
   useEffect(() => {
     const fetchLiveData = async () => {
@@ -82,7 +97,7 @@ export default function App() {
             console.error(err);
           }
           setIsCustomizerOpen(true);
-          alert("🔑 Security clearance granted: Tamarind Staff Dashboard unlocked!");
+          triggerNotification("Security Clearance Granted", "Tamarind Staff Dashboard unlocked! Controls are active.");
           typedKeys = "";
         }
       } else {
@@ -96,11 +111,14 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Processed apartments with live markupMultiplier applied
-  const processedApartments = apartments.map(apt => ({
+  // Processed apartments with live markupMultiplier applied (defensive fallback to APARTMENTS if empty)
+  const processedApartments = (apartments && apartments.length > 0 ? apartments : APARTMENTS).map(apt => ({
     ...apt,
-    pricePerNight: Math.round(apt.pricePerNight * pricingRules.markupMultiplier)
+    pricePerNight: Math.round(apt.pricePerNight * (pricingRules?.markupMultiplier || 1.0))
   }));
+
+  // Dynamic dining options with fallback to static DINING
+  const displayDining = diningOptions && diningOptions.length > 0 ? diningOptions : DINING;
 
   // Dynamic state for extras (Transfers & Events)
   const [transferVehiclesList, setTransferVehiclesList] = useState(() => loadTransferVehicles());
@@ -162,8 +180,9 @@ export default function App() {
       setStaffPinInput("");
       setStaffPinError("");
       setIsCustomizerOpen(true);
+      triggerNotification("Access Granted", "Staff Dashboard unlocked. Admin panel is now active.");
     } else {
-      setStaffPinError("Invalid Staff Passcode. Default passcode is 1977.");
+      setStaffPinError("Invalid Staff Passcode. Please contact your system administrator.");
     }
   };
 
@@ -803,7 +822,7 @@ export default function App() {
 
                 {/* Dining Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center justify-center">
-                  {DINING.map((dining, index) => (
+                  {displayDining.map((dining, index) => (
                     <div 
                       key={dining.id}
                       className={`bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer hover:border-brand-teal/40 w-full max-w-sm ${
@@ -1243,7 +1262,7 @@ export default function App() {
             /* DYNAMIC ROUTE VIEW: DINING DETAIL PAGE */
             <div key={`dining-container-${selectedDiningId}`}>
               <DiningDetail 
-                dining={DINING.find(d => d.id === selectedDiningId) || DINING[0]}
+                dining={displayDining.find(d => d.id === selectedDiningId) || displayDining[0] || DINING[0]}
                 onBack={() => {
                   setActiveView("home");
                   // Scroll back to dining section
@@ -1255,7 +1274,7 @@ export default function App() {
                   }, 100);
                 }}
                 onSelectDining={handleSelectDining}
-                allDinings={DINING}
+                allDinings={displayDining}
               />
             </div>
           ) : (
@@ -1382,12 +1401,12 @@ export default function App() {
                     type="password"
                     autoFocus
                     required
-                    placeholder="Enter staff passcode (e.g. 1977)"
+                    placeholder="Enter staff passcode"
                     value={staffPinInput}
                     onChange={(e) => setStaffPinInput(e.target.value)}
                     className="w-full text-sm px-3.5 py-2.5 border border-stone-300 focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-900 font-mono"
                   />
-                  <span className="text-[10px] text-stone-400 block mt-1">Default staff passcode: <strong>1977</strong></span>
+                  <span className="text-[10px] text-stone-400 block mt-1">Authorized personnel only. Contact administrative office if you forgot your credentials.</span>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -1422,6 +1441,38 @@ export default function App() {
         }}
         onOpenStaffPinModal={() => setIsStaffPinModalOpen(true)}
       />
+
+      {/* Custom Premium Toast Notification */}
+      <AnimatePresence>
+        {securityNotification?.show && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4 pointer-events-none"
+          >
+            <div className="bg-white border border-brand-teal shadow-2xl p-4 flex gap-4 items-start rounded-none pointer-events-auto">
+              <div className="p-2 bg-brand-teal/10 text-brand-teal flex-shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-serif text-sm font-bold text-brand-dark tracking-tight uppercase">
+                  {securityNotification.title}
+                </h4>
+                <p className="text-stone-500 text-[11px] font-light mt-1 leading-relaxed">
+                  {securityNotification.message}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSecurityNotification(null)}
+                className="text-stone-400 hover:text-stone-700 p-1 font-bold text-lg leading-none cursor-pointer flex-shrink-0"
+              >
+                &times;
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Sticky Floating WhatsApp Button */}
       <motion.div 

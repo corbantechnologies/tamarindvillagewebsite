@@ -207,7 +207,12 @@ export default function StaffDashboardModal({
     if (!editingApartment) return;
 
     setSubmitting(true);
-    const updatedApts = apartments.map(a => a.id === editingApartment.id ? editingApartment : a);
+    let updatedApts;
+    if (apartments.some(a => a.id === editingApartment.id)) {
+      updatedApts = apartments.map(a => a.id === editingApartment.id ? editingApartment : a);
+    } else {
+      updatedApts = [...apartments, editingApartment];
+    }
     try {
       const response = await fetch("/api/apartments", {
         method: "POST",
@@ -220,7 +225,7 @@ export default function StaffDashboardModal({
         setApartments(data.apartments);
         if (onApartmentsUpdated) onApartmentsUpdated(data.apartments);
         setEditingApartment(null);
-        showToast(`${editingApartment.name} updated successfully!`);
+        showToast(`${editingApartment.name} saved successfully!`);
       } else {
         throw new Error("Server error saving apartments");
       }
@@ -228,6 +233,25 @@ export default function StaffDashboardModal({
       alert("Could not save apartment details. Try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteApartment = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this apartment suite permanently?")) return;
+    try {
+      const response = await fetch(`/api/apartments/${id}`, {
+        method: "DELETE"
+      });
+      if (response.ok) {
+        const filtered = apartments.filter(a => a.id !== id);
+        setApartments(filtered);
+        if (onApartmentsUpdated) onApartmentsUpdated(filtered);
+        showToast("Apartment suite deleted from database");
+      } else {
+        throw new Error("Failed to delete from database");
+      }
+    } catch (err) {
+      alert("Could not delete apartment. Try again.");
     }
   };
 
@@ -265,7 +289,12 @@ export default function StaffDashboardModal({
     if (!editingDining) return;
 
     setSubmitting(true);
-    const updatedDins = dining.map(d => d.id === editingDining.id ? editingDining : d);
+    let updatedDins;
+    if (dining.some(d => d.id === editingDining.id)) {
+      updatedDins = dining.map(d => d.id === editingDining.id ? editingDining : d);
+    } else {
+      updatedDins = [...dining, editingDining];
+    }
     try {
       const response = await fetch("/api/dining", {
         method: "POST",
@@ -278,7 +307,7 @@ export default function StaffDashboardModal({
         setDining(data.dining);
         if (onDiningUpdated) onDiningUpdated(data.dining);
         setEditingDining(null);
-        showToast(`${editingDining.name} updated successfully!`);
+        showToast(`${editingDining.name} saved successfully!`);
       } else {
         throw new Error("Server error saving dining options");
       }
@@ -286,6 +315,25 @@ export default function StaffDashboardModal({
       alert("Could not save dining details. Try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteDining = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this dining experience permanently?")) return;
+    try {
+      const response = await fetch(`/api/dining/${id}`, {
+        method: "DELETE"
+      });
+      if (response.ok) {
+        const filtered = dining.filter(d => d.id !== id);
+        setDining(filtered);
+        if (onDiningUpdated) onDiningUpdated(filtered);
+        showToast("Dining experience deleted from database");
+      } else {
+        throw new Error("Failed to delete from database");
+      }
+    } catch (err) {
+      alert("Could not delete dining experience. Try again.");
     }
   };
 
@@ -801,13 +849,39 @@ export default function StaffDashboardModal({
                       <h3 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">Apartments & Suites Editor</h3>
                       <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">Customize texts, capacities, base pricing, and presentation images</p>
                     </div>
+                    {!editingApartment && (
+                      <button
+                        onClick={() => {
+                          setEditingApartment({
+                            id: "apt_" + Date.now(),
+                            name: "",
+                            description: "",
+                            size: "85 m²",
+                            maxGuests: 4,
+                            pricePerNight: 200,
+                            image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+                            gallery: [],
+                            amenities: ["Air Conditioning", "WiFi", "Minibar", "Ocean View", "En-suite Bathroom"],
+                            bedrooms: 2,
+                            bathrooms: 2,
+                            highlights: ["Direct Ocean Access", "Private Terrace"],
+                            bedConfig: "1 King Bed, 2 Single Beds",
+                            viewType: "Ocean & Horizon View",
+                          });
+                        }}
+                        className="px-4 py-2 bg-brand-teal hover:bg-brand-teal/80 text-brand-dark font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add New Suite</span>
+                      </button>
+                    )}
                   </div>
 
                   {editingApartment ? (
                     <form onSubmit={handleSaveApartment} className="bg-white p-6 border border-stone-200 space-y-4 max-w-3xl">
                       <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                         <span className="font-bold text-stone-700 uppercase tracking-widest text-[10px] flex items-center gap-1">
-                          <Edit3 className="w-4 h-4 text-brand-teal" /> Editing {editingApartment.name}
+                          <Edit3 className="w-4 h-4 text-brand-teal" /> Editing {editingApartment.name || "New Suite"}
                         </span>
                         <button 
                           type="button" 
@@ -877,6 +951,31 @@ export default function StaffDashboardModal({
                         </div>
 
                         <div>
+                          <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Bedrooms</label>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            value={editingApartment.bedrooms ?? 1}
+                            onChange={(e) => setEditingApartment({ ...editingApartment, bedrooms: Number(e.target.value) })}
+                            className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Bathrooms</label>
+                          <input
+                            type="number"
+                            required
+                            min="1"
+                            step="0.5"
+                            value={editingApartment.bathrooms ?? 1}
+                            onChange={(e) => setEditingApartment({ ...editingApartment, bathrooms: Number(e.target.value) })}
+                            className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                          />
+                        </div>
+
+                        <div>
                           <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Bed Configuration</label>
                           <input
                             type="text"
@@ -906,6 +1005,34 @@ export default function StaffDashboardModal({
                             value={editingApartment.image}
                             onChange={(e) => setEditingApartment({ ...editingApartment, image: e.target.value })}
                             className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Amenities (Comma-separated)</label>
+                          <input
+                            type="text"
+                            value={(editingApartment.amenities || []).join(", ")}
+                            onChange={(e) => setEditingApartment({ 
+                              ...editingApartment, 
+                              amenities: e.target.value.split(",").map(s => s.trim()).filter(Boolean) 
+                            })}
+                            className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                            placeholder="WiFi, Air Conditioning, Private Jacuzzi, etc."
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Highlights (Comma-separated)</label>
+                          <input
+                            type="text"
+                            value={(editingApartment.highlights || []).join(", ")}
+                            onChange={(e) => setEditingApartment({ 
+                              ...editingApartment, 
+                              highlights: e.target.value.split(",").map(s => s.trim()).filter(Boolean) 
+                            })}
+                            className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                            placeholder="Direct Ocean Access, Dedicated Butler, etc."
                           />
                         </div>
                       </div>
@@ -956,13 +1083,22 @@ export default function StaffDashboardModal({
                               </div>
                             </div>
 
-                            <button
-                              onClick={() => handleStartEditApartment(apt)}
-                              className="w-full py-2 bg-stone-900 hover:bg-brand-teal hover:text-brand-dark text-white font-bold uppercase tracking-widest text-[9px] transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                              <span>Edit Details</span>
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleStartEditApartment(apt)}
+                                className="flex-1 py-2 bg-stone-900 hover:bg-brand-teal hover:text-brand-dark text-white font-bold uppercase tracking-widest text-[9px] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>Edit Details</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteApartment(apt.id)}
+                                className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
+                                title="Delete Suite"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1096,13 +1232,32 @@ export default function StaffDashboardModal({
                       <h3 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">Dining & Experiences Manager</h3>
                       <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">Edit operational hours, titles, and highlight descriptors of restaurants</p>
                     </div>
+                    {!editingDining && (
+                      <button
+                        onClick={() => {
+                          setEditingDining({
+                            id: "dining_" + Date.now(),
+                            name: "",
+                            description: "",
+                            highlights: ["Fine Dining", "Oceanside Views"],
+                            hours: "7:00 AM - 11:00 PM",
+                            image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+                            reservationLinkText: "Inquire Table",
+                          });
+                        }}
+                        className="px-4 py-2 bg-brand-teal hover:bg-brand-teal/80 text-brand-dark font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add New Venue</span>
+                      </button>
+                    )}
                   </div>
 
                   {editingDining ? (
                     <form onSubmit={handleSaveDining} className="bg-white p-6 border border-stone-200 space-y-4 max-w-3xl">
                       <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                         <span className="font-bold text-stone-700 uppercase tracking-widest text-[10px] flex items-center gap-1">
-                          <Edit3 className="w-4 h-4 text-brand-teal" /> Editing {editingDining.name}
+                          <Edit3 className="w-4 h-4 text-brand-teal" /> Editing {editingDining.name || "New Venue"}
                         </span>
                         <button 
                           type="button" 
@@ -1157,6 +1312,31 @@ export default function StaffDashboardModal({
                             className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
                           />
                         </div>
+
+                        <div>
+                          <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Reservation Link Button Text</label>
+                          <input
+                            type="text"
+                            required
+                            value={editingDining.reservationLinkText || "Inquire Table"}
+                            onChange={(e) => setEditingDining({ ...editingDining, reservationLinkText: e.target.value })}
+                            className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold uppercase text-[9px] text-stone-600 mb-1">Highlights (Comma-separated)</label>
+                          <input
+                            type="text"
+                            value={(editingDining.highlights || []).join(", ")}
+                            onChange={(e) => setEditingDining({ 
+                              ...editingDining, 
+                              highlights: e.target.value.split(",").map(s => s.trim()).filter(Boolean) 
+                            })}
+                            className="w-full p-2.5 border border-stone-300 rounded-none bg-stone-50 font-medium text-stone-800 focus:outline-none focus:border-brand-teal"
+                            placeholder="Fine Dining, Oceanfront Deck, Private Sommelier, etc."
+                          />
+                        </div>
                       </div>
 
                       <div className="flex justify-end gap-3 pt-3 border-t border-stone-100">
@@ -1189,7 +1369,7 @@ export default function StaffDashboardModal({
                           <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                             <div>
                               <h4 className="font-serif text-sm font-bold text-stone-900 uppercase tracking-wide">
-                                {d.name}
+                                  {d.name}
                               </h4>
                               <p className="text-stone-500 text-xs mt-2 line-clamp-3 leading-relaxed">
                                 {d.description}
@@ -1199,13 +1379,22 @@ export default function StaffDashboardModal({
                               </div>
                             </div>
 
-                            <button
-                              onClick={() => handleStartEditDining(d)}
-                              className="w-full py-2 bg-stone-900 hover:bg-brand-teal hover:text-brand-dark text-white font-bold uppercase tracking-widest text-[9px] transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                              <span>Edit Details</span>
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleStartEditDining(d)}
+                                className="flex-1 py-2 bg-stone-900 hover:bg-brand-teal hover:text-brand-dark text-white font-bold uppercase tracking-widest text-[9px] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>Edit Details</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteDining(d.id)}
+                                className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
+                                title="Delete Venue"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}

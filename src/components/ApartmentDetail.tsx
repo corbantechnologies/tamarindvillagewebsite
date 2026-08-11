@@ -23,6 +23,17 @@ export default function ApartmentDetail({
   allApartments,
   onBookNow 
 }: ApartmentDetailProps) {
+  if (!apartment) {
+    return (
+      <div className="min-h-[50vh] flex flex-col items-center justify-center p-12 text-center bg-stone-50 border border-stone-200">
+        <p className="text-stone-500 font-light text-sm">Residence details are temporarily unavailable. Please try again later.</p>
+        <button onClick={onBack} className="mt-4 px-6 py-2 bg-brand-teal text-white text-xs uppercase tracking-widest font-bold">
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
   const { getLivePrice, getLivePackagePrice } = useLiveRates();
   const { price: livePrice, isLive: isPriceLive } = getLivePrice(apartment.id, apartment.pricePerNight);
 
