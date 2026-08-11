@@ -4,9 +4,9 @@ import { inquiries as inquiriesTable } from "../src/db/schema";
 import { eq } from "drizzle-orm";
 
 export default async function handler(req: any, res: any) {
+  const { method } = req;
   try {
     await ensureDatabaseSynced();
-    const { method } = req;
 
     if (method === "GET") {
       if (!isDbConfigured()) {
@@ -69,7 +69,15 @@ export default async function handler(req: any, res: any) {
       return res.status(405).json({ error: `Method ${method} Not Allowed` });
     }
   } catch (err: any) {
-    console.error("Vercel API /api/inquiries failed:", err);
-    return res.status(500).json({ error: err.message || "Internal Server Error" });
+    console.error("Vercel API /api/inquiries failed, falling back to static:", err);
+    if (method === "GET") {
+      // Graceful fallback to empty array on failure
+      return res.status(200).json({ 
+        success: true, 
+        inquiries: [], 
+        database_error: err.message || "Database connection failed. Switched to offline mode." 
+      });
+    }
+    return res.status(500).json({ error: `Database action failed: ${err.message || "Internal Error"}` });
   }
 }

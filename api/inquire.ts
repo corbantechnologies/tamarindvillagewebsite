@@ -11,7 +11,11 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    await ensureDatabaseSynced();
+    try {
+      await ensureDatabaseSynced();
+    } catch (syncErr: any) {
+      console.error("[Vercel Serverless] Failed to sync database during inquiry submission:", syncErr.message || syncErr);
+    }
     const { type, payload } = req.body;
     if (!type || !payload) {
       return res.status(400).json({ error: "Incomplete request. Type and payload are required." });

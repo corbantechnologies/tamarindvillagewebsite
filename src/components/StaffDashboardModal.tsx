@@ -84,6 +84,7 @@ export default function StaffDashboardModal({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [dbWarning, setDbWarning] = useState<string | null>(null);
   
   // Searching & Filtering inquiries
   const [searchQuery, setSearchQuery] = useState("");
@@ -108,8 +109,11 @@ export default function StaffDashboardModal({
   // Fetch all staff dashboard content on open
   const loadAllDashboardData = async () => {
     setLoading(true);
+    setDbWarning(null);
     console.log("🔍 [StaffDashboard] Opening staff dashboard, loading all live database data...");
     try {
+      let activeDbError: string | null = null;
+
       // 1. Fetch Inquiries
       console.log("🔍 [StaffDashboard] Fetching inquiries from /api/inquiries...");
       const inquiriesRes = await fetch("/api/inquiries");
@@ -118,6 +122,9 @@ export default function StaffDashboardModal({
         const data = await inquiriesRes.json();
         console.log("🔍 [StaffDashboard] Parsed inquiries count:", data.inquiries?.length, data.inquiries);
         setInquiries(data.inquiries || []);
+        if (data.database_error) {
+          activeDbError = data.database_error;
+        }
       } else {
         console.error("❌ [StaffDashboard] Failed to fetch inquiries, status:", inquiriesRes.status);
       }
@@ -130,6 +137,9 @@ export default function StaffDashboardModal({
         const data = await aptsRes.json();
         console.log("🔍 [StaffDashboard] Parsed apartments count:", data.apartments?.length, data.apartments);
         setApartments(data.apartments || []);
+        if (data.database_error) {
+          activeDbError = data.database_error;
+        }
       } else {
         console.error("❌ [StaffDashboard] Failed to fetch apartments, status:", aptsRes.status);
       }
@@ -142,6 +152,9 @@ export default function StaffDashboardModal({
         const data = await diningRes.json();
         console.log("🔍 [StaffDashboard] Parsed dining count:", data.dining?.length, data.dining);
         setDining(data.dining || []);
+        if (data.database_error) {
+          activeDbError = data.database_error;
+        }
       } else {
         console.error("❌ [StaffDashboard] Failed to fetch dining options, status:", diningRes.status);
       }
@@ -154,8 +167,15 @@ export default function StaffDashboardModal({
         const data = await pricingRes.json();
         console.log("🔍 [StaffDashboard] Parsed pricing rules:", data.pricing);
         setPricing(data.pricing || { markupMultiplier: 1.0, taxRate: 8, seasonalFactor: "regular" });
+        if (data.database_error) {
+          activeDbError = data.database_error;
+        }
       } else {
         console.error("❌ [StaffDashboard] Failed to fetch pricing rules, status:", pricingRes.status);
+      }
+
+      if (activeDbError) {
+        setDbWarning(activeDbError);
       }
 
       // 5. Load local store transfer vehicles and events
@@ -574,6 +594,19 @@ export default function StaffDashboardModal({
 
             {/* TAB CONTENT SPACE */}
             <div className="flex-1 flex flex-col overflow-y-auto p-8 bg-stone-50">
+              
+              {dbWarning && (
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-950 flex items-start gap-3 rounded-none">
+                  <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 font-serif">Offline Fallback Engaged</h4>
+                    <p className="text-[11px] mt-1 text-stone-700 leading-relaxed font-bold uppercase tracking-wide">
+                      Warning: A connection to the live database could not be established ({dbWarning}). 
+                      The portal is currently operating in a secure, zero-overhead offline-first fallback mode. All details are preserved locally.
+                    </p>
+                  </div>
+                </div>
+              )}
               
               {/* --- TAB 1: GUEST INQUIRIES & BOOKINGS --- */}
               {activeTab === "inquiries" && (
