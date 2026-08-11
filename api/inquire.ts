@@ -1,7 +1,7 @@
 import { Resend } from "resend";
-import { getDb, isDbConfigured } from "../src/db/db";
-import { ensureDatabaseSynced } from "../src/db/migrate";
-import { inquiries as inquiriesTable } from "../src/db/schema";
+import { getDb, isDbConfigured } from "../src/db/db.js";
+import { ensureDatabaseSynced } from "../src/db/migrate.js";
+import { inquiries as inquiriesTable } from "../src/db/schema.js";
 
 export default async function handler(req: any, res: any) {
   // Only allow POST requests for the inquiry submissions

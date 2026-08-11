@@ -1,6 +1,6 @@
-import { getDb, isDbConfigured } from "../src/db/db";
-import { ensureDatabaseSynced } from "../src/db/migrate";
-import { pricingRules as pricingRulesTable } from "../src/db/schema";
+import { getDb, isDbConfigured } from "../src/db/db.js";
+import { ensureDatabaseSynced } from "../src/db/migrate.js";
+import { pricingRules as pricingRulesTable } from "../src/db/schema.js";
 import { eq } from "drizzle-orm";
 
 const DEFAULT_PRICING = {
