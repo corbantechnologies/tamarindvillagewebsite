@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/inquiries/:id/status",
+      "destination": "/api/inquiries?id=:id&action=status"
+    },
+    {
+      "source": "/api/inquiries/:id",
+      "destination": "/api/inquiries?id=:id"
+    },
+    {
+      "source": "/api/apartments/:id",
+      "destination": "/api/apartments?id=:id"
+    },
+    {
+      "source": "/api/dining/:id",
+      "destination": "/api/dining?id=:id"
+    }
+  ]
+}

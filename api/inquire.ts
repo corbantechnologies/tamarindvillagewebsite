@@ -1,4 +1,6 @@
 import { Resend } from "resend";
+import { getDb, isDbConfigured } from "../src/db/db";
+import { inquiries as inquiriesTable } from "../src/db/schema";
 
 export default async function handler(req: any, res: any) {
   // Only allow POST requests for the inquiry submissions
@@ -13,13 +15,32 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: "Incomplete request. Type and payload are required." });
     }
 
+    const newInquiryId = "inq_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+
+    // Save inquiry to live PostgreSQL database if configured
+    if (isDbConfigured()) {
+      try {
+        const db = getDb();
+        await db.insert(inquiriesTable).values({
+          id: newInquiryId,
+          type,
+          payload,
+          status: "Pending",
+          createdAt: new Date().toISOString()
+        });
+        console.log(`[Vercel Serverless] Saved inquiry ${newInquiryId} to live database.`);
+      } catch (dbErr: any) {
+        console.error("[Vercel Serverless] Failed to save inquiry to database:", dbErr.message || dbErr);
+      }
+    }
+
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
       console.warn("RESEND_API_KEY not configured. Simulating email send.");
       return res.json({ 
         success: true, 
         simulated: true, 
-        message: "RESEND_API_KEY not set. Your inquiry was captured successfully in demo mode!" 
+        message: "RESEND_API_KEY not set. Your inquiry was captured successfully in database/demo mode!" 
       });
     }
 
