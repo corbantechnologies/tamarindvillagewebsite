@@ -212,7 +212,7 @@ export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSele
             </li>
             <li>
               <button onClick={() => onNavigate("facilities-section")} className="hover:text-brand-teal transition-colors cursor-pointer text-left">
-                Infinity Swimming Pools & Lounge
+                Resident Swimming Pools (In-House Guests Only)
               </button>
             </li>
           </ul>

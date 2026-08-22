@@ -221,15 +221,15 @@ export const DINING: DiningExperience[] = [
 export const FACILITIES: FacilityType[] = [
   {
     id: "pools",
-    name: "Creekside Infinity & Leisure Pools",
-    description: "Our harbor-front swimming pools offer a spectacular sanctuary from the tropical warmth of Mombasa. Perfectly positioned on the cliff edge of Tudor Creek, these fresh-water pools are surrounded by tall coconut palms, tropical greenery, and comfortable loungers.",
+    name: "Resident Swimming Pools (Staying Guests Only)",
+    description: "Exclusive to staying residents of Tamarind Village. Our harbor-front swimming pools offer a tranquil coastal sanctuary overlooking Tudor Creek, surrounded by coconut palms, tropical greenery, and comfortable loungers.",
     iconName: "Waves",
     image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898868/pool_mega5r.jpg",
     details: [
-      "Stunning oceanfront infinity-edge pool looking out towards the creek and boat channels",
+      "Strictly reserved for staying Tamarind Village residents & registered apartment guests",
+      "Stunning oceanfront infinity-edge pool looking out towards Tudor Creek",
       "Separate shallow swimming area safely designed for children and families",
-      "Poolside snack and cocktail service available throughout the day",
-      "Complimentary sun loungers, beach towels, and cozy sun shades for all residents"
+      "Complimentary sun loungers, beach towels, and poolside service for in-house residents"
     ]
   },
   {
