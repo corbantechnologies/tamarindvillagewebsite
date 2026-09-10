@@ -20,11 +20,11 @@ export const APARTMENTS: ApartmentType[] = [
     size: "95 m²",
     maxGuests: 2,
     pricePerNight: 160,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/3.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1783677148/4_j84vps.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1783677147/2_jkcobb.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/6.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/3.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/4.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -55,11 +55,11 @@ export const APARTMENTS: ApartmentType[] = [
     size: "145 m²",
     maxGuests: 4,
     pricePerNight: 240,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783683956/3_y4yy1f.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/10.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399444/IMG-20260728-WA0067_zddl3j.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399619/IMG-20260728-WA0082_sgufrn.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399453/IMG-20260728-WA0072_dyahqk.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/10.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/2.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/12.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -90,11 +90,11 @@ export const APARTMENTS: ApartmentType[] = [
     size: "220 m²",
     maxGuests: 6,
     pricePerNight: 350,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783685440/11_te7vun.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/11.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399398/IMG-20260728-WA0056_npidaf.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399397/IMG-20260728-WA0054_yiazz1.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399396/IMG-20260728-WA0053_vplcb1.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/9.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/7.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/8.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -185,7 +185,7 @@ export const DINING: DiningExperience[] = [
       "Premium selection of international wines curated by our resident sommelier"
     ],
     hours: "12:00 PM – 11:00 PM Daily",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1785399230/PXL_20260721_145415867_zlb785.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145514928.jpg",
     reservationLinkText: "Inquire for Restaurant Table"
   },
   {
@@ -199,7 +199,7 @@ export const DINING: DiningExperience[] = [
       "Breathtaking night views of the lit-up old town of Mombasa across the bay"
     ],
     hours: "4:00 PM – Midnight Daily",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125636903.jpg",
     reservationLinkText: "Inquire for Dawa Terrace Table"
   },
   {
@@ -213,7 +213,7 @@ export const DINING: DiningExperience[] = [
       "The perfect setting for anniversaries, proposals, or unforgettable group celebrations"
     ],
     hours: "Lunch Cruise: 1:00 PM – 3:00 PM | Dinner Cruise: 6:30 PM – 10:30 PM",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg",
     reservationLinkText: "Inquire for Dhow Charter & Cruise"
   }
 ];
@@ -224,7 +224,7 @@ export const FACILITIES: FacilityType[] = [
     name: "Resident Swimming Pools (Staying Guests Only)",
     description: "Exclusive to staying residents of Tamarind Village. Our harbor-front swimming pools offer a tranquil coastal sanctuary overlooking Tudor Creek, surrounded by coconut palms, tropical greenery, and comfortable loungers.",
     iconName: "Waves",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1782898868/pool_mega5r.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--11.jpg",
     details: [
       "Strictly reserved for staying Tamarind Village residents & registered apartment guests",
       "Stunning oceanfront infinity-edge pool looking out towards Tudor Creek",
@@ -237,7 +237,7 @@ export const FACILITIES: FacilityType[] = [
     name: "Coastal Executive Conferences & Banquets",
     description: "Combine productivity with coastal tranquility. Tamarind Village offers an air-conditioned conference venue tailored for executive retreats, boardroom meetings, team building, and social celebrations. Supported by state-of-the-art tech and world-class food.",
     iconName: "Users",
-    image: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=800&q=80",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/CONFERENCE/PXL_20260904_050610154.jpg",
     details: [
       "Versatile meeting space accommodating up to 80 guests in multiple layout formats",
       "Professional audio-visual systems, including high-lumens projector and sound layout",
