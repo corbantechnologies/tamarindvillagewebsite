@@ -142,8 +142,8 @@ export const DEFAULT_EVENT_PACKAGES: EventPackage[] = [
   }
 ];
 
-const LOCAL_STORAGE_VEHICLES_KEY = "tamarind_transfer_vehicles_v1";
-const LOCAL_STORAGE_EVENTS_KEY = "tamarind_event_packages_v1";
+const LOCAL_STORAGE_VEHICLES_KEY = "tamarind_transfer_vehicles_v2";
+const LOCAL_STORAGE_EVENTS_KEY = "tamarind_event_packages_v2";
 
 export function loadTransferVehicles(): TransferVehicle[] {
   try {
