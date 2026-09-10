@@ -30,11 +30,11 @@ const DEFAULT_APARTMENTS = [
     size: "95 m²",
     maxGuests: 2,
     pricePerNight: 160,
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677149/5_mhngcs.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
     gallery: [
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677149/5_mhngcs.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677148/4_j84vps.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677147/2_jkcobb.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1783677148/4_j84vps.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1783677147/2_jkcobb.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -65,11 +65,11 @@ const DEFAULT_APARTMENTS = [
     size: "145 m²",
     maxGuests: 4,
     pricePerNight: 240,
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783683956/3_y4yy1f.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783683956/3_y4yy1f.jpg",
     gallery: [
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399444/IMG-20260728-WA0067_zddl3j.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399619/IMG-20260728-WA0082_sgufrn.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399453/IMG-20260728-WA0072_dyahqk.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399444/IMG-20260728-WA0067_zddl3j.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399619/IMG-20260728-WA0082_sgufrn.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399453/IMG-20260728-WA0072_dyahqk.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -100,11 +100,11 @@ const DEFAULT_APARTMENTS = [
     size: "220 m²",
     maxGuests: 6,
     pricePerNight: 350,
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783685440/11_te7vun.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783685440/11_te7vun.jpg",
     gallery: [
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399398/IMG-20260728-WA0056_npidaf.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399397/IMG-20260728-WA0054_yiazz1.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399396/IMG-20260728-WA0053_vplcb1.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399398/IMG-20260728-WA0056_npidaf.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399397/IMG-20260728-WA0054_yiazz1.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399396/IMG-20260728-WA0053_vplcb1.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -142,7 +142,7 @@ const DEFAULT_DINING = [
       "Premium selection of international wines curated by our resident sommelier"
     ],
     hours: "12:00 PM – 11:00 PM Daily",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399230/PXL_20260721_145415867_zlb785.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1785399230/PXL_20260721_145415867_zlb785.jpg",
     reservationLinkText: "Inquire for Restaurant Table"
   },
   {
@@ -156,7 +156,7 @@ const DEFAULT_DINING = [
       "Breathtaking night views of the lit-up old town of Mombasa across the bay"
     ],
     hours: "4:00 PM – Midnight Daily",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
     reservationLinkText: "Inquire for Dawa Terrace Table"
   },
   {
@@ -170,7 +170,7 @@ const DEFAULT_DINING = [
       "The perfect setting for anniversaries, proposals, or unforgettable group celebrations"
     ],
     hours: "Lunch Cruise: 1:00 PM – 3:00 PM | Dinner Cruise: 6:30 PM – 10:30 PM",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
     reservationLinkText: "Inquire for Dhow Charter & Cruise"
   }
 ];
@@ -246,7 +246,7 @@ const FALLBACK_EVENTS = [
     title: "Private Tamarind Dhow Cruises",
     tag: "Private Vessel Charter",
     tagIcon: "ship",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
     description: "Charter an authentic Swahili dhow for private sunset cruises, anniversary dinners, or corporate cocktail parties along Tudor Creek with live Taarab or acoustic music.",
     features: [
       "Exclusive charter capacity: 20 to 70 guests",
@@ -280,7 +280,7 @@ const FALLBACK_EVENTS = [
     title: "Sunset Dawa Terrace Soirées",
     tag: "Bespoke Celebrations",
     tagIcon: "sparkles",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
     description: "Exclusive terrace booking for milestone birthdays, anniversaries, or intimate sunset cocktail hours overlooking lit-up Old Town Mombasa across the creek.",
     features: [
       "Private section of Dawa Terrace overlooking bay",
@@ -451,7 +451,7 @@ async function startServer() {
         .set({ status })
         .where(eq(inquiriesTable.id, id))
         .returning();
-      
+
       if (updated.length === 0) {
         return res.status(404).json({ error: "Inquiry not found." });
       }
@@ -812,10 +812,10 @@ async function startServer() {
       const resendApiKey = process.env.RESEND_API_KEY;
       if (!resendApiKey) {
         console.warn("RESEND_API_KEY not configured. Simulating email send (but saved in store!).");
-        return res.json({ 
-          success: true, 
-          simulated: true, 
-          message: "RESEND_API_KEY not set. Your inquiry was successfully captured on the staff dashboard in demo mode!" 
+        return res.json({
+          success: true,
+          simulated: true,
+          message: "RESEND_API_KEY not set. Your inquiry was successfully captured on the staff dashboard in demo mode!"
         });
       }
 
@@ -830,7 +830,7 @@ async function startServer() {
 
       if (type === "general") {
         const { name, email, message, department } = payload;
-        
+
         let deptName = "General / Guest Experience";
         if (department === "restaurant") {
           toEmail = process.env.EMAIL_RESTAURANT || "reservations.mombasa@tamarind.co.ke";
@@ -882,7 +882,7 @@ async function startServer() {
         const { name, email, phone, apartmentName, checkIn, checkOut, guests, packageId, requests, totalCost } = payload;
         toEmail = process.env.EMAIL_VILLAGE || "reservations.village@tamarind.co.ke";
         subject = `[Tamarind Village] Booking Inquiry for ${apartmentName} - ${name}`;
-        
+
         htmlContent = `
           <div style="font-family: sans-serif; max-width: 600px; color: #1F1615; line-height: 1.5;">
             <div style="background-color: #821124; padding: 25px; text-align: center;">
@@ -949,9 +949,9 @@ async function startServer() {
         `;
       } else if (type === "dining") {
         const { name, email, phone, diningName, date, time, guests, details, totalCost } = payload;
-        
+
         const isDhow = diningName.toLowerCase().includes("dhow");
-        toEmail = isDhow 
+        toEmail = isDhow
           ? (process.env.EMAIL_DHOW || "reservations.dhow@tamarind.co.ke")
           : (process.env.EMAIL_RESTAURANT || "reservations.mombasa@tamarind.co.ke");
 
@@ -1069,8 +1069,8 @@ async function startServer() {
           `;
         } else if (type === "dining") {
           const isDhow = payload.diningName?.toLowerCase().includes("dhow");
-          guestSubject = isDhow 
-            ? "Reservation Inquiry Received - Tamarind Dhow Cruise" 
+          guestSubject = isDhow
+            ? "Reservation Inquiry Received - Tamarind Dhow Cruise"
             : "Table Inquiry Received - Tamarind Mombasa Restaurant";
           guestBodyHeader = isDhow ? "Your Dhow Cruise Request is Under Review" : "Your Dining Request is Under Review";
           guestBodyIntro = `Thank you for choosing Tamarind for your culinary experience. We have received your seating reservation request for ${payload.diningName} and are currently checking table availability for your requested date.`;
@@ -1142,8 +1142,8 @@ async function startServer() {
           const data = await db.select().from(globalSettingsTable).where(eq(globalSettingsTable.key, key));
           const value = data[0]?.value || (
             key === "transfer_vehicles" ? FALLBACK_TRANSFERS :
-            key === "event_packages" ? FALLBACK_EVENTS :
-            key === "boarding_packages" ? FALLBACK_BOARDING : null
+              key === "event_packages" ? FALLBACK_EVENTS :
+                key === "boarding_packages" ? FALLBACK_BOARDING : null
           );
           return res.status(200).json({ success: true, key, value });
         } else {
@@ -1166,8 +1166,8 @@ async function startServer() {
         if (key) {
           const value = settingsMap[key] || (
             key === "transfer_vehicles" ? FALLBACK_TRANSFERS :
-            key === "event_packages" ? FALLBACK_EVENTS :
-            key === "boarding_packages" ? FALLBACK_BOARDING : null
+              key === "event_packages" ? FALLBACK_EVENTS :
+                key === "boarding_packages" ? FALLBACK_BOARDING : null
           );
           return res.status(200).json({ success: true, key, value });
         } else {
@@ -1183,16 +1183,16 @@ async function startServer() {
       console.error("Express API /api/settings failed:", err);
       if (key) {
         const value = key === "transfer_vehicles" ? FALLBACK_TRANSFERS :
-                      key === "event_packages" ? FALLBACK_EVENTS :
-                      key === "boarding_packages" ? FALLBACK_BOARDING : null;
+          key === "event_packages" ? FALLBACK_EVENTS :
+            key === "boarding_packages" ? FALLBACK_BOARDING : null;
         return res.status(200).json({ success: true, key, value, database_error: err.message });
       }
-      return res.status(200).json({ 
-        success: true, 
+      return res.status(200).json({
+        success: true,
         transfer_vehicles: FALLBACK_TRANSFERS,
         event_packages: FALLBACK_EVENTS,
         boarding_packages: FALLBACK_BOARDING,
-        database_error: err.message || "Database connection failed. Switched to offline mode." 
+        database_error: err.message || "Database connection failed. Switched to offline mode."
       });
     }
   });

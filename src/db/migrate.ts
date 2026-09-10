@@ -22,7 +22,7 @@ export async function initAndMigrateDatabase() {
         AND table_name = 'apartments'
       );
     `);
-    
+
     if (tableCheck[0]?.exists) {
       console.log("✅ Database schema is already initialized. Skipping migration/seeding.");
       return;
@@ -278,7 +278,7 @@ export async function initAndMigrateDatabase() {
           title: "Private Tamarind Dhow Cruises",
           tag: "Private Vessel Charter",
           tagIcon: "ship",
-          image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg",
+          image: "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
           description: "Charter an authentic Swahili dhow for private sunset cruises, anniversary dinners, or corporate cocktail parties along Tudor Creek with live Taarab or acoustic music.",
           features: [
             "Exclusive charter capacity: 20 to 70 guests",
@@ -312,7 +312,7 @@ export async function initAndMigrateDatabase() {
           title: "Sunset Dawa Terrace Soirées",
           tag: "Bespoke Celebrations",
           tagIcon: "sparkles",
-          image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+          image: "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
           description: "Exclusive terrace booking for milestone birthdays, anniversaries, or intimate sunset cocktail hours overlooking lit-up Old Town Mombasa across the creek.",
           features: [
             "Private section of Dawa Terrace overlooking bay",

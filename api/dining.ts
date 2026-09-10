@@ -15,7 +15,7 @@ const DEFAULT_DINING = [
       "Premium selection of international wines curated by our resident sommelier"
     ],
     hours: "12:00 PM – 11:00 PM Daily",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399230/PXL_20260721_145415867_zlb785.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1785399230/PXL_20260721_145415867_zlb785.jpg",
     reservationLinkText: "Inquire for Restaurant Table"
   },
   {
@@ -29,7 +29,7 @@ const DEFAULT_DINING = [
       "Breathtaking night views of the lit-up old town of Mombasa across the bay"
     ],
     hours: "4:00 PM – Midnight Daily",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
     reservationLinkText: "Inquire for Dawa Terrace Table"
   },
   {
@@ -43,7 +43,7 @@ const DEFAULT_DINING = [
       "The perfect setting for anniversaries, proposals, or unforgettable group celebrations"
     ],
     hours: "Lunch Cruise: 1:00 PM – 3:00 PM | Dinner Cruise: 6:30 PM – 10:30 PM",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
     reservationLinkText: "Inquire for Dhow Charter & Cruise"
   }
 ];
@@ -60,8 +60,8 @@ export default async function handler(req: any, res: any) {
       const db = getDb();
       const data = await db.select().from(diningOptionsTable);
       return res.status(200).json({ success: true, dining: data });
-    } 
-    
+    }
+
     else if (method === "POST") {
       const { dining: diningBody } = req.body || {};
       if (!Array.isArray(diningBody)) {
@@ -96,8 +96,8 @@ export default async function handler(req: any, res: any) {
       }
       const data = await db.select().from(diningOptionsTable);
       return res.status(200).json({ success: true, dining: data });
-    } 
-    
+    }
+
     else if (method === "DELETE") {
       const id = req.query.id;
       if (!id) {
@@ -111,8 +111,8 @@ export default async function handler(req: any, res: any) {
       const db = getDb();
       await db.delete(diningOptionsTable).where(eq(diningOptionsTable.id, id));
       return res.status(200).json({ success: true });
-    } 
-    
+    }
+
     else {
       res.setHeader("Allow", ["GET", "POST", "DELETE"]);
       return res.status(405).json({ error: `Method ${method} Not Allowed` });
@@ -121,10 +121,10 @@ export default async function handler(req: any, res: any) {
     console.error("Vercel API /api/dining failed, falling back to static:", err);
     if (method === "GET") {
       // Graceful fallback to static data in case of any database/connection error
-      return res.status(200).json({ 
-        success: true, 
-        dining: DEFAULT_DINING, 
-        database_error: err.message || "Database connection failed. Switched to offline mode." 
+      return res.status(200).json({
+        success: true,
+        dining: DEFAULT_DINING,
+        database_error: err.message || "Database connection failed. Switched to offline mode."
       });
     }
     return res.status(500).json({ error: `Database action failed: ${err.message || "Internal Error"}` });

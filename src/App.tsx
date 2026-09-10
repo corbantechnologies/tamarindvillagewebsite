@@ -10,8 +10,8 @@ import StaffDashboardModal from "./components/StaffDashboardModal";
 import { loadTransferVehicles, loadEventPackages, saveTransferVehicles, saveEventPackages } from "./utils/extrasStore";
 import { useLiveRates } from "./utils/profitroom";
 import { APARTMENTS, PACKAGES, DINING, FACILITIES } from "./data";
-import { 
-  Waves, Users, Maximize2, Coffee, Utensils, Ship, 
+import {
+  Waves, Users, Maximize2, Coffee, Utensils, Ship,
   MapPin, Phone, Mail, Sparkles, ArrowRight, Clock, ChevronRight,
   ShieldCheck, HelpCircle, CheckCircle2, Star, Calendar, MessageSquare,
   ChevronLeft, Image as ImageIcon, Settings, Plus, Trash2, RotateCcw, Check,
@@ -138,10 +138,10 @@ export default function App() {
   const [eventPackagesList, setEventPackagesList] = useState(() => loadEventPackages());
 
   const defaultHeroImages = [
-    "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898650/village2_w4ue4b.jpg", // Pool luxury overlooking sea
-    "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898655/village3_kiqnc0.jpg", // Beautiful coastal resort
-    "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898868/pool_mega5r.jpg", // Coastal rooms / suites
-    "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg"  // Stunning oceanside sunset deck
+    "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--14.jpg", // Pool luxury overlooking sea
+    "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--11.jpg", // Beautiful coastal resort
+    "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg", // Coastal rooms / suites
+    // "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg"  // Stunning oceanside sunset deck
   ];
 
   const [heroImages, setHeroImages] = useState<string[]>(() => {
@@ -292,7 +292,7 @@ export default function App() {
     setActiveView("dining");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-  
+
   // Custom contact submission form state
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -342,7 +342,7 @@ export default function App() {
       alert("Please fill out all fields.");
       return;
     }
-    
+
     setIsContactSubmitting(true);
     setContactSubmitError("");
 
@@ -400,7 +400,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-brand-sand font-sans text-brand-dark selection:bg-brand-teal selection:text-white flex flex-col w-full max-w-full overflow-x-hidden">
-      
+
       {/* Staff Mode Active Indicator Banner */}
       {isAdmin && (
         <div className="bg-brand-teal text-white text-xs font-mono py-1.5 px-4 flex justify-between items-center z-50 border-b border-brand-teal-dark shadow-inner">
@@ -419,7 +419,7 @@ export default function App() {
       )}
 
       {/* Dynamic Sticky Header */}
-      <Navbar 
+      <Navbar
         onNavigate={navigateToSection}
         onOpenBooking={() => setIsBookingOpen(true)}
         onOpenTransferModal={() => setIsTransferModalOpen(true)}
@@ -441,16 +441,16 @@ export default function App() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              
+
               {/* 1. HERO SECTION */}
               <section className="relative min-h-[85vh] flex items-center justify-center bg-brand-dark overflow-hidden" id="hero-section">
                 {/* Visual Backdrop (Curated Luxury resort / pool overlooking sea with smooth fade-in) */}
                 <div className="absolute inset-0 z-0">
                   <AnimatePresence mode="popLayout">
-                    <motion.img 
+                    <motion.img
                       key={currentHeroIndex}
-                      src={heroImages[currentHeroIndex]} 
-                      alt={`Tamarind Village Coastal Backdrop ${currentHeroIndex + 1}`} 
+                      src={heroImages[currentHeroIndex]}
+                      alt={`Tamarind Village Coastal Backdrop ${currentHeroIndex + 1}`}
                       initial={{ opacity: 0, scale: 1.05 }}
                       animate={{ opacity: 0.45, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
@@ -465,7 +465,7 @@ export default function App() {
 
                 {/* Left Carousel Arrow */}
                 {heroImages.length > 1 && (
-                  <button 
+                  <button
                     onClick={() => setCurrentHeroIndex((prev) => (prev - 1 + heroImages.length) % heroImages.length)}
                     className="absolute left-4 top-1/2 -translate-y-1/2 z-20 p-2.5 bg-black/30 hover:bg-brand-teal border border-white/10 text-white transition-all cursor-pointer rounded-none group"
                     aria-label="Previous slide"
@@ -476,7 +476,7 @@ export default function App() {
 
                 {/* Right Carousel Arrow */}
                 {heroImages.length > 1 && (
-                  <button 
+                  <button
                     onClick={() => setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 z-20 p-2.5 bg-black/30 hover:bg-brand-teal border border-white/10 text-white transition-all cursor-pointer rounded-none group"
                     aria-label="Next slide"
@@ -502,7 +502,7 @@ export default function App() {
                 {/* Slides Customize Button (Bottom Left Overlay) */}
                 {isAdmin && (
                   <div className="absolute bottom-6 left-6 z-20 hidden sm:block">
-                    <button 
+                    <button
                       onClick={openCustomizer}
                       className="flex items-center gap-2 px-3 py-1.5 bg-black/50 hover:bg-brand-teal text-white border border-white/10 text-[11px] font-bold uppercase tracking-wider transition-all duration-300 backdrop-blur-md hover:border-brand-teal cursor-pointer"
                     >
@@ -532,7 +532,7 @@ export default function App() {
 
                     {/* CTAs */}
                     <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 pt-4">
-                      <button 
+                      <button
                         onClick={() => navigateToSection("apartments-section")}
                         className="w-full sm:w-auto px-8 py-3.5 bg-brand-teal hover:bg-brand-teal-dark text-white font-bold rounded-none text-xs uppercase tracking-widest shadow-lg transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer hover:scale-103"
                         id="hero-btn-explore"
@@ -540,8 +540,8 @@ export default function App() {
                         <span>Explore Our Apartments</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
-                      
-                      <button 
+
+                      <button
                         onClick={() => setIsBookingOpen(true)}
                         className="w-full sm:w-auto px-8 py-3.5 bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold rounded-none text-xs uppercase tracking-widest transition-all duration-300 backdrop-blur-sm cursor-pointer"
                         id="hero-btn-book"
@@ -608,115 +608,114 @@ export default function App() {
               <section className="py-20 scroll-mt-12 w-full" id="apartments-section">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <div className="text-center max-w-3xl mx-auto mb-16">
-                  <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-brand-teal/10 border border-brand-teal/25 text-brand-teal text-xs font-bold uppercase tracking-widest mb-3">
-                    <ShieldCheck className="w-3.5 h-3.5 text-brand-teal" />
-                    <span>Exclusive Residences</span>
+                    <div className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-brand-teal/10 border border-brand-teal/25 text-brand-teal text-xs font-bold uppercase tracking-widest mb-3">
+                      <ShieldCheck className="w-3.5 h-3.5 text-brand-teal" />
+                      <span>Exclusive Residences</span>
+                    </div>
+                    <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark tracking-tight">
+                      Luxury Serviced Residences
+                    </h2>
+                    <p className="text-stone-500 font-light mt-4 text-sm sm:text-base leading-relaxed">
+                      Designed around spacious, light-filled rooms, high arches, and authentic coastal Swahili furniture, our apartments are perfectly suited for long-term residencies or luxurious family holidays.
+                    </p>
                   </div>
-                  <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark tracking-tight">
-                    Luxury Serviced Residences
-                  </h2>
-                  <p className="text-stone-500 font-light mt-4 text-sm sm:text-base leading-relaxed">
-                    Designed around spacious, light-filled rooms, high arches, and authentic coastal Swahili furniture, our apartments are perfectly suited for long-term residencies or luxurious family holidays.
-                  </p>
-                </div>
 
-                {/* Apartments Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center justify-center">
-                  {processedApartments.map((apt, index) => {
-                    const { price: livePrice, isLive } = getLivePrice(apt.id, apt.pricePerNight);
-                    return (
-                      <div 
-                        key={apt.id} 
-                        className={`bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group w-full max-w-sm ${
-                          index === 2 ? "md:col-span-2 lg:col-span-1 mx-auto" : ""
-                        }`}
-                        id={`card-${apt.id}`}
-                      >
-                        {/* Image Thumbnail Container */}
-                        <div className="relative aspect-[16/10] overflow-hidden bg-stone-100">
-                          <img 
-                            src={apt.image} 
-                            alt={apt.name} 
-                            className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
-                            referrerPolicy="no-referrer"
-                          />
-                          <div className="absolute top-4 right-4 bg-brand-dark/90 backdrop-blur-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-gold">
-                            {apt.viewType.split(" ")[0]} View
-                          </div>
-                        </div>
-
-                        {/* Specs and details */}
-                        <div className="p-6 flex-1 flex flex-col justify-between space-y-6">
-                          <div>
-                            <div className="flex justify-between items-start gap-4 mb-3">
-                              <h3 className="font-serif text-xl text-brand-dark group-hover:text-brand-teal transition-colors">
-                                {apt.name}
-                              </h3>
-                            </div>
-                            
-                            <p className="text-stone-500 text-xs font-light leading-relaxed mb-4 line-clamp-3">
-                              {apt.description}
-                            </p>
-
-                            {/* Quick Specs Icons Row */}
-                            <div className="grid grid-cols-3 gap-2 py-3 border-y border-stone-200 text-stone-600 font-medium">
-                              <div className="flex items-center gap-1.5 justify-center">
-                                <Maximize2 className="w-4 h-4 text-brand-teal" />
-                                <span className="text-[11px] font-mono">{apt.size}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 justify-center">
-                                <Users className="w-4 h-4 text-brand-teal" />
-                                <span className="text-[11px] font-mono">Max {apt.maxGuests}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 justify-center">
-                                <span className="text-[11px] font-serif font-bold text-brand-teal">{apt.bedrooms} Bed</span>
-                              </div>
-                            </div>
-
-                            {/* Inclusions List */}
-                            <div className="mt-4 space-y-2">
-                              <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-1">Key Highlights:</span>
-                              {apt.highlights.slice(0, 2).map((hl, idx) => (
-                                <div key={idx} className="flex gap-2 items-start text-[11px] text-stone-600">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-brand-teal flex-shrink-0 mt-0.5" />
-                                  <span className="font-light">{hl}</span>
-                                </div>
-                              ))}
+                  {/* Apartments Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center justify-center">
+                    {processedApartments.map((apt, index) => {
+                      const { price: livePrice, isLive } = getLivePrice(apt.id, apt.pricePerNight);
+                      return (
+                        <div
+                          key={apt.id}
+                          className={`bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group w-full max-w-sm ${index === 2 ? "md:col-span-2 lg:col-span-1 mx-auto" : ""
+                            }`}
+                          id={`card-${apt.id}`}
+                        >
+                          {/* Image Thumbnail Container */}
+                          <div className="relative aspect-[16/10] overflow-hidden bg-stone-100">
+                            <img
+                              src={apt.image}
+                              alt={apt.name}
+                              className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="absolute top-4 right-4 bg-brand-dark/90 backdrop-blur-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-gold">
+                              {apt.viewType.split(" ")[0]} View
                             </div>
                           </div>
 
-                          {/* Cost & Action footer */}
-                          <div className="pt-4 border-t border-stone-200 flex items-center justify-between">
+                          {/* Specs and details */}
+                          <div className="p-6 flex-1 flex flex-col justify-between space-y-6">
                             <div>
-                              <div className="flex items-center gap-1.5 mb-0.5">
-                                <span className="text-[10px] text-stone-400 uppercase tracking-widest font-bold">
-                                  {isLive ? "Live Rate" : "Base Rate"}
-                                </span>
-                                {isLive && (
-                                  <span className="inline-flex items-center gap-0.5 px-1 py-0.2 text-[8px] font-bold text-white bg-emerald-600 rounded-none uppercase tracking-wider">
-                                    ● Live
-                                  </span>
-                                )}
+                              <div className="flex justify-between items-start gap-4 mb-3">
+                                <h3 className="font-serif text-xl text-brand-dark group-hover:text-brand-teal transition-colors">
+                                  {apt.name}
+                                </h3>
                               </div>
-                              <p className="text-xl font-serif text-brand-dark font-extrabold">
-                                ${livePrice} <span className="text-xs font-sans text-stone-500 font-light">/ night</span>
+
+                              <p className="text-stone-500 text-xs font-light leading-relaxed mb-4 line-clamp-3">
+                                {apt.description}
                               </p>
+
+                              {/* Quick Specs Icons Row */}
+                              <div className="grid grid-cols-3 gap-2 py-3 border-y border-stone-200 text-stone-600 font-medium">
+                                <div className="flex items-center gap-1.5 justify-center">
+                                  <Maximize2 className="w-4 h-4 text-brand-teal" />
+                                  <span className="text-[11px] font-mono">{apt.size}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 justify-center">
+                                  <Users className="w-4 h-4 text-brand-teal" />
+                                  <span className="text-[11px] font-mono">Max {apt.maxGuests}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 justify-center">
+                                  <span className="text-[11px] font-serif font-bold text-brand-teal">{apt.bedrooms} Bed</span>
+                                </div>
+                              </div>
+
+                              {/* Inclusions List */}
+                              <div className="mt-4 space-y-2">
+                                <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-1">Key Highlights:</span>
+                                {apt.highlights.slice(0, 2).map((hl, idx) => (
+                                  <div key={idx} className="flex gap-2 items-start text-[11px] text-stone-600">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-brand-teal flex-shrink-0 mt-0.5" />
+                                    <span className="font-light">{hl}</span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                            
-                            <div className="flex flex-col gap-2">
-                              <button 
-                                onClick={() => handleSelectApartment(apt.id)}
-                                className="px-5 py-2.5 border border-brand-dark text-brand-dark hover:bg-stone-50 rounded-none text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer text-center"
-                                id={`btn-details-${apt.id}`}
-                              >
-                                View Details
-                              </button>
+
+                            {/* Cost & Action footer */}
+                            <div className="pt-4 border-t border-stone-200 flex items-center justify-between">
+                              <div>
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  <span className="text-[10px] text-stone-400 uppercase tracking-widest font-bold">
+                                    {isLive ? "Live Rate" : "Base Rate"}
+                                  </span>
+                                  {isLive && (
+                                    <span className="inline-flex items-center gap-0.5 px-1 py-0.2 text-[8px] font-bold text-white bg-emerald-600 rounded-none uppercase tracking-wider">
+                                      ● Live
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xl font-serif text-brand-dark font-extrabold">
+                                  ${livePrice} <span className="text-xs font-sans text-stone-500 font-light">/ night</span>
+                                </p>
+                              </div>
+
+                              <div className="flex flex-col gap-2">
+                                <button
+                                  onClick={() => handleSelectApartment(apt.id)}
+                                  className="px-5 py-2.5 border border-brand-dark text-brand-dark hover:bg-stone-50 rounded-none text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer text-center"
+                                  id={`btn-details-${apt.id}`}
+                                >
+                                  View Details
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                   </div>
                 </div>
               </section>
@@ -738,7 +737,7 @@ export default function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto justify-items-center justify-center">
                     {PACKAGES.map((pkg, index) => {
                       const { rate: liveRate, isLive, name: liveName } = getLivePackagePrice(pkg.id, pkg.pricePerPersonPerDay);
-                      
+
                       // Assign elegant icons based on package type
                       const getPackageIcon = (id: string) => {
                         switch (id) {
@@ -751,11 +750,10 @@ export default function App() {
                       };
 
                       return (
-                        <div 
+                        <div
                           key={pkg.id}
-                          className={`bg-[#2D2926] border border-stone-800 rounded-none p-8 flex flex-col justify-between hover:border-brand-teal/80 transition-all duration-300 shadow-md group relative w-full max-w-sm ${
-                            index === 2 ? "md:col-span-2 lg:col-span-1 mx-auto" : ""
-                          }`}
+                          className={`bg-[#2D2926] border border-stone-800 rounded-none p-8 flex flex-col justify-between hover:border-brand-teal/80 transition-all duration-300 shadow-md group relative w-full max-w-sm ${index === 2 ? "md:col-span-2 lg:col-span-1 mx-auto" : ""
+                            }`}
                           id={`package-card-${pkg.id}`}
                         >
                           {pkg.id === "hbp" && (
@@ -763,7 +761,7 @@ export default function App() {
                               Highly Recommended
                             </div>
                           )}
-                          
+
                           <div>
                             <div className="flex items-center gap-2 mb-4">
                               <div className="p-2 bg-stone-800 rounded-none text-brand-teal">
@@ -804,8 +802,8 @@ export default function App() {
                               <span className="text-lg font-serif font-bold text-white">${liveRate}</span>
                               <span className="text-[10px] text-stone-400 font-light block">/ Adult / Day</span>
                             </div>
-                            
-                            <button 
+
+                            <button
                               onClick={() => handleOpenBookingWithParams("1-bedroom", pkg.id)}
                               className="w-full py-3 bg-brand-teal hover:bg-brand-teal-dark text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer text-center"
                               id={`btn-pkg-select-${pkg.id}`}
@@ -824,79 +822,78 @@ export default function App() {
               <section className="py-20 scroll-mt-12 w-full" id="dining-section">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <div className="text-center max-w-3xl mx-auto mb-16">
-                  <span className="text-xs font-semibold uppercase tracking-widest text-brand-teal">The Tamarind Culinary Alliance</span>
-                  <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark tracking-tight mt-2">
-                    Adjacent World-Class Gastronomy
-                  </h2>
-                  <p className="text-stone-500 font-light mt-4 text-sm sm:text-base leading-relaxed">
-                    Tamarind Village is physically linked to East Africa’s legendary seafood dining institutions. Residents receive priority reservations, creekside seating placement, and direct-to-veranda room service billing privileges.
-                  </p>
-                </div>
+                    <span className="text-xs font-semibold uppercase tracking-widest text-brand-teal">The Tamarind Culinary Alliance</span>
+                    <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-brand-dark tracking-tight mt-2">
+                      Adjacent World-Class Gastronomy
+                    </h2>
+                    <p className="text-stone-500 font-light mt-4 text-sm sm:text-base leading-relaxed">
+                      Tamarind Village is physically linked to East Africa’s legendary seafood dining institutions. Residents receive priority reservations, creekside seating placement, and direct-to-veranda room service billing privileges.
+                    </p>
+                  </div>
 
-                {/* Dining Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center justify-center">
-                  {displayDining.map((dining, index) => (
-                    <div 
-                      key={dining.id}
-                      className={`bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer hover:border-brand-teal/40 w-full max-w-sm ${
-                        index === 2 ? "md:col-span-2 lg:col-span-1 mx-auto" : ""
-                      }`}
-                      onClick={() => handleSelectDining(dining.id)}
-                      id={`dining-${dining.id}`}
-                    >
-                      <div>
-                        {/* Image */}
-                        <div className="relative aspect-[16/10] bg-stone-100 overflow-hidden">
-                          <img 
-                            src={dining.image} 
-                            alt={dining.name} 
-                            className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
-                            referrerPolicy="no-referrer"
-                          />
-                          <div className="absolute bottom-4 left-4 bg-brand-dark/90 backdrop-blur-md px-3 py-1 text-[10px] uppercase font-mono font-bold tracking-wider text-brand-gold">
-                            {dining.hours.split(" | ")[0]}
+                  {/* Dining Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center justify-center">
+                    {displayDining.map((dining, index) => (
+                      <div
+                        key={dining.id}
+                        className={`bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer hover:border-brand-teal/40 w-full max-w-sm ${index === 2 ? "md:col-span-2 lg:col-span-1 mx-auto" : ""
+                          }`}
+                        onClick={() => handleSelectDining(dining.id)}
+                        id={`dining-${dining.id}`}
+                      >
+                        <div>
+                          {/* Image */}
+                          <div className="relative aspect-[16/10] bg-stone-100 overflow-hidden">
+                            <img
+                              src={dining.image}
+                              alt={dining.name}
+                              className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="absolute bottom-4 left-4 bg-brand-dark/90 backdrop-blur-md px-3 py-1 text-[10px] uppercase font-mono font-bold tracking-wider text-brand-gold">
+                              {dining.hours.split(" | ")[0]}
+                            </div>
+                          </div>
+
+                          {/* Specs */}
+                          <div className="p-6">
+                            <div className="flex justify-between items-center mb-3">
+                              <h3 className="font-serif text-lg sm:text-xl font-bold text-brand-dark group-hover:text-brand-teal transition-colors">
+                                {dining.name}
+                              </h3>
+                            </div>
+
+                            <p className="text-stone-500 text-xs font-light leading-relaxed mb-6">
+                              {dining.description}
+                            </p>
+
+                            <div className="space-y-2.5">
+                              <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-1">Cuisine Highlights:</span>
+                              {dining.highlights.map((hl, idx) => (
+                                <div key={idx} className="flex gap-2 items-start text-[11px] text-stone-600 font-light">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-brand-teal mt-1.5 flex-shrink-0"></span>
+                                  <span>{hl}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
 
-                        {/* Specs */}
-                        <div className="p-6">
-                          <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-serif text-lg sm:text-xl font-bold text-brand-dark group-hover:text-brand-teal transition-colors">
-                              {dining.name}
-                            </h3>
-                          </div>
-                          
-                          <p className="text-stone-500 text-xs font-light leading-relaxed mb-6">
-                            {dining.description}
-                          </p>
-
-                          <div className="space-y-2.5">
-                            <span className="text-[10px] uppercase font-bold text-stone-400 tracking-wider block mb-1">Cuisine Highlights:</span>
-                            {dining.highlights.map((hl, idx) => (
-                              <div key={idx} className="flex gap-2 items-start text-[11px] text-stone-600 font-light">
-                                <span className="w-1.5 h-1.5 rounded-full bg-brand-teal mt-1.5 flex-shrink-0"></span>
-                                <span>{hl}</span>
-                              </div>
-                            ))}
-                          </div>
+                        {/* Footer reservation placeholder */}
+                        <div className="p-6 pt-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectDining(dining.id);
+                            }}
+                            className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors text-center cursor-pointer block"
+                            id={`btn-dining-inquire-${dining.id}`}
+                          >
+                            View Details & Inquire
+                          </button>
                         </div>
                       </div>
-
-                      {/* Footer reservation placeholder */}
-                      <div className="p-6 pt-0">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectDining(dining.id);
-                          }}
-                          className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest transition-colors text-center cursor-pointer block"
-                          id={`btn-dining-inquire-${dining.id}`}
-                        >
-                          View Details & Inquire
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                   </div>
                 </div>
               </section>
@@ -917,18 +914,17 @@ export default function App() {
                   {/* Facilities Rows */}
                   <div className="space-y-12">
                     {FACILITIES.map((facility, index) => (
-                      <div 
+                      <div
                         key={facility.id}
-                        className={`flex flex-col lg:flex-row items-stretch gap-8 bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-shadow ${
-                          index % 2 !== 0 ? "lg:flex-row-reverse" : ""
-                        }`}
+                        className={`flex flex-col lg:flex-row items-stretch gap-8 bg-white border border-stone-200 rounded-none overflow-hidden shadow-sm hover:shadow-md transition-shadow ${index % 2 !== 0 ? "lg:flex-row-reverse" : ""
+                          }`}
                         id={`facility-${facility.id}`}
                       >
                         {/* Image side */}
                         <div className="lg:w-1/2 aspect-[16/10] lg:aspect-auto relative overflow-hidden bg-stone-200">
-                          <img 
-                            src={facility.image} 
-                            alt={facility.name} 
+                          <img
+                            src={facility.image}
+                            alt={facility.name}
                             className="w-full h-full object-cover"
                             referrerPolicy="no-referrer"
                           />
@@ -940,7 +936,7 @@ export default function App() {
                             <span className="text-[10px] uppercase font-bold tracking-widest text-brand-teal block mb-2">Resort Amenity</span>
                             <h3 className="font-serif text-2xl font-semibold text-brand-dark mb-4">{facility.name}</h3>
                             <p className="text-stone-500 text-xs sm:text-sm font-light leading-relaxed mb-6">{facility.description}</p>
-                            
+
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               {facility.details.map((detail, idx) => (
                                 <div key={idx} className="flex gap-2.5 items-start" id={`fac-detail-${facility.id}-${idx}`}>
@@ -953,7 +949,7 @@ export default function App() {
 
                           <div className="mt-8 pt-6 border-t border-stone-200 flex items-center justify-between">
                             <span className="text-xs font-mono text-stone-400">Serviced Daily • Exclusive for Residents</span>
-                            <button 
+                            <button
                               onClick={() => setIsBookingOpen(true)}
                               className="px-5 py-2.5 border border-brand-dark text-brand-dark hover:bg-stone-50 font-bold rounded-none text-xs uppercase tracking-widest transition-colors cursor-pointer"
                               id={`btn-facility-inquire-${facility.id}`}
@@ -1006,8 +1002,8 @@ export default function App() {
               </section>
 
               {/* 6C. WEDDINGS, PRIVATE EVENTS & DHOW CHARTERS */}
-              <EventsAndChartersSection 
-                onOpenTransferModal={() => setIsTransferModalOpen(true)} 
+              <EventsAndChartersSection
+                onOpenTransferModal={() => setIsTransferModalOpen(true)}
                 onOpenCustomizer={() => {
                   if (isAdmin) {
                     setIsCustomizerOpen(true);
@@ -1023,205 +1019,205 @@ export default function App() {
               <section className="py-20 scroll-mt-12 w-full" id="contact-section">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
-                  
-                  {/* Left: Custom Vector-CSS Map representation of Mombasa & Coordinates (7 cols) */}
-                  <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
-                    <div>
-                      <span className="text-xs font-semibold uppercase tracking-widest text-brand-teal block mb-2">Prime Harbor-Frontage</span>
-                      <h3 className="font-serif text-3xl text-brand-dark tracking-tight">Our Location on Tudor Creek</h3>
-                      <p className="text-stone-500 font-light mt-2 text-xs sm:text-sm leading-relaxed">
-                        Tamarind Village is situated on Cement Silos Road, Nyali, directly on the cliffside shores of Tudor Creek in Mombasa, Kenya. We face the historical Old Port, overlooking Mombasa Island and Old Town.
-                      </p>
-                    </div>
 
-                    {/* Highly Creative CSS Stylized Local Map Container */}
-                    <div className="relative aspect-[16/10] bg-brand-dark border border-stone-800 rounded-none p-6 overflow-hidden flex flex-col justify-between shadow-inner" id="vector-map-container">
-                      {/* Stylized water / land backdrop */}
-                      <div className="absolute inset-0 bg-brand-dark opacity-95"></div>
-                      <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[70%] rounded-full bg-stone-800/40 border border-stone-700/30 transform rotate-12"></div> {/* Tudor Creek shoreline */}
-                      <div className="absolute top-[-10%] left-[-15%] w-[60%] h-[60%] rounded-full bg-brand-teal/5 blur-3xl"></div> {/* Nyali glow */}
-                      
-                      {/* Grid representation */}
-                      <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 opacity-5 pointer-events-none">
-                        {Array.from({ length: 144 }).map((_, i) => (
-                          <div key={i} className="border-t border-l border-white"></div>
-                        ))}
-                      </div>
-
-                      {/* Map Markers */}
-                      <div className="relative z-10 h-full flex flex-col justify-between">
-                        {/* Nyali side label */}
-                        <div className="flex justify-between items-start">
-                          <span className="text-[10px] uppercase font-mono tracking-widest text-stone-400 font-bold bg-[#1a1a1a]/95 border border-stone-800 px-2 py-0.5 rounded-none">
-                            Nyali Mainland (Residences)
-                          </span>
-                          <span className="text-[10px] uppercase font-mono tracking-widest text-stone-400 font-bold bg-[#1a1a1a]/95 border border-stone-800 px-2 py-0.5 rounded-none">
-                            Tudor Creek Inlet
-                          </span>
-                        </div>
-
-                        {/* Core pin representer */}
-                        <div className="absolute top-[40%] left-[45%] flex flex-col items-center">
-                          <div className="relative flex h-4 w-4 items-center justify-center">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-teal opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-teal"></span>
-                          </div>
-                          <div className="bg-brand-dark border border-brand-teal/60 text-white p-3 rounded-none mt-2 shadow-lg text-left w-56 space-y-1">
-                            <p className="text-[11px] font-bold text-brand-gold uppercase tracking-widest leading-none">Tamarind Village</p>
-                            <p className="text-[10px] text-stone-300 font-light">Tamarind Restaurant & Dawa Terrace Adjacent</p>
-                            <p className="text-[9px] text-stone-400 font-mono italic">Cement Silos Road, Nyali Coast</p>
-                          </div>
-                        </div>
-
-                        {/* Fort Jesus Marker */}
-                        <div className="absolute bottom-[20%] right-[15%] flex flex-col items-center opacity-70">
-                          <span className="inline-block w-2 h-2 rounded-full bg-stone-400"></span>
-                          <span className="text-[9px] text-stone-400 uppercase tracking-wider mt-1 font-semibold">Fort Jesus</span>
-                        </div>
-
-                        {/* Old Town Marker */}
-                        <div className="absolute bottom-[35%] left-[10%] flex flex-col items-center opacity-70">
-                          <span className="inline-block w-2 h-2 rounded-full bg-stone-400"></span>
-                          <span className="text-[9px] text-stone-400 uppercase tracking-wider mt-1 font-semibold">Mombasa Old Town</span>
-                        </div>
-
-                        {/* Map Footer legend */}
-                        <div className="flex flex-wrap gap-2 text-[9px] font-mono text-stone-400 bg-[#1a1a1a]/95 p-2.5 rounded-none border border-stone-800">
-                          <span className="text-brand-gold font-bold">Transit distances:</span>
-                          <span className="border-r border-stone-800 pr-2">Moi Airport: ~30 min</span>
-                          <span className="border-r border-stone-800 pr-2">SGR Mombasa Terminus: ~25 min</span>
-                          <span>Nyali Bridge: ~5 min</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Interactive Contact Inquiry Form (5 cols) */}
-                  <div className="lg:col-span-5 bg-white border border-stone-200 rounded-none p-8 flex flex-col justify-between shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-brand-teal/5 rounded-full blur-xl"></div>
-                    
-                    <div className="space-y-6">
+                    {/* Left: Custom Vector-CSS Map representation of Mombasa & Coordinates (7 cols) */}
+                    <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
                       <div>
-                        <span className="text-[10px] uppercase font-bold tracking-widest text-brand-teal block mb-1">Direct Communication</span>
-                        <h4 className="font-serif text-2xl text-brand-dark">Location Desk & Contact Form</h4>
-                        <p className="text-stone-500 text-xs font-light leading-relaxed mt-1">
-                          Have any questions about custom residencies, executive conference packages, long-term rentals, or Dhow charters? Send us a direct message.
+                        <span className="text-xs font-semibold uppercase tracking-widest text-brand-teal block mb-2">Prime Harbor-Frontage</span>
+                        <h3 className="font-serif text-3xl text-brand-dark tracking-tight">Our Location on Tudor Creek</h3>
+                        <p className="text-stone-500 font-light mt-2 text-xs sm:text-sm leading-relaxed">
+                          Tamarind Village is situated on Cement Silos Road, Nyali, directly on the cliffside shores of Tudor Creek in Mombasa, Kenya. We face the historical Old Port, overlooking Mombasa Island and Old Town.
                         </p>
                       </div>
 
-                      {!isContactSubmitted ? (
-                        <form onSubmit={handleContactSubmit} className="space-y-4">
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Your Full Name</label>
-                            <input 
-                              type="text" 
-                              required
-                              placeholder="e.g., Jane Doe"
-                              value={contactName}
-                              onChange={(e) => setContactName(e.target.value)}
-                              className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
-                              id="contact-name"
-                              disabled={isContactSubmitting}
-                            />
+                      {/* Highly Creative CSS Stylized Local Map Container */}
+                      <div className="relative aspect-[16/10] bg-brand-dark border border-stone-800 rounded-none p-6 overflow-hidden flex flex-col justify-between shadow-inner" id="vector-map-container">
+                        {/* Stylized water / land backdrop */}
+                        <div className="absolute inset-0 bg-brand-dark opacity-95"></div>
+                        <div className="absolute bottom-[-10%] right-[-10%] w-[80%] h-[70%] rounded-full bg-stone-800/40 border border-stone-700/30 transform rotate-12"></div> {/* Tudor Creek shoreline */}
+                        <div className="absolute top-[-10%] left-[-15%] w-[60%] h-[60%] rounded-full bg-brand-teal/5 blur-3xl"></div> {/* Nyali glow */}
+
+                        {/* Grid representation */}
+                        <div className="absolute inset-0 grid grid-cols-12 grid-rows-12 opacity-5 pointer-events-none">
+                          {Array.from({ length: 144 }).map((_, i) => (
+                            <div key={i} className="border-t border-l border-white"></div>
+                          ))}
+                        </div>
+
+                        {/* Map Markers */}
+                        <div className="relative z-10 h-full flex flex-col justify-between">
+                          {/* Nyali side label */}
+                          <div className="flex justify-between items-start">
+                            <span className="text-[10px] uppercase font-mono tracking-widest text-stone-400 font-bold bg-[#1a1a1a]/95 border border-stone-800 px-2 py-0.5 rounded-none">
+                              Nyali Mainland (Residences)
+                            </span>
+                            <span className="text-[10px] uppercase font-mono tracking-widest text-stone-400 font-bold bg-[#1a1a1a]/95 border border-stone-800 px-2 py-0.5 rounded-none">
+                              Tudor Creek Inlet
+                            </span>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {/* Core pin representer */}
+                          <div className="absolute top-[40%] left-[45%] flex flex-col items-center">
+                            <div className="relative flex h-4 w-4 items-center justify-center">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-teal opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-teal"></span>
+                            </div>
+                            <div className="bg-brand-dark border border-brand-teal/60 text-white p-3 rounded-none mt-2 shadow-lg text-left w-56 space-y-1">
+                              <p className="text-[11px] font-bold text-brand-gold uppercase tracking-widest leading-none">Tamarind Village</p>
+                              <p className="text-[10px] text-stone-300 font-light">Tamarind Restaurant & Dawa Terrace Adjacent</p>
+                              <p className="text-[9px] text-stone-400 font-mono italic">Cement Silos Road, Nyali Coast</p>
+                            </div>
+                          </div>
+
+                          {/* Fort Jesus Marker */}
+                          <div className="absolute bottom-[20%] right-[15%] flex flex-col items-center opacity-70">
+                            <span className="inline-block w-2 h-2 rounded-full bg-stone-400"></span>
+                            <span className="text-[9px] text-stone-400 uppercase tracking-wider mt-1 font-semibold">Fort Jesus</span>
+                          </div>
+
+                          {/* Old Town Marker */}
+                          <div className="absolute bottom-[35%] left-[10%] flex flex-col items-center opacity-70">
+                            <span className="inline-block w-2 h-2 rounded-full bg-stone-400"></span>
+                            <span className="text-[9px] text-stone-400 uppercase tracking-wider mt-1 font-semibold">Mombasa Old Town</span>
+                          </div>
+
+                          {/* Map Footer legend */}
+                          <div className="flex flex-wrap gap-2 text-[9px] font-mono text-stone-400 bg-[#1a1a1a]/95 p-2.5 rounded-none border border-stone-800">
+                            <span className="text-brand-gold font-bold">Transit distances:</span>
+                            <span className="border-r border-stone-800 pr-2">Moi Airport: ~30 min</span>
+                            <span className="border-r border-stone-800 pr-2">SGR Mombasa Terminus: ~25 min</span>
+                            <span>Nyali Bridge: ~5 min</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Interactive Contact Inquiry Form (5 cols) */}
+                    <div className="lg:col-span-5 bg-white border border-stone-200 rounded-none p-8 flex flex-col justify-between shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-brand-teal/5 rounded-full blur-xl"></div>
+
+                      <div className="space-y-6">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold tracking-widest text-brand-teal block mb-1">Direct Communication</span>
+                          <h4 className="font-serif text-2xl text-brand-dark">Location Desk & Contact Form</h4>
+                          <p className="text-stone-500 text-xs font-light leading-relaxed mt-1">
+                            Have any questions about custom residencies, executive conference packages, long-term rentals, or Dhow charters? Send us a direct message.
+                          </p>
+                        </div>
+
+                        {!isContactSubmitted ? (
+                          <form onSubmit={handleContactSubmit} className="space-y-4">
                             <div>
-                              <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Email Address</label>
-                              <input 
-                                type="email" 
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Your Full Name</label>
+                              <input
+                                type="text"
                                 required
-                                placeholder="e.g., janedoe@example.com"
-                                value={contactEmail}
-                                onChange={(e) => setContactEmail(e.target.value)}
+                                placeholder="e.g., Jane Doe"
+                                value={contactName}
+                                onChange={(e) => setContactName(e.target.value)}
                                 className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
-                                id="contact-email"
+                                id="contact-name"
                                 disabled={isContactSubmitting}
                               />
                             </div>
 
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Email Address</label>
+                                <input
+                                  type="email"
+                                  required
+                                  placeholder="e.g., janedoe@example.com"
+                                  value={contactEmail}
+                                  onChange={(e) => setContactEmail(e.target.value)}
+                                  className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
+                                  id="contact-email"
+                                  disabled={isContactSubmitting}
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Select Department</label>
+                                <select
+                                  value={contactDept}
+                                  onChange={(e) => setContactDept(e.target.value)}
+                                  className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
+                                  id="contact-dept"
+                                  disabled={isContactSubmitting}
+                                >
+                                  <option value="village">Tamarind Village (Apartments)</option>
+                                  <option value="restaurant">Tamarind Mombasa Restaurant</option>
+                                  <option value="dhow">Tamarind Dhow Cruise</option>
+                                </select>
+                              </div>
+                            </div>
+
                             <div>
-                              <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Select Department</label>
-                              <select 
-                                value={contactDept}
-                                onChange={(e) => setContactDept(e.target.value)}
-                                className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal bg-stone-50"
-                                id="contact-dept"
+                              <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Message Inquiry</label>
+                              <textarea
+                                required
+                                placeholder="How can our accommodation concierge or dining team assist you today?"
+                                rows={4}
+                                value={contactMessage}
+                                onChange={(e) => setContactMessage(e.target.value)}
+                                className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal resize-none bg-stone-50"
+                                id="contact-message"
                                 disabled={isContactSubmitting}
-                              >
-                                <option value="village">Tamarind Village (Apartments)</option>
-                                <option value="restaurant">Tamarind Mombasa Restaurant</option>
-                                <option value="dhow">Tamarind Dhow Cruise</option>
-                              </select>
+                              />
                             </div>
-                          </div>
 
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Message Inquiry</label>
-                            <textarea 
-                              required
-                              placeholder="How can our accommodation concierge or dining team assist you today?"
-                              rows={4}
-                              value={contactMessage}
-                              onChange={(e) => setContactMessage(e.target.value)}
-                              className="w-full text-xs px-3.5 py-2.5 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal resize-none bg-stone-50"
-                              id="contact-message"
+                            {contactSubmitError && (
+                              <div className="p-3 bg-red-50 text-red-700 text-xs font-medium border-l-2 border-red-600">
+                                {contactSubmitError}
+                              </div>
+                            )}
+
+                            <button
+                              type="submit"
                               disabled={isContactSubmitting}
-                            />
-                          </div>
-
-                          {contactSubmitError && (
-                            <div className="p-3 bg-red-50 text-red-700 text-xs font-medium border-l-2 border-red-600">
-                              {contactSubmitError}
-                            </div>
-                          )}
-
-                          <button 
-                            type="submit"
-                            disabled={isContactSubmitting}
-                            className={`w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest shadow-xs transition-colors cursor-pointer ${isContactSubmitting ? "opacity-75 cursor-not-allowed" : ""}`}
-                            id="btn-contact-submit"
+                              className={`w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs uppercase tracking-widest shadow-xs transition-colors cursor-pointer ${isContactSubmitting ? "opacity-75 cursor-not-allowed" : ""}`}
+                              id="btn-contact-submit"
+                            >
+                              {isContactSubmitting ? "Sending Inquiry..." : "Send General Inquiry"}
+                            </button>
+                          </form>
+                        ) : (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="py-12 text-center space-y-4 bg-brand-teal/5 border border-brand-teal/15 rounded-none"
+                            id="contact-success"
                           >
-                            {isContactSubmitting ? "Sending Inquiry..." : "Send General Inquiry"}
-                          </button>
-                        </form>
-                      ) : (
-                        <motion.div 
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="py-12 text-center space-y-4 bg-brand-teal/5 border border-brand-teal/15 rounded-none"
-                          id="contact-success"
-                        >
-                          <div className="w-12 h-12 bg-brand-teal/10 text-brand-teal rounded-none flex items-center justify-center mx-auto">
-                            <CheckCircle2 className="w-6 h-6" />
-                          </div>
-                          <div>
-                            <p className="font-serif text-lg font-bold text-brand-dark">Message Received!</p>
-                            <p className="text-xs text-stone-500 mt-1 font-light max-w-xs mx-auto">
-                              Thank you, <span className="font-semibold">{contactName}</span>. A Tamarind Village representative has logged your inquiry and will respond within 12 hours.
-                            </p>
-                          </div>
-                        </motion.div>
-                      )}
-                    </div>
-
-                    {/* Phone/Email cards */}
-                    <div className="pt-6 border-t border-stone-200 grid grid-cols-2 gap-4 text-left text-[10px] text-stone-500">
-                      <div>
-                        <p className="font-bold text-brand-dark uppercase">Resort Reception</p>
-                        <p>+254 725 959 552</p>
+                            <div className="w-12 h-12 bg-brand-teal/10 text-brand-teal rounded-none flex items-center justify-center mx-auto">
+                              <CheckCircle2 className="w-6 h-6" />
+                            </div>
+                            <div>
+                              <p className="font-serif text-lg font-bold text-brand-dark">Message Received!</p>
+                              <p className="text-xs text-stone-500 mt-1 font-light max-w-xs mx-auto">
+                                Thank you, <span className="font-semibold">{contactName}</span>. A Tamarind Village representative has logged your inquiry and will respond within 12 hours.
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
                       </div>
-                      <div>
-                        <p className="font-bold text-brand-dark uppercase">Direct Booking</p>
-                        <p className="truncate" title="reservations.village@tamarind.co.ke">reservations.village@...</p>
-                        <p>Mombasa, Kenya</p>
-                      </div>
-                    </div>
 
+                      {/* Phone/Email cards */}
+                      <div className="pt-6 border-t border-stone-200 grid grid-cols-2 gap-4 text-left text-[10px] text-stone-500">
+                        <div>
+                          <p className="font-bold text-brand-dark uppercase">Resort Reception</p>
+                          <p>+254 725 959 552</p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-brand-dark uppercase">Direct Booking</p>
+                          <p className="truncate" title="reservations.village@tamarind.co.ke">reservations.village@...</p>
+                          <p>Mombasa, Kenya</p>
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
 
               {/* 8. FAQ INTERACTIVE SECTION */}
               <section className="py-20 bg-brand-sand border-t border-stone-200" id="faq-section">
@@ -1233,7 +1229,7 @@ export default function App() {
 
                   <div className="space-y-4">
                     {faqs.map((faq, index) => (
-                      <div 
+                      <div
                         key={index}
                         className="bg-white border border-stone-200 rounded-none overflow-hidden transition-shadow duration-300"
                         id={`faq-item-${index}`}
@@ -1249,7 +1245,7 @@ export default function App() {
                             {openFaqIndex === index ? "−" : "+"}
                           </span>
                         </button>
-                        
+
                         <AnimatePresence>
                           {openFaqIndex === index && (
                             <motion.div
@@ -1271,10 +1267,10 @@ export default function App() {
 
             </motion.div>
           ) : activeView === "dining" ? (
-            
+
             /* DYNAMIC ROUTE VIEW: DINING DETAIL PAGE */
             <div key={`dining-container-${selectedDiningId}`}>
-              <DiningDetail 
+              <DiningDetail
                 dining={displayDining.find(d => d.id === selectedDiningId) || displayDining[0] || DINING[0]}
                 onBack={() => {
                   setActiveView("home");
@@ -1291,10 +1287,10 @@ export default function App() {
               />
             </div>
           ) : (
-            
+
             /* DYNAMIC ROUTE VIEW: APARTMENT DETAIL PAGE */
             <div key={`detail-container-${selectedApartmentId}`}>
-              <ApartmentDetail 
+              <ApartmentDetail
                 apartment={activeApartment}
                 onBack={() => {
                   setActiveView("home");
@@ -1320,8 +1316,8 @@ export default function App() {
       </main>
 
       {/* Global Booking Inquiry Modal */}
-      <BookingModal 
-        isOpen={isBookingOpen} 
+      <BookingModal
+        isOpen={isBookingOpen}
         onClose={() => setIsBookingOpen(false)}
         initialApartmentId={selectedApartmentId}
         initialPackageId={preSelectedPkg}
@@ -1329,14 +1325,14 @@ export default function App() {
       />
 
       {/* Chauffeur & Private Transfer Modal */}
-      <TransferModal 
+      <TransferModal
         isOpen={isTransferModalOpen}
         onClose={() => setIsTransferModalOpen(false)}
         vehiclesList={transferVehiclesList}
       />
 
       {/* Resort Extras, Content Customizer & Staff Dashboard Modal */}
-      <StaffDashboardModal 
+      <StaffDashboardModal
         isOpen={isCustomizerOpen}
         onClose={() => setIsCustomizerOpen(false)}
         onApartmentsUpdated={(apts) => setApartments(apts)}
@@ -1366,7 +1362,7 @@ export default function App() {
       <AnimatePresence>
         {isStaffPinModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1387,7 +1383,7 @@ export default function App() {
                   </div>
                   <h3 className="font-serif text-2xl font-bold text-brand-dark">Resort Content Manager</h3>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsStaffPinModalOpen(false)}
                   className="p-1 hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
                 >
@@ -1444,7 +1440,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Luxury Footer component */}
-      <Footer 
+      <Footer
         onNavigate={navigateToSection}
         onSelectApartment={handleSelectApartment}
         onSelectDining={handleSelectDining}
@@ -1476,7 +1472,7 @@ export default function App() {
                   {securityNotification.message}
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setSecurityNotification(null)}
                 className="text-stone-400 hover:text-stone-700 p-1 font-bold text-lg leading-none cursor-pointer flex-shrink-0"
               >
@@ -1488,7 +1484,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Sticky Floating WhatsApp Button */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1, duration: 0.5 }}
@@ -1497,7 +1493,7 @@ export default function App() {
         <span className="hidden sm:inline-block bg-white text-stone-800 text-[10px] font-bold px-3 py-1.5 shadow-md border border-stone-100 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300 pointer-events-none uppercase tracking-wider font-sans">
           Chat with Us
         </span>
-        <a 
+        <a
           href="https://wa.me/254725959552?text=Hello%20Tamarind%20Village%20Mombasa%2C%20I%20would%20like%20to%20inquire%20about%20booking%20an%20apartment."
           target="_blank"
           rel="noopener noreferrer"

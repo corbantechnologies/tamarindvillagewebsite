@@ -11,11 +11,11 @@ const DEFAULT_APARTMENTS = [
     size: "95 m²",
     maxGuests: 2,
     pricePerNight: 160,
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677149/5_mhngcs.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
     gallery: [
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677149/5_mhngcs.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677148/4_j84vps.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783677147/2_jkcobb.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1783677148/4_j84vps.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1783677147/2_jkcobb.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -46,11 +46,11 @@ const DEFAULT_APARTMENTS = [
     size: "145 m²",
     maxGuests: 4,
     pricePerNight: 240,
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783683956/3_y4yy1f.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783683956/3_y4yy1f.jpg",
     gallery: [
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399444/IMG-20260728-WA0067_zddl3j.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399619/IMG-20260728-WA0082_sgufrn.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399453/IMG-20260728-WA0072_dyahqk.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399444/IMG-20260728-WA0067_zddl3j.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399619/IMG-20260728-WA0082_sgufrn.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399453/IMG-20260728-WA0072_dyahqk.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -81,11 +81,11 @@ const DEFAULT_APARTMENTS = [
     size: "220 m²",
     maxGuests: 6,
     pricePerNight: 350,
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1783685440/11_te7vun.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783685440/11_te7vun.jpg",
     gallery: [
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399398/IMG-20260728-WA0056_npidaf.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399397/IMG-20260728-WA0054_yiazz1.jpg",
-      "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399396/IMG-20260728-WA0053_vplcb1.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399398/IMG-20260728-WA0056_npidaf.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399397/IMG-20260728-WA0054_yiazz1.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/v1785399396/IMG-20260728-WA0053_vplcb1.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -123,8 +123,8 @@ export default async function handler(req: any, res: any) {
       const db = getDb();
       const data = await db.select().from(apartmentsTable);
       return res.status(200).json({ success: true, apartments: data });
-    } 
-    
+    }
+
     else if (method === "POST") {
       const { apartments: aptsBody } = req.body || {};
       if (!Array.isArray(aptsBody)) {
@@ -173,8 +173,8 @@ export default async function handler(req: any, res: any) {
       }
       const data = await db.select().from(apartmentsTable);
       return res.status(200).json({ success: true, apartments: data });
-    } 
-    
+    }
+
     else if (method === "DELETE") {
       const id = req.query.id;
       if (!id) {
@@ -188,8 +188,8 @@ export default async function handler(req: any, res: any) {
       const db = getDb();
       await db.delete(apartmentsTable).where(eq(apartmentsTable.id, id));
       return res.status(200).json({ success: true });
-    } 
-    
+    }
+
     else {
       res.setHeader("Allow", ["GET", "POST", "DELETE"]);
       return res.status(405).json({ error: `Method ${method} Not Allowed` });
@@ -198,10 +198,10 @@ export default async function handler(req: any, res: any) {
     console.error("Vercel API /api/apartments failed, falling back to static:", err);
     if (method === "GET") {
       // Graceful fallback to static data in case of any database/connection error
-      return res.status(200).json({ 
-        success: true, 
-        apartments: DEFAULT_APARTMENTS, 
-        database_error: err.message || "Database connection failed. Switched to offline mode." 
+      return res.status(200).json({
+        success: true,
+        apartments: DEFAULT_APARTMENTS,
+        database_error: err.message || "Database connection failed. Switched to offline mode."
       });
     }
     return res.status(500).json({ error: `Database action failed: ${err.message || "Internal Error"}` });

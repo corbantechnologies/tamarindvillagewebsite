@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { 
-  Clock, Calendar, Users, ArrowLeft, Utensils, CheckCircle2, 
+import {
+  Clock, Calendar, Users, ArrowLeft, Utensils, CheckCircle2,
   MapPin, Sparkles, Wine, Compass, Sunset, Anchor, ArrowRight,
   Info, Star, GlassWater, ChefHat, AlertCircle, RefreshCw
 } from "lucide-react";
@@ -31,21 +31,21 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
     switch (id) {
       case "tamarind-restaurant":
         return [
-          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399228/PXL_20260721_145416704_xuozav.jpg",
-          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782929875/food1_kxukhp.jpg",
-          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785399227/PXL_20260721_145353750_vid6so.jpg"
+          "https://media.tamarind.co.ke/tvl-website-assets/v1785399228/PXL_20260721_145416704_xuozav.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/v1782929875/food1_kxukhp.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/v1785399227/PXL_20260721_145353750_vid6so.jpg"
         ];
       case "dawa-terrace":
         return [
-          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
-          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844614/PXL_20260731_125647779_hfyoag.jpg",
-          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844584/PXL_20260729_123521019.PORTRAIT_s1z8wz.jpg"
+          "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/v1785844614/PXL_20260731_125647779_hfyoag.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/v1785844584/PXL_20260729_123521019.PORTRAIT_s1z8wz.jpg"
         ];
       case "tamarind-dhow":
         return [
-          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg",
-          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782899001/v4_hcmdu7.jpg",
-          "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782929875/food1_kxukhp.jpg"
+          "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/v1782899001/v4_hcmdu7.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/v1782929875/food1_kxukhp.jpg"
         ];
       default:
         return [dining.image];
@@ -181,7 +181,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
       alert("Please fill out all mandatory guest contact and booking details.");
       return;
     }
-    
+
     setIsDiningSubmitting(true);
     setDiningSubmitError("");
 
@@ -232,9 +232,9 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10" id={`dining-detail-${dining.id}`}>
-      
+
       {/* Back Button */}
-      <button 
+      <button
         onClick={onBack}
         className="group flex items-center gap-2 text-stone-600 hover:text-brand-teal font-medium mb-8 transition-colors duration-200 cursor-pointer"
         id="btn-back-to-home"
@@ -259,14 +259,14 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
 
       {/* Gallery & Quick specs */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
-        
+
         {/* Left: Gallery & Description (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
           {/* Main Image */}
           <div className="relative aspect-[16/10] bg-stone-100 rounded-none overflow-hidden shadow-md">
-            <img 
-              src={activeImage} 
-              alt={dining.name} 
+            <img
+              src={activeImage}
+              alt={dining.name}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
               id="dining-main-image"
@@ -283,16 +283,15 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
               <button
                 key={idx}
                 onClick={() => setActiveImage(img)}
-                className={`relative aspect-[4/3] rounded-none overflow-hidden cursor-pointer transition-all duration-200 ${
-                  activeImage === img 
-                    ? "ring-2 ring-brand-teal ring-offset-2 scale-98 shadow-sm" 
+                className={`relative aspect-[4/3] rounded-none overflow-hidden cursor-pointer transition-all duration-200 ${activeImage === img
+                    ? "ring-2 ring-brand-teal ring-offset-2 scale-98 shadow-sm"
                     : "opacity-75 hover:opacity-100 hover:scale-102"
-                }`}
+                  }`}
                 id={`dining-thumb-${idx}`}
               >
-                <img 
-                  src={img} 
-                  alt={`${dining.name} detail ${idx + 1}`} 
+                <img
+                  src={img}
+                  alt={`${dining.name} detail ${idx + 1}`}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
@@ -306,7 +305,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
             <p className="text-stone-600 leading-relaxed font-light mb-6 text-xs sm:text-sm">
               {dining.description}
             </p>
-            
+
             <p className="p-4 bg-brand-teal/5 border-l-2 border-brand-teal text-stone-700 text-xs sm:text-sm font-light leading-relaxed italic mb-8">
               "{specials.extraDetail}"
             </p>
@@ -331,11 +330,11 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
 
         {/* Right: Stay Specs & Inquiry Form (5 cols) */}
         <div className="lg:col-span-5 space-y-6">
-          
+
           {/* Quick specs card */}
           <div className="bg-brand-sand/40 border border-stone-200 rounded-none p-6 shadow-xs space-y-4">
             <h3 className="text-lg font-serif text-brand-dark pb-2 border-b border-stone-200">Table & Venue Guidelines</h3>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-stone-200/60 text-stone-700">
@@ -393,13 +392,13 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
 
             {!isSubmitted ? (
               <form onSubmit={handleFormSubmit} className="p-6 space-y-4 text-left">
-                
+
                 {/* Specific options for Dhow Cruise */}
                 {dining.id === "tamarind-dhow" && (
                   <div className="space-y-3 p-3.5 bg-brand-teal/5 border border-brand-teal/10 mb-2">
                     <div>
                       <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Cruise Journey Type</label>
-                      <select 
+                      <select
                         value={cruiseType}
                         onChange={(e) => setCruiseType(e.target.value)}
                         className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 bg-white focus:outline-none focus:border-brand-teal"
@@ -436,7 +435,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Preferred Date</label>
-                    <input 
+                    <input
                       type="date"
                       required
                       min="2026-06-29"
@@ -447,7 +446,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Preferred Time</label>
-                    <input 
+                    <input
                       type="time"
                       required
                       value={reserveTime}
@@ -490,7 +489,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-stone-700 mb-1">Cover Guests</label>
                     <div className="flex items-center border border-stone-300 rounded-none overflow-hidden bg-stone-50/50 h-[34px]">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setReserveGuests(prev => Math.max(1, prev - 1))}
                         className="px-3 py-1 hover:bg-stone-200 text-stone-600 font-bold h-full cursor-pointer"
@@ -498,7 +497,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                         −
                       </button>
                       <span className="flex-1 text-center font-mono text-xs text-stone-800 font-bold">{reserveGuests}</span>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setReserveGuests(prev => Math.min(25, prev + 1))}
                         className="px-3 py-1 hover:bg-stone-200 text-stone-600 font-bold h-full cursor-pointer"
@@ -540,9 +539,9 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                 {/* Guest Contacts */}
                 <div className="pt-2 border-t border-stone-100 space-y-3">
                   <h4 className="text-[10px] font-bold uppercase tracking-wider text-stone-800 block pb-1 border-b border-stone-100">Guest Contact Information</h4>
-                  
+
                   <div>
-                    <input 
+                    <input
                       type="text"
                       required
                       placeholder="Your Full Name"
@@ -552,7 +551,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <input 
+                    <input
                       type="email"
                       required
                       placeholder="Email Address"
@@ -560,7 +559,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                       onChange={(e) => setGuestEmail(e.target.value)}
                       className="w-full text-xs px-3 py-2 border border-stone-300 rounded-none text-stone-800 focus:outline-none focus:border-brand-teal"
                     />
-                    <input 
+                    <input
                       type="tel"
                       required
                       placeholder="Phone (e.g. +254...)"
@@ -571,7 +570,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                   </div>
 
                   <div>
-                    <input 
+                    <input
                       type="text"
                       placeholder="Dietary requirements (e.g., Shellfish Allergy, Vegetarian)"
                       value={dietary}
@@ -581,7 +580,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                   </div>
 
                   <div>
-                    <textarea 
+                    <textarea
                       placeholder="Special requests, celebration milestones, or specific table desires..."
                       rows={2}
                       value={specialRequests}
@@ -597,7 +596,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                     {diningSubmitError}
                   </div>
                 )}
-                <button 
+                <button
                   type="submit"
                   disabled={isDiningSubmitting}
                   className="w-full py-3 bg-brand-dark hover:bg-brand-teal text-white font-bold rounded-none text-xs transition-colors duration-200 uppercase tracking-widest shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
@@ -608,7 +607,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                 </button>
               </form>
             ) : (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="p-8 text-center space-y-4"
@@ -631,7 +630,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                 <p className="text-stone-500 text-xs font-light leading-relaxed">
                   The dining reservation desk has prioritized your Swahili coastal booking. A formal SMS and email verification with dining credentials has been dispatched to <span className="font-semibold">{guestEmail}</span>.
                 </p>
-                <button 
+                <button
                   onClick={() => {
                     setIsSubmitted(false);
                     setGuestName("");
@@ -656,7 +655,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
         <h3 className="text-2xl font-serif text-brand-dark mb-8 text-center">Alternative Dining Experiences</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {otherDinings.map((apt) => (
-            <div 
+            <div
               key={apt.id}
               onClick={() => {
                 onSelectDining(apt.id);
@@ -666,9 +665,9 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
               id={`recommend-dining-${apt.id}`}
             >
               <div className="sm:w-2/5 aspect-[16/10] sm:aspect-auto relative overflow-hidden bg-stone-100">
-                <img 
-                  src={apt.image} 
-                  alt={apt.name} 
+                <img
+                  src={apt.image}
+                  alt={apt.name}
                   className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
                   referrerPolicy="no-referrer"
                 />

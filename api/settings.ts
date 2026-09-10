@@ -73,7 +73,7 @@ const FALLBACK_EVENTS = [
     title: "Private Tamarind Dhow Cruises",
     tag: "Private Vessel Charter",
     tagIcon: "ship",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1782898889/v5_albvc2.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
     description: "Charter an authentic Swahili dhow for private sunset cruises, anniversary dinners, or corporate cocktail parties along Tudor Creek with live Taarab or acoustic music.",
     features: [
       "Exclusive charter capacity: 20 to 70 guests",
@@ -107,7 +107,7 @@ const FALLBACK_EVENTS = [
     title: "Sunset Dawa Terrace Soirées",
     tag: "Bespoke Celebrations",
     tagIcon: "sparkles",
-    image: "https://res.cloudinary.com/dhw8kulj3/image/upload/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
     description: "Exclusive terrace booking for milestone birthdays, anniversaries, or intimate sunset cocktail hours overlooking lit-up Old Town Mombasa across the creek.",
     features: [
       "Private section of Dawa Terrace overlooking bay",
@@ -164,7 +164,7 @@ export default async function handler(req: any, res: any) {
         if (key === "transfer_vehicles") return res.status(200).json({ success: true, value: FALLBACK_TRANSFERS });
         if (key === "event_packages") return res.status(200).json({ success: true, value: FALLBACK_EVENTS });
         if (key === "boarding_packages") return res.status(200).json({ success: true, value: FALLBACK_BOARDING });
-        
+
         return res.status(200).json({
           success: true,
           transfer_vehicles: FALLBACK_TRANSFERS,
@@ -178,8 +178,8 @@ export default async function handler(req: any, res: any) {
         const data = await db.select().from(globalSettingsTable).where(eq(globalSettingsTable.key, key));
         const value = data[0]?.value || (
           key === "transfer_vehicles" ? FALLBACK_TRANSFERS :
-          key === "event_packages" ? FALLBACK_EVENTS :
-          key === "boarding_packages" ? FALLBACK_BOARDING : null
+            key === "event_packages" ? FALLBACK_EVENTS :
+              key === "boarding_packages" ? FALLBACK_BOARDING : null
         );
         return res.status(200).json({ success: true, key, value });
       } else {
@@ -196,8 +196,8 @@ export default async function handler(req: any, res: any) {
           boarding_packages: settingsMap.boarding_packages || FALLBACK_BOARDING
         });
       }
-    } 
-    
+    }
+
     else if (method === "POST") {
       if (!key) {
         return res.status(400).json({ error: "Settings 'key' parameter is required." });
@@ -222,8 +222,8 @@ export default async function handler(req: any, res: any) {
       });
 
       return res.status(200).json({ success: true, key, value });
-    } 
-    
+    }
+
     else {
       res.setHeader("Allow", ["GET", "POST"]);
       return res.status(405).json({ error: `Method ${method} Not Allowed` });
@@ -235,12 +235,12 @@ export default async function handler(req: any, res: any) {
       if (key === "event_packages") return res.status(200).json({ success: true, value: FALLBACK_EVENTS });
       if (key === "boarding_packages") return res.status(200).json({ success: true, value: FALLBACK_BOARDING });
 
-      return res.status(200).json({ 
-        success: true, 
+      return res.status(200).json({
+        success: true,
         transfer_vehicles: FALLBACK_TRANSFERS,
         event_packages: FALLBACK_EVENTS,
         boarding_packages: FALLBACK_BOARDING,
-        database_error: err.message || "Database connection failed. Switched to offline mode." 
+        database_error: err.message || "Database connection failed. Switched to offline mode."
       });
     }
     return res.status(500).json({ error: `Database action failed: ${err.message || "Internal Error"}` });
