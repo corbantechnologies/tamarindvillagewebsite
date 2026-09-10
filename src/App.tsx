@@ -141,7 +141,6 @@ export default function App() {
     "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--14.jpg", // Pool luxury overlooking sea
     "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--11.jpg", // Beautiful coastal resort
     "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg", // Coastal rooms / suites
-    // "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg"  // Stunning oceanside sunset deck
   ];
 
   const [heroImages, setHeroImages] = useState<string[]>(() => {

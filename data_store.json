@@ -7,11 +7,11 @@
       "size": "95 m²",
       "maxGuests": 2,
       "pricePerNight": 160,
-      "image": "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
+      "image": "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/3.jpg",
       "gallery": [
-        "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
-        "https://media.tamarind.co.ke/tvl-website-assets/v1783677148/4_j84vps.jpg",
-        "https://media.tamarind.co.ke/tvl-website-assets/v1783677147/2_jkcobb.jpg"
+        "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/6.jpg",
+        "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/3.jpg",
+        "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/4.jpg"
       ],
       "amenities": [
         "High-speed Wi-Fi",
@@ -42,11 +42,11 @@
       "size": "145 m²",
       "maxGuests": 4,
       "pricePerNight": 240,
-      "image": "https://media.tamarind.co.ke/tvl-website-assets/v1783683956/3_y4yy1f.jpg",
+      "image": "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/10.jpg",
       "gallery": [
-        "https://media.tamarind.co.ke/tvl-website-assets/v1785399444/IMG-20260728-WA0067_zddl3j.jpg",
-        "https://media.tamarind.co.ke/tvl-website-assets/v1785399619/IMG-20260728-WA0082_sgufrn.jpg",
-        "https://media.tamarind.co.ke/tvl-website-assets/v1785399453/IMG-20260728-WA0072_dyahqk.jpg"
+        "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/10.jpg",
+        "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/2.jpg",
+        "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/12.jpg"
       ],
       "amenities": [
         "High-speed Wi-Fi",
@@ -77,11 +77,11 @@
       "size": "220 m²",
       "maxGuests": 6,
       "pricePerNight": 350,
-      "image": "https://media.tamarind.co.ke/tvl-website-assets/v1783685440/11_te7vun.jpg",
+      "image": "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/11.jpg",
       "gallery": [
-        "https://media.tamarind.co.ke/tvl-website-assets/v1785399398/IMG-20260728-WA0056_npidaf.jpg",
-        "https://media.tamarind.co.ke/tvl-website-assets/v1785399397/IMG-20260728-WA0054_yiazz1.jpg",
-        "https://media.tamarind.co.ke/tvl-website-assets/v1785399396/IMG-20260728-WA0053_vplcb1.jpg"
+        "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/9.jpg",
+        "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/7.jpg",
+        "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/8.jpg"
       ],
       "amenities": [
         "High-speed Wi-Fi",
@@ -118,7 +118,7 @@
         "Premium selection of international wines curated by our resident sommelier"
       ],
       "hours": "12:00 PM – 11:00 PM Daily",
-      "image": "https://media.tamarind.co.ke/tvl-website-assets/v1785399230/PXL_20260721_145415867_zlb785.jpg",
+      "image": "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145514928.jpg",
       "reservationLinkText": "Inquire for Restaurant Table"
     },
     {
@@ -132,7 +132,7 @@
         "Breathtaking night views of the lit-up old town of Mombasa across the bay"
       ],
       "hours": "4:00 PM – Midnight Daily",
-      "image": "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+      "image": "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125636903.jpg",
       "reservationLinkText": "Inquire for Dawa Terrace Table"
     },
     {
@@ -146,7 +146,7 @@
         "The perfect setting for anniversaries, proposals, or unforgettable group celebrations"
       ],
       "hours": "Lunch Cruise: 1:00 PM – 3:00 PM | Dinner Cruise: 6:30 PM – 10:30 PM",
-      "image": "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
+      "image": "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg",
       "reservationLinkText": "Inquire for Dhow Charter & Cruise"
     }
   ],
@@ -246,7 +246,7 @@
         "title": "Private Tamarind Dhow Cruises",
         "tag": "Private Vessel Charter",
         "tagIcon": "ship",
-        "image": "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
+        "image": "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg",
         "description": "Charter an authentic Swahili dhow for private sunset cruises, anniversary dinners, or corporate cocktail parties along Tudor Creek with live Taarab or acoustic music.",
         "features": [
           "Exclusive charter capacity: 20 to 70 guests",
@@ -280,7 +280,7 @@
         "title": "Sunset Dawa Terrace Soirées",
         "tag": "Bespoke Celebrations",
         "tagIcon": "sparkles",
-        "image": "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
+        "image": "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125636903.jpg",
         "description": "Exclusive terrace booking for milestone birthdays, anniversaries, or intimate sunset cocktail hours overlooking lit-up Old Town Mombasa across the creek.",
         "features": [
           "Private section of Dawa Terrace overlooking bay",

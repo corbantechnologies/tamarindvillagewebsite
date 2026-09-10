@@ -11,11 +11,11 @@ const DEFAULT_APARTMENTS = [
     size: "95 m²",
     maxGuests: 2,
     pricePerNight: 160,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/3.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/v1783677149/5_mhngcs.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1783677148/4_j84vps.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1783677147/2_jkcobb.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/6.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/3.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/4.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -46,11 +46,11 @@ const DEFAULT_APARTMENTS = [
     size: "145 m²",
     maxGuests: 4,
     pricePerNight: 240,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783683956/3_y4yy1f.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/10.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399444/IMG-20260728-WA0067_zddl3j.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399619/IMG-20260728-WA0082_sgufrn.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399453/IMG-20260728-WA0072_dyahqk.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/10.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/2.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/12.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -81,11 +81,11 @@ const DEFAULT_APARTMENTS = [
     size: "220 m²",
     maxGuests: 6,
     pricePerNight: 350,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/v1783685440/11_te7vun.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/11.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399398/IMG-20260728-WA0056_npidaf.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399397/IMG-20260728-WA0054_yiazz1.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/v1785399396/IMG-20260728-WA0053_vplcb1.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/9.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/7.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/8.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
