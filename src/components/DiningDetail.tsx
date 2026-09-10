@@ -31,21 +31,21 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
     switch (id) {
       case "tamarind-restaurant":
         return [
-          "https://media.tamarind.co.ke/tvl-website-assets/v1785399228/PXL_20260721_145416704_xuozav.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/v1782929875/food1_kxukhp.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/v1785399227/PXL_20260721_145353750_vid6so.jpg"
+          "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145416704.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145344191.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145353750.jpg"
         ];
       case "dawa-terrace":
         return [
-          "https://media.tamarind.co.ke/tvl-website-assets/v1785844619/PXL_20260731_125648811_cnkxww.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/v1785844614/PXL_20260731_125647779_hfyoag.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/v1785844584/PXL_20260729_123521019.PORTRAIT_s1z8wz.jpg"
+          "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125646637.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260803_110941837.MP.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/dawa.jpg"
         ];
       case "tamarind-dhow":
         return [
-          "https://media.tamarind.co.ke/tvl-website-assets/v1782898889/v5_albvc2.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/v1782899001/v4_hcmdu7.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/v1782929875/food1_kxukhp.jpg"
+          "https://media.tamarind.co.ke/tvl-website-assets/DHOW-2/1.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/DHOW-2/2.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/DHOW-2/3.jpg"
         ];
       default:
         return [dining.image];
@@ -284,8 +284,8 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                 key={idx}
                 onClick={() => setActiveImage(img)}
                 className={`relative aspect-[4/3] rounded-none overflow-hidden cursor-pointer transition-all duration-200 ${activeImage === img
-                    ? "ring-2 ring-brand-teal ring-offset-2 scale-98 shadow-sm"
-                    : "opacity-75 hover:opacity-100 hover:scale-102"
+                  ? "ring-2 ring-brand-teal ring-offset-2 scale-98 shadow-sm"
+                  : "opacity-75 hover:opacity-100 hover:scale-102"
                   }`}
                 id={`dining-thumb-${idx}`}
               >
