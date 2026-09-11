@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, Plane, Train, Car, Calendar, Clock, Users, Luggage, CheckCircle2, ShieldCheck, Sparkles, ArrowRight, Phone, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { loadTransferVehicles, TransferVehicle } from "../utils/extrasStore";
+import OptimizedImage from "./OptimizedImage";
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -286,11 +287,11 @@ export default function TransferModal({ isOpen, onClose, vehiclesList }: Transfe
                       >
                         <div>
                           <div className="aspect-[16/10] bg-stone-100 overflow-hidden mb-3 relative">
-                            <img 
+                            <OptimizedImage 
                               src={v.image} 
+                              preset="card"
                               alt={v.name} 
                               className="w-full h-full object-cover"
-                              referrerPolicy="no-referrer"
                             />
                             {isSelected && (
                               <span className="absolute top-2 right-2 bg-brand-teal text-white text-[9px] font-bold px-2 py-0.5 uppercase tracking-wider shadow-sm">

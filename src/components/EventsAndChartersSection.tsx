@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Sparkles, Ship, Heart, Briefcase, CheckCircle2, ArrowRight, FileText, ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { loadEventPackages, EventPackage } from "../utils/extrasStore";
+import OptimizedImage from "./OptimizedImage";
 
 interface EventsAndChartersSectionProps {
   onOpenTransferModal?: () => void;
@@ -175,11 +176,11 @@ export default function EventsAndChartersSection({ onOpenTransferModal, onOpenCu
                 >
                   {/* Left Column: Image Banner */}
                   <div className="lg:col-span-7 relative min-h-[300px] sm:min-h-[400px] bg-stone-900 overflow-hidden">
-                    <img 
+                    <OptimizedImage 
                       src={activePackage.image} 
+                      preset="gallery"
                       alt={activePackage.title} 
                       className="w-full h-full object-cover transition-transform duration-700 hover:scale-102"
-                      referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-brand-dark/30 pointer-events-none" />
 
