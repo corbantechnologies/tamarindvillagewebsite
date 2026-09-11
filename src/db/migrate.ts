@@ -24,7 +24,8 @@ export async function initAndMigrateDatabase() {
     `);
 
     if (tableCheck[0]?.exists) {
-      console.log("✅ Database schema is already initialized. Skipping migration/seeding.");
+      console.log("✅ Database schema is already initialized. Verifying and self-healing media assets...");
+      await healLegacyMediaAssets(client, db);
       return;
     }
 
@@ -312,7 +313,7 @@ export async function initAndMigrateDatabase() {
           title: "Sunset Dawa Terrace Soirées",
           tag: "Bespoke Celebrations",
           tagIcon: "sparkles",
-          image: "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125636903.jpg",
+          image: "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg",
           description: "Exclusive terrace booking for milestone birthdays, anniversaries, or intimate sunset cocktail hours overlooking lit-up Old Town Mombasa across the creek.",
           features: [
             "Private section of Dawa Terrace overlooking bay",
@@ -375,10 +376,126 @@ export async function initAndMigrateDatabase() {
       console.log("🌱 Default global settings seeded successfully.");
     }
 
+    await healLegacyMediaAssets(client, db);
+
     console.log("🎉 Database initialization completed successfully!");
   } catch (error) {
     console.error("❌ Database initialization / migration failed:", error);
     throw error;
+  }
+}
+
+let isLegacyMediaHealed = false;
+
+export async function healLegacyMediaAssets(client: any, db: any) {
+  if (isLegacyMediaHealed) return;
+
+  try {
+    // 1. Check for legacy Cloudinary images in dining_options
+    const legacyDining = await client.unsafe(`
+      SELECT id, name, image FROM dining_options WHERE image LIKE '%cloudinary%';
+    `);
+
+    // 2. Check for legacy Cloudinary images in apartments
+    const legacyApartments = await client.unsafe(`
+      SELECT id, name, image, gallery FROM apartments 
+      WHERE image LIKE '%cloudinary%' OR gallery::text LIKE '%cloudinary%';
+    `);
+
+    // 3. Check for legacy Cloudinary images in global_settings
+    const legacySettings = await client.unsafe(`
+      SELECT key, value FROM global_settings WHERE value::text LIKE '%cloudinary%';
+    `);
+
+    const hasLegacyData = legacyDining.length > 0 || legacyApartments.length > 0 || legacySettings.length > 0;
+
+    if (!hasLegacyData) {
+      isLegacyMediaHealed = true;
+      return;
+    }
+
+    console.log(`🔄 [Self-Healing] Detected legacy Cloudinary assets (${legacyDining.length} dining, ${legacyApartments.length} apartments, ${legacySettings.length} settings). Self-healing database records...`);
+
+    // Load canonical data from data_store.json if available, or fall back to static data
+    let canonicalData: any = null;
+    const storePath = path.join(process.cwd(), "data_store.json");
+    if (fs.existsSync(storePath)) {
+      try {
+        canonicalData = JSON.parse(fs.readFileSync(storePath, "utf-8"));
+      } catch (e) {
+        console.error("⚠️ Failed to parse data_store.json during self-healing:", e);
+      }
+    }
+
+    if (!canonicalData) {
+      canonicalData = {
+        apartments: APARTMENTS,
+        dining: DINING,
+      };
+    }
+
+    // Default hardcoded self-hosted mappings for dining
+    const FALLBACK_DINING_IMAGES: Record<string, string> = {
+      "tamarind-restaurant": "https://media.tamarind.co.ke/tvl-website-assets/mr6.jpg",
+      "dawa-terrace": "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg",
+      "tamarind-dhow": "https://media.tamarind.co.ke/tvl-website-assets/d2.jpg",
+    };
+
+    // A. Heal dining_options
+    let healedDiningCount = 0;
+    for (const row of legacyDining) {
+      const match = canonicalData.dining?.find((d: any) => d.id === row.id);
+      const targetImage = (match?.image && !match.image.includes("cloudinary"))
+        ? match.image 
+        : (FALLBACK_DINING_IMAGES[row.id] || "https://media.tamarind.co.ke/tvl-website-assets/mr6.jpg");
+
+      if (targetImage) {
+        await client.unsafe(`
+          UPDATE dining_options SET image = $1 WHERE id = $2;
+        `, [targetImage, row.id]);
+        healedDiningCount++;
+        console.log(`  ✅ [Self-Healing] Updated dining '${row.id}' -> ${targetImage}`);
+      }
+    }
+
+    // B. Heal apartments
+    let healedApartmentCount = 0;
+    for (const row of legacyApartments) {
+      const match = canonicalData.apartments?.find((a: any) => a.id === row.id);
+      if (match) {
+        const targetImage = (match.image && !match.image.includes("cloudinary")) ? match.image : row.image;
+        const targetGallery = (match.gallery && Array.isArray(match.gallery)) ? match.gallery : row.gallery;
+        await client.unsafe(`
+          UPDATE apartments SET image = $1, gallery = $2 WHERE id = $3;
+        `, [targetImage, JSON.stringify(targetGallery), row.id]);
+        healedApartmentCount++;
+        console.log(`  ✅ [Self-Healing] Updated apartment '${row.id}' to self-hosted media`);
+      }
+    }
+
+    // C. Heal global_settings
+    let healedSettingsCount = 0;
+    for (const row of legacySettings) {
+      if (row.key === "event_packages" && canonicalData.settings?.event_packages) {
+        await client.unsafe(`
+          UPDATE global_settings SET value = $1 WHERE key = 'event_packages';
+        `, [JSON.stringify(canonicalData.settings.event_packages)]);
+        healedSettingsCount++;
+        console.log(`  ✅ [Self-Healing] Updated global_settings 'event_packages'`);
+      }
+      if (row.key === "transfer_vehicles" && canonicalData.settings?.transfer_vehicles) {
+        await client.unsafe(`
+          UPDATE global_settings SET value = $1 WHERE key = 'transfer_vehicles';
+        `, [JSON.stringify(canonicalData.settings.transfer_vehicles)]);
+        healedSettingsCount++;
+        console.log(`  ✅ [Self-Healing] Updated global_settings 'transfer_vehicles'`);
+      }
+    }
+
+    console.log(`✨ [Self-Healing] Successfully healed ${healedDiningCount} dining options, ${healedApartmentCount} apartments, and ${healedSettingsCount} global settings!`);
+    isLegacyMediaHealed = true;
+  } catch (err) {
+    console.error("⚠️ [Self-Healing] Failed to auto-heal legacy media assets:", err);
   }
 }
 

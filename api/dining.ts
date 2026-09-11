@@ -15,7 +15,7 @@ const DEFAULT_DINING = [
       "Premium selection of international wines curated by our resident sommelier"
     ],
     hours: "12:00 PM – 11:00 PM Daily",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145514928.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/mr6.jpg",
     reservationLinkText: "Inquire for Restaurant Table"
   },
   {
@@ -29,7 +29,7 @@ const DEFAULT_DINING = [
       "Breathtaking night views of the lit-up old town of Mombasa across the bay"
     ],
     hours: "4:00 PM – Midnight Daily",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125636903.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg",
     reservationLinkText: "Inquire for Dawa Terrace Table"
   },
   {
@@ -43,7 +43,7 @@ const DEFAULT_DINING = [
       "The perfect setting for anniversaries, proposals, or unforgettable group celebrations"
     ],
     hours: "Lunch Cruise: 1:00 PM – 3:00 PM | Dinner Cruise: 6:30 PM – 10:30 PM",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/d2.jpg",
     reservationLinkText: "Inquire for Dhow Charter & Cruise"
   }
 ];

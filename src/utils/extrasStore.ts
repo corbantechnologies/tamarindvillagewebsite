@@ -128,7 +128,7 @@ export const DEFAULT_EVENT_PACKAGES: EventPackage[] = [
     title: "Sunset Dawa Terrace Soirées",
     tag: "Bespoke Celebrations",
     tagIcon: "sparkles",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125636903.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg",
     description: "Exclusive terrace booking for milestone birthdays, anniversaries, or intimate sunset cocktail hours overlooking lit-up Old Town Mombasa across the creek.",
     features: [
       "Private section of Dawa Terrace overlooking bay",

@@ -151,6 +151,12 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasCloudinary = parsed.some((img: string) => typeof img === "string" && img.includes("cloudinary"));
+          if (hasCloudinary) {
+            console.log("🧹 [LocalStorage] Resetting legacy Cloudinary hero images to self-hosted defaults.");
+            localStorage.setItem("tamarind_hero_images", JSON.stringify(defaultHeroImages));
+            return defaultHeroImages;
+          }
           return parsed;
         }
       }

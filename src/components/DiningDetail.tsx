@@ -32,21 +32,21 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
     switch (id) {
       case "tamarind-restaurant":
         return [
-          "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145416704.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145344191.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145353750.jpg"
+          "https://media.tamarind.co.ke/tvl-website-assets/mr6.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/mr1.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/mr2.jpg"
         ];
       case "dawa-terrace":
         return [
-          "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125646637.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260803_110941837.MP.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/t2.jpg",
           "https://media.tamarind.co.ke/tvl-website-assets/dawa.jpg"
         ];
       case "tamarind-dhow":
         return [
-          "https://media.tamarind.co.ke/tvl-website-assets/DHOW-2/1.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/DHOW-2/2.jpg",
-          "https://media.tamarind.co.ke/tvl-website-assets/DHOW-2/3.jpg"
+          "https://media.tamarind.co.ke/tvl-website-assets/d2.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/d1.jpg",
+          "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg"
         ];
       default:
         return [dining.image];

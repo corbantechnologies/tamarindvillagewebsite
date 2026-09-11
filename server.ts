@@ -30,11 +30,11 @@ const DEFAULT_APARTMENTS = [
     size: "95 m²",
     maxGuests: 2,
     pricePerNight: 160,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/3.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/r36.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/6.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/3.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/1/4.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/r31.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/r32.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/r34.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -65,11 +65,11 @@ const DEFAULT_APARTMENTS = [
     size: "145 m²",
     maxGuests: 4,
     pricePerNight: 240,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/10.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/r22.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/10.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/2.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/2/12.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/r22.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/r24.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/r26.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -100,11 +100,11 @@ const DEFAULT_APARTMENTS = [
     size: "220 m²",
     maxGuests: 6,
     pricePerNight: 350,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/11.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/r36.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/9.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/7.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/ROOMS/3/8.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/r36.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/r32.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/r35.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
@@ -142,7 +142,7 @@ const DEFAULT_DINING = [
       "Premium selection of international wines curated by our resident sommelier"
     ],
     hours: "12:00 PM – 11:00 PM Daily",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/RESTAURANT/PXL_20260721_145514928.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/mr6.jpg",
     reservationLinkText: "Inquire for Restaurant Table"
   },
   {
@@ -156,7 +156,7 @@ const DEFAULT_DINING = [
       "Breathtaking night views of the lit-up old town of Mombasa across the bay"
     ],
     hours: "4:00 PM – Midnight Daily",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125636903.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg",
     reservationLinkText: "Inquire for Dawa Terrace Table"
   },
   {
@@ -170,7 +170,7 @@ const DEFAULT_DINING = [
       "The perfect setting for anniversaries, proposals, or unforgettable group celebrations"
     ],
     hours: "Lunch Cruise: 1:00 PM – 3:00 PM | Dinner Cruise: 6:30 PM – 10:30 PM",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/d2.jpg",
     reservationLinkText: "Inquire for Dhow Charter & Cruise"
   }
 ];
@@ -280,7 +280,7 @@ const FALLBACK_EVENTS = [
     title: "Sunset Dawa Terrace Soirées",
     tag: "Bespoke Celebrations",
     tagIcon: "sparkles",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125636903.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg",
     description: "Exclusive terrace booking for milestone birthdays, anniversaries, or intimate sunset cocktail hours overlooking lit-up Old Town Mombasa across the creek.",
     features: [
       "Private section of Dawa Terrace overlooking bay",

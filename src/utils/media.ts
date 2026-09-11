@@ -76,6 +76,48 @@ export const MEDIA_PRESETS: Record<PresetName, ImagePresetOptions> = {
 };
 
 /**
+ * Automatically translates legacy Cloudinary image URLs to canonical self-hosted MinIO equivalents.
+ */
+export function mapLegacyCloudinaryUrl(url: string): string {
+  if (!url || !url.includes("res.cloudinary.com")) return url;
+
+  // 1. Dining experiences
+  if (url.includes("PXL_20260721_145415867") || url.includes("PXL_20260721_145514928") || url.includes("tamarind-restaurant")) {
+    return "https://media.tamarind.co.ke/tvl-website-assets/mr6.jpg";
+  }
+  if (url.includes("PXL_20260731_125648811") || url.includes("PXL_20260731_125636903") || url.includes("dawa-terrace")) {
+    return "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg";
+  }
+  if (url.includes("v5_albvc2") || url.includes("tamarind-dhow")) {
+    return "https://media.tamarind.co.ke/tvl-website-assets/d2.jpg";
+  }
+
+  // 2. Suite & apartment legacy references
+  if (url.includes("/ROOMS/1/") || url.includes("1-bedroom")) {
+    return "https://media.tamarind.co.ke/tvl-website-assets/r36.jpg";
+  }
+  if (url.includes("/ROOMS/2/") || url.includes("2-bedroom")) {
+    return "https://media.tamarind.co.ke/tvl-website-assets/r22.jpg";
+  }
+  if (url.includes("/ROOMS/3/") || url.includes("3-bedroom")) {
+    return "https://media.tamarind.co.ke/tvl-website-assets/r36.jpg";
+  }
+
+  // 3. Drone / Hero legacy references
+  if (url.includes("drone-14") || url.includes("drone--14")) {
+    return "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--14.jpg";
+  }
+  if (url.includes("drone-11") || url.includes("drone--11")) {
+    return "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--11.jpg";
+  }
+  if (url.includes("drone-2") || url.includes("drone--2")) {
+    return "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg";
+  }
+
+  return url;
+}
+
+/**
  * Transforms a canonical MinIO URL into an optimized imgproxy URL.
  * If the URL is external (Unsplash, local assets, etc.) or already transformed,
  * it returns the original URL unchanged.
@@ -99,22 +141,27 @@ export function getOptimizedImageUrl(
     return trimmed;
   }
 
-  // 3. Check if this is a MinIO asset from our bucket
+  // 3. Intercept and resolve any legacy Cloudinary URLs to self-hosted MinIO equivalents
+  const resolvedUrl = trimmed.includes("res.cloudinary.com") 
+    ? mapLegacyCloudinaryUrl(trimmed) 
+    : trimmed;
+
+  // 4. Check if this is a MinIO asset from our bucket
   let objectKey: string | null = null;
 
-  if (trimmed.includes(MINIO_HOST) && trimmed.includes(BUCKET_NAME)) {
+  if (resolvedUrl.includes(MINIO_HOST) && resolvedUrl.includes(BUCKET_NAME)) {
     // Matches https://media.tamarind.co.ke/tvl-website-assets/PATH...
-    const match = trimmed.match(new RegExp(`https?://${MINIO_HOST}/${BUCKET_NAME}/(.*)`));
+    const match = resolvedUrl.match(new RegExp(`https?://${MINIO_HOST}/${BUCKET_NAME}/(.*)`));
     if (match && match[1]) {
       objectKey = match[1];
     }
-  } else if (trimmed.startsWith(`s3://${BUCKET_NAME}/`)) {
-    objectKey = trimmed.replace(`s3://${BUCKET_NAME}/`, "");
+  } else if (resolvedUrl.startsWith(`s3://${BUCKET_NAME}/`)) {
+    objectKey = resolvedUrl.replace(`s3://${BUCKET_NAME}/`, "");
   }
 
   // If not our MinIO asset (e.g. Unsplash, external link), return original as-is
   if (!objectKey) {
-    return trimmed;
+    return resolvedUrl;
   }
 
   // Clean any leading slashes or query parameters from object key
