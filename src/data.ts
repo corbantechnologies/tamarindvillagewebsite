@@ -199,7 +199,7 @@ export const DINING: DiningExperience[] = [
       "Breathtaking night views of the lit-up old town of Mombasa across the bay"
     ],
     hours: "4:00 PM – Midnight Daily",
-    image: "https://media.tamarind.co.ke/tvl-website-assets/TERRACE/PXL_20260731_125636903.jpg",
+    image: "https://tml-files.tamarind.co.ke/insecure/resize:fit:1200:0/plain/s3://tvl-website-assets/TERRACE/PXL_20260731_125646637.jpg",
     reservationLinkText: "Inquire for Dawa Terrace Table"
   },
   {

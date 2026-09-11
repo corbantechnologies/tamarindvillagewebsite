@@ -7,6 +7,7 @@ import {
   Edit3, Eye, CheckSquare, Sparkles, RefreshCw, Car, Heart, Image as ImageIcon
 } from "lucide-react";
 import { ApartmentType, DiningExperience } from "../types";
+import OptimizedImage from "./OptimizedImage";
 import { 
   TransferVehicle, 
   EventPackage, 
@@ -1215,11 +1216,11 @@ export default function StaffDashboardModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {apartments.map(apt => (
                         <div key={apt.id} className="bg-white border border-stone-200 overflow-hidden flex flex-col shadow-sm">
-                          <img 
+                          <OptimizedImage 
                             src={apt.image} 
+                            preset="thumb"
                             alt={apt.name} 
                             className="w-full h-48 object-cover border-b border-stone-150"
-                            referrerPolicy="no-referrer"
                           />
                           <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                             <div>
@@ -1517,11 +1518,11 @@ export default function StaffDashboardModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {dining.map(d => (
                         <div key={d.id} className="bg-white border border-stone-200 overflow-hidden flex flex-col shadow-sm">
-                          <img 
+                          <OptimizedImage 
                             src={d.image} 
+                            preset="thumb"
                             alt={d.name} 
                             className="w-full h-48 object-cover border-b border-stone-150"
-                            referrerPolicy="no-referrer"
                           />
                           <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                             <div>
@@ -1759,7 +1760,7 @@ export default function StaffDashboardModal({
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {vehicles.map((v, idx) => (
                               <div key={v.id || idx} className="flex gap-4 p-4 bg-white border border-stone-200 text-xs shadow-sm">
-                                <img src={v.image} alt={v.name} className="w-20 h-20 object-cover border border-stone-100 shrink-0" referrerPolicy="no-referrer" />
+                                <OptimizedImage src={v.image} preset="thumb" alt={v.name} className="w-20 h-20 object-cover border border-stone-100 shrink-0" />
                                 <div className="flex-1 space-y-1 min-w-0">
                                   <p className="font-bold text-stone-900 uppercase truncate">{v.name}</p>
                                   <p className="text-[10px] text-stone-500 leading-tight line-clamp-2">{v.tagline}</p>
@@ -1996,7 +1997,7 @@ export default function StaffDashboardModal({
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {events.map((ev, idx) => (
                               <div key={ev.id || idx} className="bg-white border border-stone-200 flex flex-col shadow-sm">
-                                <img src={ev.image} alt={ev.title} className="w-full h-40 object-cover border-b border-stone-150" referrerPolicy="no-referrer" />
+                                <OptimizedImage src={ev.image} preset="thumb" alt={ev.title} className="w-full h-40 object-cover border-b border-stone-150" />
                                 <div className="p-4 flex-1 flex flex-col justify-between space-y-3 min-w-0">
                                   <div>
                                     <div className="flex justify-between items-start gap-1">

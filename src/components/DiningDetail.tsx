@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { DiningExperience } from "../types";
+import OptimizedImage from "./OptimizedImage";
 
 interface DiningDetailProps {
   dining: DiningExperience;
@@ -264,12 +265,13 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
         <div className="lg:col-span-7 space-y-6">
           {/* Main Image */}
           <div className="relative aspect-[16/10] bg-stone-100 rounded-none overflow-hidden shadow-md">
-            <img
+            <OptimizedImage
               src={activeImage}
+              preset="gallery"
               alt={dining.name}
               className="w-full h-full object-cover"
-              referrerPolicy="no-referrer"
               id="dining-main-image"
+              loading="eager"
             />
             <div className="absolute top-4 left-4 bg-brand-dark/95 border border-stone-800 px-3 py-1.5 rounded-none text-[10px] font-bold uppercase tracking-widest text-brand-gold flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5" />
@@ -289,11 +291,11 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
                   }`}
                 id={`dining-thumb-${idx}`}
               >
-                <img
+                <OptimizedImage
                   src={img}
+                  preset="thumb"
                   alt={`${dining.name} detail ${idx + 1}`}
                   className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
                 />
               </button>
             ))}
@@ -665,11 +667,11 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
               id={`recommend-dining-${apt.id}`}
             >
               <div className="sm:w-2/5 aspect-[16/10] sm:aspect-auto relative overflow-hidden bg-stone-100">
-                <img
+                <OptimizedImage
                   src={apt.image}
+                  preset="card"
                   alt={apt.name}
                   className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
-                  referrerPolicy="no-referrer"
                 />
               </div>
               <div className="p-6 sm:w-3/5 flex flex-col justify-between">

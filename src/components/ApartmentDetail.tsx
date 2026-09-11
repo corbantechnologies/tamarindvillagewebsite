@@ -7,6 +7,7 @@ import {
   Wifi, Wind, ChefHat, Tv, Lock, Coffee, Sparkles, Calendar, ArrowRight 
 } from "lucide-react";
 import { motion } from "motion/react";
+import OptimizedImage from "./OptimizedImage";
 
 interface ApartmentDetailProps {
   apartment: ApartmentType;
@@ -219,12 +220,13 @@ export default function ApartmentDetail({
         {/* Left Side: Image Gallery (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
           <div className="relative aspect-[16/10] bg-stone-100 rounded-none overflow-hidden shadow-md group">
-            <img 
+            <OptimizedImage 
               src={activeImage} 
+              preset="gallery"
               alt={apartment.name} 
               className="w-full h-full object-cover transform duration-500 group-hover:scale-102"
-              referrerPolicy="no-referrer"
               id="main-gallery-image"
+              loading="eager"
             />
             <div className="absolute top-4 left-4 bg-brand-dark/95 border border-stone-800 px-3 py-1.5 rounded-none text-[10px] font-bold uppercase tracking-widest text-brand-gold">
               {apartment.viewType}
@@ -244,11 +246,11 @@ export default function ApartmentDetail({
                 }`}
                 id={`thumb-${idx}`}
               >
-                <img 
+                <OptimizedImage 
                   src={img} 
+                  preset="thumb"
                   alt={`${apartment.name} view ${idx + 1}`} 
                   className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
                 />
               </button>
             ))}
@@ -700,11 +702,11 @@ export default function ApartmentDetail({
                 id={`recommend-${apt.id}`}
               >
                 <div className="sm:w-2/5 aspect-[4/3] sm:aspect-auto relative overflow-hidden bg-stone-100">
-                  <img 
+                  <OptimizedImage 
                     src={apt.image} 
+                    preset="card"
                     alt={apt.name} 
                     className="w-full h-full object-cover transform duration-500 group-hover:scale-102"
-                    referrerPolicy="no-referrer"
                   />
                 </div>
                 <div className="p-6 sm:w-3/5 flex flex-col justify-between">

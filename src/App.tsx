@@ -7,6 +7,8 @@ import BookingModal from "./components/BookingModal";
 import TransferModal from "./components/TransferModal";
 import EventsAndChartersSection from "./components/EventsAndChartersSection";
 import StaffDashboardModal from "./components/StaffDashboardModal";
+import OptimizedImage from "./components/OptimizedImage";
+import { getOptimizedImageUrl } from "./utils/media";
 import { loadTransferVehicles, loadEventPackages, saveTransferVehicles, saveEventPackages } from "./utils/extrasStore";
 import { useLiveRates } from "./utils/profitroom";
 import { APARTMENTS, PACKAGES, DINING, FACILITIES } from "./data";
@@ -448,7 +450,7 @@ export default function App() {
                   <AnimatePresence mode="popLayout">
                     <motion.img
                       key={currentHeroIndex}
-                      src={heroImages[currentHeroIndex]}
+                      src={getOptimizedImageUrl(heroImages[currentHeroIndex], "hero")}
                       alt={`Tamarind Village Coastal Backdrop ${currentHeroIndex + 1}`}
                       initial={{ opacity: 0, scale: 1.05 }}
                       animate={{ opacity: 0.45, scale: 1 }}
@@ -456,6 +458,12 @@ export default function App() {
                       transition={{ duration: 1.2, ease: "easeInOut" }}
                       className="absolute inset-0 w-full h-full object-cover filter brightness-90"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        const original = heroImages[currentHeroIndex];
+                        if (original && e.currentTarget.src !== original) {
+                          e.currentTarget.src = original;
+                        }
+                      }}
                     />
                   </AnimatePresence>
                   <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-brand-dark/60 to-transparent pointer-events-none"></div>
@@ -632,11 +640,11 @@ export default function App() {
                         >
                           {/* Image Thumbnail Container */}
                           <div className="relative aspect-[16/10] overflow-hidden bg-stone-100">
-                            <img
+                            <OptimizedImage
                               src={apt.image}
+                              preset="card"
                               alt={apt.name}
                               className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
-                              referrerPolicy="no-referrer"
                             />
                             <div className="absolute top-4 right-4 bg-brand-dark/90 backdrop-blur-md px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-gold">
                               {apt.viewType.split(" ")[0]} View
@@ -843,11 +851,11 @@ export default function App() {
                         <div>
                           {/* Image */}
                           <div className="relative aspect-[16/10] bg-stone-100 overflow-hidden">
-                            <img
+                            <OptimizedImage
                               src={dining.image}
+                              preset="card"
                               alt={dining.name}
                               className="w-full h-full object-cover transform duration-500 group-hover:scale-103"
-                              referrerPolicy="no-referrer"
                             />
                             <div className="absolute bottom-4 left-4 bg-brand-dark/90 backdrop-blur-md px-3 py-1 text-[10px] uppercase font-mono font-bold tracking-wider text-brand-gold">
                               {dining.hours.split(" | ")[0]}
@@ -921,11 +929,11 @@ export default function App() {
                       >
                         {/* Image side */}
                         <div className="lg:w-1/2 aspect-[16/10] lg:aspect-auto relative overflow-hidden bg-stone-200">
-                          <img
+                          <OptimizedImage
                             src={facility.image}
+                            preset="card"
                             alt={facility.name}
                             className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
                           />
                         </div>
 
