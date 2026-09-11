@@ -30,11 +30,11 @@ const DEFAULT_APARTMENTS = [
     size: "95 m²",
     maxGuests: 2,
     pricePerNight: 160,
-    image: "https://media.tamarind.co.ke/tvl-website-assets/r36.jpg",
+    image: "https://media.tamarind.co.ke/tvl-website-assets/r12.jpg",
     gallery: [
-      "https://media.tamarind.co.ke/tvl-website-assets/r31.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/r32.jpg",
-      "https://media.tamarind.co.ke/tvl-website-assets/r34.jpg"
+      "https://media.tamarind.co.ke/tvl-website-assets/r13.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/r12.jpg",
+      "https://media.tamarind.co.ke/tvl-website-assets/r14.jpg"
     ],
     amenities: [
       "High-speed Wi-Fi",
