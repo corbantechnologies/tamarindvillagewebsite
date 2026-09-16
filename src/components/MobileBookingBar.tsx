@@ -4,15 +4,24 @@ import { Calendar, ShieldCheck } from "lucide-react";
 interface MobileBookingBarProps {
   onOpenBooking: () => void;
   startingPrice?: number;
+  isLive?: boolean;
 }
 
-export default function MobileBookingBar({ onOpenBooking, startingPrice = 160 }: MobileBookingBarProps) {
+export default function MobileBookingBar({ onOpenBooking, startingPrice = 160, isLive = false }: MobileBookingBarProps) {
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-300 px-4 py-2.5 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-700 font-bold uppercase tracking-wider">
-          <ShieldCheck className="w-3 h-3" />
-          <span>Direct Guarantee</span>
+        <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider">
+          <div className="flex items-center gap-1 text-emerald-700 font-bold">
+            <ShieldCheck className="w-3 h-3" />
+            <span>Direct Guarantee</span>
+          </div>
+          {isLive && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 text-[8px] font-bold text-white bg-emerald-600 uppercase tracking-widest">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              Live Rate
+            </span>
+          )}
         </div>
         <div className="flex items-baseline gap-1">
           <span className="text-[11px] text-stone-500 font-light">From</span>

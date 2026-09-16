@@ -3,7 +3,8 @@ import toast from "react-hot-toast";
 import {
   Calendar, Users, MapPin, Phone, Mail, ShieldCheck, CheckCircle2,
   Clock, AlertCircle, ArrowRight, Copy, Check, MessageSquare, CreditCard,
-  RefreshCw, X, ChevronRight, Download, DollarSign, Utensils, Sparkles
+  RefreshCw, X, ChevronRight, Download, DollarSign, Utensils, Sparkles,
+  Maximize2, Minimize2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -20,6 +21,8 @@ export default function GuestBookingTrackerModal({
   initialToken,
   onOpenBookingModal
 }: GuestBookingTrackerModalProps) {
+  // Fullscreen view toggle (default to true for expansive guest portal workspace)
+  const [isFullScreen, setIsFullScreen] = useState(true);
   const [tokenInput, setTokenInput] = useState(initialToken || "");
   const [activeToken, setActiveToken] = useState(initialToken || "");
   const [loading, setLoading] = useState(false);
@@ -203,18 +206,24 @@ export default function GuestBookingTrackerModal({
   const isCancelled = inquiry?.status === "Cancelled (Lost)";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
+    <div className={`fixed inset-0 z-50 flex ${isFullScreen ? "p-0" : "items-center justify-center p-3 sm:p-6 overflow-y-auto"}`}>
+      {/* Backdrop (in windowed mode) */}
+      {!isFullScreen && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+          onClick={onClose}
+        />
+      )}
 
       {/* Main Container */}
-      <div className="relative w-full max-w-3xl bg-white text-brand-dark shadow-2xl z-10 my-auto overflow-hidden border border-stone-200">
+      <div className={`relative bg-white text-brand-dark shadow-2xl z-10 overflow-hidden flex flex-col ${
+        isFullScreen 
+          ? "w-screen h-screen border-none" 
+          : "w-full max-w-4xl h-[92vh] my-auto border border-stone-200"
+      }`}>
         
         {/* Top Header */}
-        <div className="bg-gradient-to-r from-[#821124] to-[#560A17] text-white p-5 sm:p-6 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-[#821124] to-[#560A17] text-white p-5 sm:p-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/10 border border-white/20 flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-brand-gold" />
@@ -230,17 +239,29 @@ export default function GuestBookingTrackerModal({
               </h2>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              className="p-1.5 bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              title={isFullScreen ? "Restore Window Size" : "Maximize Full Screen"}
+              aria-label={isFullScreen ? "Exit full screen" : "Full screen"}
+            >
+              {isFullScreen ? <Minimize2 className="w-5 h-5 text-brand-gold" /> : <Maximize2 className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              aria-label="Close"
+              title="Close Portal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Content Body */}
-        <div className="p-5 sm:p-8 max-h-[80vh] overflow-y-auto space-y-6">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-stone-50">
+          <div className="max-w-4xl mx-auto space-y-6 w-full">
 
           {/* Search Bar if not yet loaded or user wants to lookup another token */}
           <form onSubmit={handleSearch} className="flex gap-2">
@@ -746,10 +767,11 @@ export default function GuestBookingTrackerModal({
             </div>
           )}
 
+          </div>
         </div>
 
         {/* Modal Footer */}
-        <div className="bg-stone-100 px-6 py-4 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        <div className="bg-stone-100 px-6 py-4 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
           <div className="flex items-center gap-2 text-stone-500 text-[11px]">
             <Clock className="w-3.5 h-3.5 text-stone-400" />
             <span>Tamarind Reservations Desk operates daily from 7:00 AM – 10:00 PM EAT.</span>

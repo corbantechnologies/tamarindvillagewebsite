@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -158,6 +158,38 @@ export default function App() {
     ...apt,
     pricePerNight: Math.round(apt.pricePerNight * (pricingRules?.markupMultiplier || 1.0))
   }));
+
+  // Live starting price for mobile booking bar (dynamic from Profitroom)
+  const { mobileStartingPrice, isMobilePriceLive } = useMemo(() => {
+    // If viewing a specific apartment detail, show that apartment's live rate
+    if (activeView === "detail" && selectedApartmentId) {
+      const activeApt = processedApartments.find(a => a.id === selectedApartmentId) || processedApartments[0];
+      if (activeApt) {
+        const { price, isLive } = getLivePrice(activeApt.id, activeApt.pricePerNight);
+        return { mobileStartingPrice: price, isMobilePriceLive: isLive };
+      }
+    }
+
+    // On home view or other views, find the minimum live rate across all available apartments
+    let lowestPrice = Infinity;
+    let anyLive = false;
+
+    processedApartments.forEach(apt => {
+      const { price, isLive } = getLivePrice(apt.id, apt.pricePerNight);
+      if (price < lowestPrice) {
+        lowestPrice = price;
+      }
+      if (isLive) {
+        anyLive = true;
+      }
+    });
+
+    if (lowestPrice === Infinity) {
+      lowestPrice = processedApartments[0]?.pricePerNight || 160;
+    }
+
+    return { mobileStartingPrice: lowestPrice, isMobilePriceLive: anyLive };
+  }, [activeView, selectedApartmentId, processedApartments, getLivePrice]);
 
   // Dynamic dining options with fallback to static DINING
   const displayDining = diningOptions && diningOptions.length > 0 ? diningOptions : DINING;
@@ -1568,7 +1600,8 @@ export default function App() {
       {/* Mobile Sticky Booking Bar */}
       <MobileBookingBar
         onOpenBooking={() => setIsBookingOpen(true)}
-        startingPrice={processedApartments[0]?.pricePerNight || 160}
+        startingPrice={mobileStartingPrice}
+        isLive={isMobilePriceLive}
       />
 
       {/* Custom Premium Toast Notification */}
