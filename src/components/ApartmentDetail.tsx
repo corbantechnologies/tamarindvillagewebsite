@@ -342,7 +342,7 @@ export default function ApartmentDetail({
               </div>
               <div className="text-right">
                 <p className="text-2xl font-serif text-brand-dark font-bold">${livePrice}</p>
-                <p className="text-[10px] text-brand-teal font-bold uppercase tracking-wider">USD / room</p>
+                <p className="text-[10px] text-brand-teal font-bold uppercase tracking-wider">USD / Apartment</p>
               </div>
             </div>
           </div>
