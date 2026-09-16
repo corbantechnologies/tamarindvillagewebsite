@@ -440,8 +440,45 @@ async function startServer() {
         if (!inq) {
           return res.status(404).json({ error: "Inquiry not found." });
         }
-        if (status) inq.status = status;
-        if (payload) inq.payload = { ...inq.payload, ...payload };
+        inq.payload = inq.payload || {};
+        inq.payload.auditTrail = inq.payload.auditTrail || [];
+
+        if (status && status !== inq.status) {
+          inq.payload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "staff",
+            actorName: staffNote?.author || "Tamarind Reservations",
+            action: `Status changed from "${inq.status}" to "${status}"`,
+            type: "status_change"
+          });
+          inq.status = status;
+        }
+
+        if (payload) {
+          if (payload.paymentLink && payload.paymentLink !== inq.payload.paymentLink) {
+            inq.payload.auditTrail.push({
+              id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+              timestamp: new Date().toISOString(),
+              actor: "staff",
+              actorName: staffNote?.author || "Tamarind Reservations",
+              action: `Direct payment link configured: ${payload.paymentLink}`,
+              type: "payment_link"
+            });
+          }
+          if (payload.totalCost && payload.totalCost !== inq.payload.totalCost) {
+            inq.payload.auditTrail.push({
+              id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+              timestamp: new Date().toISOString(),
+              actor: "staff",
+              actorName: staffNote?.author || "Tamarind Reservations",
+              action: `Agreed quote rate updated to $${payload.totalCost}`,
+              type: "price_update"
+            });
+          }
+          inq.payload = { ...inq.payload, ...payload };
+        }
+
         if (staffNote) {
           inq.payload.staffNotes = inq.payload.staffNotes || [];
           inq.payload.staffNotes.push({
@@ -449,6 +486,14 @@ async function startServer() {
             author: staffNote.author || "Tamarind Reservations",
             text: staffNote.text,
             createdAt: new Date().toISOString()
+          });
+          inq.payload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "staff",
+            actorName: staffNote.author || "Tamarind Reservations",
+            action: `Added negotiation note: "${staffNote.text}"`,
+            type: "staff_note"
           });
         }
         if (!inq.payload.guestToken) {
@@ -469,7 +514,43 @@ async function startServer() {
       if (status) updatedFields.status = status;
       
       const mergedPayload = { ...((current.payload as any) || {}) };
-      if (payload) Object.assign(mergedPayload, payload);
+      mergedPayload.auditTrail = mergedPayload.auditTrail || [];
+
+      if (status && status !== current.status) {
+        mergedPayload.auditTrail.push({
+          id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          timestamp: new Date().toISOString(),
+          actor: "staff",
+          actorName: staffNote?.author || "Tamarind Reservations",
+          action: `Status changed from "${current.status}" to "${status}"`,
+          type: "status_change"
+        });
+      }
+
+      if (payload) {
+        if (payload.paymentLink && payload.paymentLink !== mergedPayload.paymentLink) {
+          mergedPayload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "staff",
+            actorName: staffNote?.author || "Tamarind Reservations",
+            action: `Direct payment link configured: ${payload.paymentLink}`,
+            type: "payment_link"
+          });
+        }
+        if (payload.totalCost && payload.totalCost !== mergedPayload.totalCost) {
+          mergedPayload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "staff",
+            actorName: staffNote?.author || "Tamarind Reservations",
+            action: `Agreed quote rate updated to $${payload.totalCost}`,
+            type: "price_update"
+          });
+        }
+        Object.assign(mergedPayload, payload);
+      }
+
       if (staffNote) {
         mergedPayload.staffNotes = mergedPayload.staffNotes || [];
         mergedPayload.staffNotes.push({
@@ -477,6 +558,14 @@ async function startServer() {
           author: staffNote.author || "Tamarind Reservations",
           text: staffNote.text,
           createdAt: new Date().toISOString()
+        });
+        mergedPayload.auditTrail.push({
+          id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          timestamp: new Date().toISOString(),
+          actor: "staff",
+          actorName: staffNote.author || "Tamarind Reservations",
+          action: `Added negotiation note: "${staffNote.text}"`,
+          type: "staff_note"
         });
       }
       if (!mergedPayload.guestToken) {
@@ -568,6 +657,7 @@ async function startServer() {
 
         inq.payload = inq.payload || {};
         inq.payload.staffNotes = inq.payload.staffNotes || [];
+        inq.payload.auditTrail = inq.payload.auditTrail || [];
 
         if (action === "request_change" && changeData) {
           inq.payload.changeRequests = inq.payload.changeRequests || [];
@@ -579,6 +669,14 @@ async function startServer() {
             text: `[Guest Modification Request] Requested check-in: ${changeData.checkIn || "unchanged"}, check-out: ${changeData.checkOut || "unchanged"}, guests: ${changeData.guests}. Note: ${changeData.notes || "None"}`,
             createdAt: new Date().toISOString()
           });
+          inq.payload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "guest",
+            actorName: inq.payload.name || "Guest",
+            action: `Requested stay modification: Check-in ${changeData.checkIn || "unchanged"}, Check-out ${changeData.checkOut || "unchanged"}, Guests: ${changeData.guests}`,
+            type: "guest_change"
+          });
         } else if (action === "record_payment" && payment) {
           inq.payload.paymentStatus = "deposit_paid";
           inq.payload.paymentDetails = payment;
@@ -587,6 +685,31 @@ async function startServer() {
             author: "Guest Self-Service Portal",
             text: `[Guest Payment Recorded] Method: ${payment.method.toUpperCase()}, Ref: ${payment.reference}, Phone: ${payment.phoneNumber || "N/A"}. Staff verification requested.`,
             createdAt: new Date().toISOString()
+          });
+          inq.payload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "guest",
+            actorName: inq.payload.name || "Guest",
+            action: `Submitted ${payment.method.toUpperCase()} payment code: ${payment.reference} ($${payment.amount || inq.payload.totalCost || 0})`,
+            type: "guest_payment"
+          });
+        } else if (action === "accept_quote") {
+          inq.payload.quoteAccepted = true;
+          inq.payload.quoteAcceptedAt = new Date().toISOString();
+          inq.payload.staffNotes.push({
+            id: "note_" + Date.now(),
+            author: "Guest Self-Service Portal",
+            text: `[Guest Accepted Proposal] Guest officially accepted the stay proposal via Magic Link.`,
+            createdAt: new Date().toISOString()
+          });
+          inq.payload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "guest",
+            actorName: inq.payload.name || "Guest",
+            action: `Accepted stay proposal via Magic Link`,
+            type: "guest_acceptance"
           });
         }
 
@@ -605,6 +728,7 @@ async function startServer() {
 
       const mergedPayload = { ...((inq.payload as any) || {}) };
       mergedPayload.staffNotes = mergedPayload.staffNotes || [];
+      mergedPayload.auditTrail = mergedPayload.auditTrail || [];
       let newStatus = inq.status;
 
       if (action === "request_change" && changeData) {
@@ -617,6 +741,14 @@ async function startServer() {
           text: `[Guest Modification Request] Requested check-in: ${changeData.checkIn || "unchanged"}, check-out: ${changeData.checkOut || "unchanged"}, guests: ${changeData.guests}. Note: ${changeData.notes || "None"}`,
           createdAt: new Date().toISOString()
         });
+        mergedPayload.auditTrail.push({
+          id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          timestamp: new Date().toISOString(),
+          actor: "guest",
+          actorName: mergedPayload.name || "Guest",
+          action: `Requested stay modification: Check-in ${changeData.checkIn || "unchanged"}, Check-out ${changeData.checkOut || "unchanged"}, Guests: ${changeData.guests}`,
+          type: "guest_change"
+        });
       } else if (action === "record_payment" && payment) {
         mergedPayload.paymentStatus = "deposit_paid";
         mergedPayload.paymentDetails = payment;
@@ -625,6 +757,31 @@ async function startServer() {
           author: "Guest Self-Service Portal",
           text: `[Guest Payment Recorded] Method: ${payment.method.toUpperCase()}, Ref: ${payment.reference}, Phone: ${payment.phoneNumber || "N/A"}. Staff verification requested.`,
           createdAt: new Date().toISOString()
+        });
+        mergedPayload.auditTrail.push({
+          id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          timestamp: new Date().toISOString(),
+          actor: "guest",
+          actorName: mergedPayload.name || "Guest",
+          action: `Submitted ${payment.method.toUpperCase()} payment code: ${payment.reference} ($${payment.amount || mergedPayload.totalCost || 0})`,
+          type: "guest_payment"
+        });
+      } else if (action === "accept_quote") {
+        mergedPayload.quoteAccepted = true;
+        mergedPayload.quoteAcceptedAt = new Date().toISOString();
+        mergedPayload.staffNotes.push({
+          id: "note_" + Date.now(),
+          author: "Guest Self-Service Portal",
+          text: `[Guest Accepted Proposal] Guest officially accepted the stay proposal via Magic Link.`,
+          createdAt: new Date().toISOString()
+        });
+        mergedPayload.auditTrail.push({
+          id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          timestamp: new Date().toISOString(),
+          actor: "guest",
+          actorName: mergedPayload.name || "Guest",
+          action: `Accepted stay proposal via Magic Link`,
+          type: "guest_acceptance"
         });
       }
 

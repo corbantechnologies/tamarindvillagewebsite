@@ -44,7 +44,43 @@ export default async function handler(req: any, res: any) {
         if (status) updatedFields.status = status;
         
         const mergedPayload = { ...((current.payload as any) || {}) };
-        if (payload) Object.assign(mergedPayload, payload);
+        mergedPayload.auditTrail = mergedPayload.auditTrail || [];
+
+        if (status && status !== current.status) {
+          mergedPayload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "staff",
+            actorName: staffNote?.author || "Tamarind Reservations",
+            action: `Status changed from "${current.status}" to "${status}"`,
+            type: "status_change"
+          });
+        }
+
+        if (payload) {
+          if (payload.paymentLink && payload.paymentLink !== mergedPayload.paymentLink) {
+            mergedPayload.auditTrail.push({
+              id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+              timestamp: new Date().toISOString(),
+              actor: "staff",
+              actorName: staffNote?.author || "Tamarind Reservations",
+              action: `Direct payment link configured: ${payload.paymentLink}`,
+              type: "payment_link"
+            });
+          }
+          if (payload.totalCost && payload.totalCost !== mergedPayload.totalCost) {
+            mergedPayload.auditTrail.push({
+              id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+              timestamp: new Date().toISOString(),
+              actor: "staff",
+              actorName: staffNote?.author || "Tamarind Reservations",
+              action: `Agreed rate updated to $${payload.totalCost}`,
+              type: "price_update"
+            });
+          }
+          Object.assign(mergedPayload, payload);
+        }
+
         if (staffNote) {
           mergedPayload.staffNotes = mergedPayload.staffNotes || [];
           mergedPayload.staffNotes.push({
@@ -52,6 +88,14 @@ export default async function handler(req: any, res: any) {
             author: staffNote.author || "Tamarind Reservations",
             text: staffNote.text,
             createdAt: new Date().toISOString()
+          });
+          mergedPayload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "staff",
+            actorName: staffNote.author || "Tamarind Reservations",
+            action: `Added negotiation note: "${staffNote.text}"`,
+            type: "staff_note"
           });
         }
         if (!mergedPayload.guestToken) {

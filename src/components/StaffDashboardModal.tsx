@@ -138,6 +138,20 @@ export default function StaffDashboardModal({
   const [copiedTokenLink, setCopiedTokenLink] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState<InquiryData | null>(null);
 
+  // Live Offer & Payment Link states
+  const [editPaymentLink, setEditPaymentLink] = useState("");
+  const [editTotalCost, setEditTotalCost] = useState("");
+  const [editPaymentStatus, setEditPaymentStatus] = useState("unpaid");
+  const [offerUpdating, setOfferUpdating] = useState(false);
+
+  useEffect(() => {
+    if (selectedInquiry) {
+      setEditPaymentLink(selectedInquiry.payload?.paymentLink || "");
+      setEditTotalCost(selectedInquiry.payload?.totalCost ? String(selectedInquiry.payload.totalCost) : "");
+      setEditPaymentStatus(selectedInquiry.payload?.paymentStatus || "unpaid");
+    }
+  }, [selectedInquiry]);
+
   // Editing forms state
   const [editingApartment, setEditingApartment] = useState<ApartmentType | null>(null);
   const [editingDining, setEditingDining] = useState<DiningExperience | null>(null);
@@ -317,6 +331,35 @@ export default function StaffDashboardModal({
       }
     } catch (err) {
       alert("Could not save note. Try again.");
+    }
+  };
+
+  const handleSaveLiveOffer = async () => {
+    if (!selectedInquiry) return;
+    setOfferUpdating(true);
+    try {
+      const payloadUpdates: any = {
+        paymentLink: editPaymentLink.trim(),
+        totalCost: editTotalCost ? Number(editTotalCost) : selectedInquiry.payload?.totalCost,
+        paymentStatus: editPaymentStatus
+      };
+      const response = await fetch(`/api/inquiries/${selectedInquiry.id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload: payloadUpdates })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setInquiries(prev => prev.map(inq => inq.id === selectedInquiry.id ? { ...inq, payload: data.inquiry.payload } : inq));
+        setSelectedInquiry(prev => prev ? { ...prev, payload: data.inquiry.payload } : null);
+        showToast("Live offer & payment link updated on guest's magic link!");
+      } else {
+        alert("Failed to update offer. Please try again.");
+      }
+    } catch (e) {
+      alert("Error saving offer updates.");
+    } finally {
+      setOfferUpdating(false);
     }
   };
 
@@ -1141,6 +1184,98 @@ export default function StaffDashboardModal({
                               >
                                 6. Lost / Cancel
                               </button>
+                            </div>
+                          </div>
+
+                          {/* LIVE OFFER & DIRECT PAYMENT LINK MANAGER */}
+                          <div className="space-y-2 border-t border-stone-100 pt-3 bg-brand-gold/5 p-2.5 border border-brand-gold/20">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-brand-dark flex items-center gap-1.5 font-mono">
+                                <span>💳 Live Offer & Payment Link</span>
+                              </span>
+                              <span className="text-[8px] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.2 font-bold uppercase">
+                                Realtime Sync
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <label className="text-[8px] font-bold uppercase tracking-wider text-stone-500 block mb-0.5">
+                                  Agreed Total Quote ($ USD)
+                                </label>
+                                <input
+                                  type="number"
+                                  value={editTotalCost}
+                                  onChange={(e) => setEditTotalCost(e.target.value)}
+                                  placeholder="e.g. 640"
+                                  className="w-full p-1.5 border border-stone-300 text-xs font-mono bg-white"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[8px] font-bold uppercase tracking-wider text-stone-500 block mb-0.5">
+                                  Payment Status
+                                </label>
+                                <select
+                                  value={editPaymentStatus}
+                                  onChange={(e) => setEditPaymentStatus(e.target.value)}
+                                  className="w-full p-1.5 border border-stone-300 text-xs bg-white"
+                                >
+                                  <option value="unpaid">Unpaid / Awaiting Quote</option>
+                                  <option value="deposit_paid">Deposit Paid</option>
+                                  <option value="fully_paid">Fully Paid & Secured</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-[8px] font-bold uppercase tracking-wider text-stone-500 block mb-0.5">
+                                Custom Direct Payment Link (Pesapal / DPO / Stripe / Invoice URL)
+                              </label>
+                              <input
+                                type="url"
+                                value={editPaymentLink}
+                                onChange={(e) => setEditPaymentLink(e.target.value)}
+                                placeholder="https://payments.pesapal.com/tamarind/..."
+                                className="w-full p-1.5 border border-stone-300 text-xs font-mono bg-white"
+                              />
+                            </div>
+                            <button
+                              onClick={handleSaveLiveOffer}
+                              disabled={offerUpdating}
+                              className="w-full py-1.5 bg-brand-dark hover:bg-brand-teal text-white text-[9px] font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {offerUpdating ? "Saving Live Offer..." : "Update Guest Magic Link Offer"}
+                            </button>
+                          </div>
+
+                          {/* IMMUTABLE AUDIT TRAIL */}
+                          <div className="space-y-1.5 border-t border-stone-100 pt-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[8px] font-bold uppercase tracking-widest text-stone-500 font-mono">
+                                📋 Audit Trail ({selectedInquiry.payload.auditTrail?.length || 0} Events)
+                              </span>
+                              <span className="text-[8px] font-mono text-stone-400">Chronological Log</span>
+                            </div>
+                            <div className="space-y-1 max-h-[120px] overflow-y-auto pr-1">
+                              {selectedInquiry.payload.auditTrail && selectedInquiry.payload.auditTrail.length > 0 ? (
+                                selectedInquiry.payload.auditTrail.slice().reverse().map((ev: any) => (
+                                  <div key={ev.id} className="p-1.5 bg-stone-50 border border-stone-200 text-[9px] flex gap-2 items-start">
+                                    <span className={`px-1 py-0.2 rounded-none text-[7px] font-bold uppercase font-mono flex-shrink-0 mt-0.5 ${
+                                      ev.actor === "guest" ? "bg-purple-100 text-purple-800" :
+                                      ev.actor === "staff" ? "bg-blue-100 text-blue-800" :
+                                      "bg-stone-200 text-stone-700"
+                                    }`}>
+                                      {ev.actor}
+                                    </span>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-stone-800 leading-tight font-medium">{ev.action}</p>
+                                      <span className="text-[8px] text-stone-400 font-mono block mt-0.5">
+                                        {new Date(ev.timestamp).toLocaleDateString()} {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {ev.actorName || ev.actor}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-[9px] text-stone-400 italic">No previous audit records for this inquiry.</p>
+                              )}
                             </div>
                           </div>
 

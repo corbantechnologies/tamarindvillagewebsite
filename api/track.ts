@@ -74,6 +74,7 @@ export default async function handler(req: any, res: any) {
 
         inq.payload = inq.payload || {};
         inq.payload.staffNotes = inq.payload.staffNotes || [];
+        inq.payload.auditTrail = inq.payload.auditTrail || [];
 
         if (action === "request_change" && changeData) {
           inq.payload.changeRequests = inq.payload.changeRequests || [];
@@ -85,6 +86,14 @@ export default async function handler(req: any, res: any) {
             text: `[Guest Modification Request] Requested check-in: ${changeData.checkIn || "unchanged"}, check-out: ${changeData.checkOut || "unchanged"}, guests: ${changeData.guests}. Note: ${changeData.notes || "None"}`,
             createdAt: new Date().toISOString()
           });
+          inq.payload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "guest",
+            actorName: inq.payload.name || "Guest",
+            action: `Requested stay modification: Check-in ${changeData.checkIn || "unchanged"}, Check-out ${changeData.checkOut || "unchanged"}, Guests: ${changeData.guests}`,
+            type: "guest_change"
+          });
         } else if (action === "record_payment" && payment) {
           inq.payload.paymentStatus = "deposit_paid";
           inq.payload.paymentDetails = payment;
@@ -93,6 +102,31 @@ export default async function handler(req: any, res: any) {
             author: "Guest Self-Service Portal",
             text: `[Guest Payment Recorded] Method: ${payment.method.toUpperCase()}, Ref: ${payment.reference}, Phone: ${payment.phoneNumber || "N/A"}. Staff verification requested.`,
             createdAt: new Date().toISOString()
+          });
+          inq.payload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "guest",
+            actorName: inq.payload.name || "Guest",
+            action: `Submitted ${payment.method.toUpperCase()} payment code: ${payment.reference} ($${payment.amount || inq.payload.totalCost || 0})`,
+            type: "guest_payment"
+          });
+        } else if (action === "accept_quote") {
+          inq.payload.quoteAccepted = true;
+          inq.payload.quoteAcceptedAt = new Date().toISOString();
+          inq.payload.staffNotes.push({
+            id: "note_" + Date.now(),
+            author: "Guest Self-Service Portal",
+            text: `[Guest Accepted Proposal] Guest officially accepted the stay proposal via Magic Link.`,
+            createdAt: new Date().toISOString()
+          });
+          inq.payload.auditTrail.push({
+            id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+            timestamp: new Date().toISOString(),
+            actor: "guest",
+            actorName: inq.payload.name || "Guest",
+            action: `Accepted stay proposal via Magic Link`,
+            type: "guest_acceptance"
           });
         }
 
@@ -111,6 +145,7 @@ export default async function handler(req: any, res: any) {
 
       const mergedPayload = { ...((inq.payload as any) || {}) };
       mergedPayload.staffNotes = mergedPayload.staffNotes || [];
+      mergedPayload.auditTrail = mergedPayload.auditTrail || [];
       let newStatus = inq.status;
 
       if (action === "request_change" && changeData) {
@@ -123,6 +158,14 @@ export default async function handler(req: any, res: any) {
           text: `[Guest Modification Request] Requested check-in: ${changeData.checkIn || "unchanged"}, check-out: ${changeData.checkOut || "unchanged"}, guests: ${changeData.guests}. Note: ${changeData.notes || "None"}`,
           createdAt: new Date().toISOString()
         });
+        mergedPayload.auditTrail.push({
+          id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          timestamp: new Date().toISOString(),
+          actor: "guest",
+          actorName: mergedPayload.name || "Guest",
+          action: `Requested stay modification: Check-in ${changeData.checkIn || "unchanged"}, Check-out ${changeData.checkOut || "unchanged"}, Guests: ${changeData.guests}`,
+          type: "guest_change"
+        });
       } else if (action === "record_payment" && payment) {
         mergedPayload.paymentStatus = "deposit_paid";
         mergedPayload.paymentDetails = payment;
@@ -131,6 +174,31 @@ export default async function handler(req: any, res: any) {
           author: "Guest Self-Service Portal",
           text: `[Guest Payment Recorded] Method: ${payment.method.toUpperCase()}, Ref: ${payment.reference}, Phone: ${payment.phoneNumber || "N/A"}. Staff verification requested.`,
           createdAt: new Date().toISOString()
+        });
+        mergedPayload.auditTrail.push({
+          id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          timestamp: new Date().toISOString(),
+          actor: "guest",
+          actorName: mergedPayload.name || "Guest",
+          action: `Submitted ${payment.method.toUpperCase()} payment code: ${payment.reference} ($${payment.amount || mergedPayload.totalCost || 0})`,
+          type: "guest_payment"
+        });
+      } else if (action === "accept_quote") {
+        mergedPayload.quoteAccepted = true;
+        mergedPayload.quoteAcceptedAt = new Date().toISOString();
+        mergedPayload.staffNotes.push({
+          id: "note_" + Date.now(),
+          author: "Guest Self-Service Portal",
+          text: `[Guest Accepted Proposal] Guest officially accepted the stay proposal via Magic Link.`,
+          createdAt: new Date().toISOString()
+        });
+        mergedPayload.auditTrail.push({
+          id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          timestamp: new Date().toISOString(),
+          actor: "guest",
+          actorName: mergedPayload.name || "Guest",
+          action: `Accepted stay proposal via Magic Link`,
+          type: "guest_acceptance"
         });
       }
 

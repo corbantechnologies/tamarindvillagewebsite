@@ -426,6 +426,30 @@ export default function GuestBookingTrackerModal({
                 )}
               </div>
 
+              {/* LIVE CONCIERGE PAYMENT LINK BANNER (IF CONFIGURED BY STAFF) */}
+              {p.paymentLink && (
+                <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-500 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                  <div className="text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 text-emerald-800 font-bold text-xs uppercase font-mono">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Official Online Payment Link Ready</span>
+                    </div>
+                    <p className="text-stone-600 text-xs mt-0.5 font-light">
+                      The Tamarind reservations team has prepared your verified checkout link for this stay.
+                    </p>
+                  </div>
+                  <a
+                    href={p.paymentLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs uppercase tracking-widest transition-all shadow-md flex items-center gap-2 cursor-pointer whitespace-nowrap"
+                  >
+                    <span>Pay ${p.totalCost ? Number(p.totalCost).toLocaleString() : ""} Online Now</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </a>
+                </div>
+              )}
+
               {/* Guest Self-Service Action Bar */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* 1. Request Modification */}
@@ -693,6 +717,28 @@ export default function GuestBookingTrackerModal({
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* GUEST-FACING AUDIT & ACTIVITY TIMELINE */}
+              {p.auditTrail && p.auditTrail.length > 0 && (
+                <div className="border-t border-stone-200 pt-4 space-y-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 font-bold block">
+                    Reservation Activity Timeline
+                  </span>
+                  <div className="space-y-1.5 max-h-[140px] overflow-y-auto">
+                    {p.auditTrail.slice().reverse().map((ev: any) => (
+                      <div key={ev.id} className="flex items-start gap-2.5 text-xs text-stone-600 bg-stone-50 p-2 border border-stone-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-teal mt-1.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-stone-800 leading-tight">{ev.action}</p>
+                          <span className="text-[9px] text-stone-400 font-mono block mt-0.5">
+                            {new Date(ev.timestamp).toLocaleDateString()} {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             </div>
           )}
