@@ -435,18 +435,81 @@ async function startServer() {
     }
   });
 
+function ensureInquiryAuditTrail(inq: any): any {
+  if (!inq) return inq;
+  const payload = inq.payload || {};
+  let auditTrail: any[] = Array.isArray(payload.auditTrail) ? [...payload.auditTrail] : [];
+
+  if (auditTrail.length === 0) {
+    // 1. Initial creation entry
+    auditTrail.push({
+      id: "audit_init_" + inq.id,
+      timestamp: inq.createdAt || new Date().toISOString(),
+      actor: "guest",
+      actorName: payload.name || "Online Guest",
+      action: `Inquiry submitted for ${payload.apartmentName || inq.type || "Apartment Suite"}${payload.checkIn ? ` (${payload.checkIn} to ${payload.checkOut})` : ""}`,
+      type: "inquiry_created"
+    });
+
+    // 2. Any notes
+    if (Array.isArray(payload.staffNotes)) {
+      payload.staffNotes.forEach((note: any, idx: number) => {
+        auditTrail.push({
+          id: "audit_note_" + inq.id + "_" + idx,
+          timestamp: note.createdAt || inq.createdAt || new Date().toISOString(),
+          actor: "staff",
+          actorName: note.author || "Tamarind Reservations",
+          action: `Added negotiation note: "${note.text}"`,
+          type: "staff_note"
+        });
+      });
+    }
+
+    // 3. Status change if not pending
+    if (inq.status && inq.status.toLowerCase() !== "pending") {
+      auditTrail.push({
+        id: "audit_status_" + inq.id,
+        timestamp: inq.createdAt || new Date().toISOString(),
+        actor: "staff",
+        actorName: "Tamarind Reservations",
+        action: `Status moved to "${inq.status}"`,
+        type: "status_change"
+      });
+    }
+
+    // 4. Payment link if exists
+    if (payload.paymentLink) {
+      auditTrail.push({
+        id: "audit_pay_" + inq.id,
+        timestamp: inq.createdAt || new Date().toISOString(),
+        actor: "staff",
+        actorName: "Tamarind Reservations",
+        action: `Direct payment link configured: ${payload.paymentLink}`,
+        type: "payment_link"
+      });
+    }
+
+    payload.auditTrail = auditTrail;
+    inq.payload = payload;
+  }
+  return inq;
+}
+
   // STAFF MANAGEMENT PORTAL ENDPOINTS (POWERED BY POSTGRES & DRIZZLE WITH LOCAL FALLBACK)
   app.get("/api/inquiries", async (req, res) => {
     try {
       if (!isDbConfigured()) {
         const store = readLocalStore();
-        const sorted = [...(store.inquiries || [])].sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt));
+        const raw = store.inquiries || [];
+        const inquiries = raw.map((i: any) => ensureInquiryAuditTrail(i));
+        const sorted = [...inquiries].sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt));
         return res.json({ success: true, inquiries: sorted });
       }
       const db = getDb();
       const data = await db.select().from(inquiriesTable);
+      const inquiries = data.map((i: any) => ensureInquiryAuditTrail(i));
       // Order inquiries so newest show up first
-      const sorted = [...data].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      const sorted = [...inquiries].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       return res.json({ success: true, inquiries: sorted });
     } catch (err: any) {
       console.error("Failed to fetch inquiries:", err);
@@ -1130,11 +1193,22 @@ async function startServer() {
 
       const newInquiryId = "inq_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
       const guestToken = payload.guestToken || "tv_guest_" + Math.random().toString(36).slice(2, 11);
+      const creationAuditEntry = {
+        id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        timestamp: new Date().toISOString(),
+        actor: "guest",
+        actorName: payload.name || "Online Guest",
+        action: `Inquiry submitted for ${payload.apartmentName || payload.eventType || type || "Apartment Suite"}${payload.checkIn ? ` (${payload.checkIn} to ${payload.checkOut})` : ""}`,
+        type: "inquiry_created"
+      };
       const enrichedPayload = {
         ...payload,
         guestToken,
         paymentStatus: payload.paymentStatus || "unpaid",
-        changeRequests: payload.changeRequests || []
+        changeRequests: payload.changeRequests || [],
+        auditTrail: Array.isArray(payload.auditTrail) && payload.auditTrail.length > 0
+          ? payload.auditTrail
+          : [creationAuditEntry]
       };
 
       if (!isDbConfigured()) {

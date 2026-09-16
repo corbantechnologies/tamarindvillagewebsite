@@ -23,11 +23,22 @@ export default async function handler(req: any, res: any) {
 
     const newInquiryId = "inq_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
     const guestToken = payload.guestToken || "tv_guest_" + Math.random().toString(36).slice(2, 11);
+    const creationAuditEntry = {
+      id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      timestamp: new Date().toISOString(),
+      actor: "guest",
+      actorName: payload.name || "Online Guest",
+      action: `Inquiry submitted for ${payload.apartmentName || payload.eventType || type || "Apartment Suite"}${payload.checkIn ? ` (${payload.checkIn} to ${payload.checkOut})` : ""}`,
+      type: "inquiry_created"
+    };
     const enrichedPayload = {
       ...payload,
       guestToken,
       paymentStatus: payload.paymentStatus || "unpaid",
-      changeRequests: payload.changeRequests || []
+      changeRequests: payload.changeRequests || [],
+      auditTrail: Array.isArray(payload.auditTrail) && payload.auditTrail.length > 0
+        ? payload.auditTrail
+        : [creationAuditEntry]
     };
 
     // Save inquiry to live PostgreSQL database if configured

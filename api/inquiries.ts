@@ -8,14 +8,71 @@ export default async function handler(req: any, res: any) {
   try {
     await ensureDatabaseSynced();
 
+function ensureInquiryAuditTrail(inq: any): any {
+  if (!inq) return inq;
+  const payload = inq.payload || {};
+  let auditTrail: any[] = Array.isArray(payload.auditTrail) ? [...payload.auditTrail] : [];
+
+  if (auditTrail.length === 0) {
+    auditTrail.push({
+      id: "audit_init_" + inq.id,
+      timestamp: inq.createdAt || new Date().toISOString(),
+      actor: "guest",
+      actorName: payload.name || "Online Guest",
+      action: `Inquiry submitted for ${payload.apartmentName || inq.type || "Apartment Suite"}${payload.checkIn ? ` (${payload.checkIn} to ${payload.checkOut})` : ""}`,
+      type: "inquiry_created"
+    });
+
+    if (Array.isArray(payload.staffNotes)) {
+      payload.staffNotes.forEach((note: any, idx: number) => {
+        auditTrail.push({
+          id: "audit_note_" + inq.id + "_" + idx,
+          timestamp: note.createdAt || inq.createdAt || new Date().toISOString(),
+          actor: "staff",
+          actorName: note.author || "Tamarind Reservations",
+          action: `Added negotiation note: "${note.text}"`,
+          type: "staff_note"
+        });
+      });
+    }
+
+    if (inq.status && inq.status.toLowerCase() !== "pending") {
+      auditTrail.push({
+        id: "audit_status_" + inq.id,
+        timestamp: inq.createdAt || new Date().toISOString(),
+        actor: "staff",
+        actorName: "Tamarind Reservations",
+        action: `Status moved to "${inq.status}"`,
+        type: "status_change"
+      });
+    }
+
+    if (payload.paymentLink) {
+      auditTrail.push({
+        id: "audit_pay_" + inq.id,
+        timestamp: inq.createdAt || new Date().toISOString(),
+        actor: "staff",
+        actorName: "Tamarind Reservations",
+        action: `Direct payment link configured: ${payload.paymentLink}`,
+        type: "payment_link"
+      });
+    }
+
+    payload.auditTrail = auditTrail;
+    inq.payload = payload;
+  }
+  return inq;
+}
+
     if (method === "GET") {
       if (!isDbConfigured()) {
         return res.status(200).json({ success: true, inquiries: [] });
       }
       const db = getDb();
       const data = await db.select().from(inquiriesTable);
+      const inquiries = data.map((i: any) => ensureInquiryAuditTrail(i));
       // Order inquiries so newest show up first (defensively handling null/undefined timestamps)
-      const sorted = [...data].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      const sorted = [...inquiries].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
       return res.status(200).json({ success: true, inquiries: sorted });
     } 
     

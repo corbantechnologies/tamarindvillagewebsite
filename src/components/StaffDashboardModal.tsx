@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   X, Check, Plus, Trash2, RotateCcw, Sliders, Hotel, Utensils, 
   Mail, FileText, Calendar, DollarSign, TrendingUp, Percent, 
   ShieldAlert, CheckCircle, Clock, ArrowRight, Search, Filter, 
   Edit3, Eye, CheckSquare, Sparkles, RefreshCw, Car, Heart, Image as ImageIcon,
-  MessageSquare, Copy, ExternalLink, Send, Key, Users, ShieldCheck, UserCheck, EyeOff, Lock
+  MessageSquare, Copy, ExternalLink, Send, Key, Users, ShieldCheck, UserCheck, EyeOff, Lock,
+  Maximize2, Minimize2, Download
 } from "lucide-react";
 import { ApartmentType, DiningExperience, StaffUser } from "../types";
 import OptimizedImage from "./OptimizedImage";
@@ -17,7 +18,14 @@ import {
   loadEventPackages, 
   saveEventPackages 
 } from "../utils/extrasStore";
-import { loadStaffUsers, saveStaffUsers } from "../utils/staffStore";
+import { 
+  loadStaffUsers, 
+  saveStaffUsers, 
+  SystemAuditLog, 
+  loadSystemAuditLogs, 
+  saveSystemAuditLogs, 
+  ensureInquiryAuditTrail 
+} from "../utils/staffStore";
 
 const DEFAULT_BOARDING_PACKAGES = [
   {
@@ -122,8 +130,11 @@ export default function StaffDashboardModal({
   onSaveHeroImages,
   onResetHeroImages
 }: StaffDashboardModalProps) {
+  // Fullscreen view toggle (default to true for expansive SaaS workspace)
+  const [isFullScreen, setIsFullScreen] = useState(true);
+
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<"inquiries" | "apartments" | "pricing" | "dining" | "transfers" | "hero" | "team">("inquiries");
+  const [activeTab, setActiveTab] = useState<"inquiries" | "apartments" | "pricing" | "dining" | "transfers" | "hero" | "team" | "logs">("inquiries");
   
   // Data State loaded from APIs
   const [inquiries, setInquiries] = useState<InquiryData[]>([]);
@@ -188,16 +199,49 @@ export default function StaffDashboardModal({
   const [revealedPins, setRevealedPins] = useState<Record<string, boolean>>({});
   const [copiedPinId, setCopiedPinId] = useState<string | null>(null);
 
+  // Audit Logs & Operations Ledger states
+  const [systemLogs, setSystemLogs] = useState<SystemAuditLog[]>(() => loadSystemAuditLogs());
+  const [logSearchQuery, setLogSearchQuery] = useState("");
+  const [logCategoryFilter, setLogCategoryFilter] = useState("all");
+  const [logActorFilter, setLogActorFilter] = useState("all");
+
   useEffect(() => {
     if (staffUsersList && staffUsersList.length > 0) {
       setStaffUsers(staffUsersList);
     }
   }, [staffUsersList]);
 
-  const handleSaveStaffUsersList = async (newList: StaffUser[]) => {
+  const handleSaveStaffUsersList = async (newList: StaffUser[], auditAction?: string) => {
     setStaffUsers(newList);
     saveStaffUsers(newList);
     if (onStaffUsersUpdated) onStaffUsersUpdated(newList);
+
+    if (auditAction) {
+      const newSysLog: SystemAuditLog = {
+        id: "log_" + Date.now(),
+        timestamp: new Date().toISOString(),
+        actor: currentUser?.role || "admin",
+        actorName: currentUser?.name || "Master Administrator",
+        action: auditAction,
+        type: "pin_management",
+        category: "security",
+        targetName: "Staff Credentials",
+        targetType: "Security"
+      };
+      const updatedLogs = [newSysLog, ...systemLogs];
+      setSystemLogs(updatedLogs);
+      saveSystemAuditLogs(updatedLogs);
+      try {
+        await fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "system_audit_logs", value: updatedLogs })
+        });
+      } catch (e) {
+        console.warn("Could not sync system log to API:", e);
+      }
+    }
+
     try {
       const response = await fetch("/api/settings", {
         method: "POST",
@@ -238,7 +282,7 @@ export default function StaffDashboardModal({
       createdAt: new Date().toISOString()
     };
     const updated = [...staffUsers, newUser];
-    await handleSaveStaffUsersList(updated);
+    await handleSaveStaffUsersList(updated, `Allocated access passcode for ${newUser.name} (${newUser.role.toUpperCase()})`);
     setNewStaffName("");
     setNewStaffPin("");
     setNewStaffEmail("");
@@ -252,7 +296,7 @@ export default function StaffDashboardModal({
     }
     if (!confirm(`Are you sure you want to revoke access and deactivate PIN for ${name}?`)) return;
     const updated = staffUsers.filter(u => u.id !== id);
-    await handleSaveStaffUsersList(updated);
+    await handleSaveStaffUsersList(updated, `Revoked access credentials for ${name}`);
     showToast(`Access revoked for ${name}`);
   };
 
@@ -266,7 +310,7 @@ export default function StaffDashboardModal({
       return;
     }
     const updated = staffUsers.map(u => u.id === id ? { ...u, pin: editingStaffPin.trim() } : u);
-    await handleSaveStaffUsersList(updated);
+    await handleSaveStaffUsersList(updated, `Updated access PIN for ${targetUser.name}`);
     setEditingStaffId(null);
     setEditingStaffPin("");
     showToast(`PIN updated for ${targetUser.name}`);
@@ -280,9 +324,96 @@ export default function StaffDashboardModal({
     setNewStaffPin(pin);
   };
 
+  // Combine all inquiry audit events + system-wide audit events
+  const allAuditLogs = useMemo(() => {
+    const logs: any[] = [];
+    
+    // 1. Inquiry logs (guaranteeing baseline event for each)
+    inquiries.forEach((inq) => {
+      const ensuredInq = ensureInquiryAuditTrail(inq);
+      const inqAudit = ensuredInq.payload?.auditTrail || [];
+      inqAudit.forEach((ev: any) => {
+        logs.push({
+          id: ev.id || `inq_${inq.id}_${ev.timestamp}`,
+          timestamp: ev.timestamp || inq.createdAt,
+          actor: ev.actor || "staff",
+          actorName: ev.actorName || (ev.actor === "guest" ? inq.payload?.name || "Online Guest" : "Tamarind Staff"),
+          action: ev.action,
+          type: ev.type || "general",
+          category: ev.type?.includes("pin") ? "security" :
+                    ev.type?.includes("price") || ev.type?.includes("payment") ? "financial" :
+                    ev.type?.includes("note") ? "notes" :
+                    ev.type?.includes("guest") ? "guest" :
+                    ev.type?.includes("status") ? "status" : "inquiry",
+          targetName: inq.payload?.name || inq.payload?.apartmentName || inq.id,
+          targetType: "Inquiry",
+          inquiryId: inq.id,
+          inquiry: inq
+        });
+      });
+    });
+
+    // 2. System audit logs
+    systemLogs.forEach((sLog) => {
+      logs.push({
+        id: sLog.id || `sys_${sLog.timestamp}`,
+        timestamp: sLog.timestamp,
+        actor: sLog.actor || "admin",
+        actorName: sLog.actorName || "Master Administrator",
+        action: sLog.action,
+        type: sLog.type || "system",
+        category: sLog.category || "security",
+        targetName: sLog.targetName || "System Setting",
+        targetType: "System"
+      });
+    });
+
+    // Sort descending by timestamp (newest first)
+    return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [inquiries, systemLogs]);
+
+  // Filtered logs based on search query, category, and actor
+  const filteredLogs = useMemo(() => {
+    return allAuditLogs.filter((log) => {
+      const matchesSearch = logSearchQuery === "" ||
+        (log.action && log.action.toLowerCase().includes(logSearchQuery.toLowerCase())) ||
+        (log.actorName && log.actorName.toLowerCase().includes(logSearchQuery.toLowerCase())) ||
+        (log.targetName && log.targetName.toLowerCase().includes(logSearchQuery.toLowerCase())) ||
+        (log.inquiryId && log.inquiryId.toLowerCase().includes(logSearchQuery.toLowerCase()));
+
+      const matchesCategory = logCategoryFilter === "all" || log.category === logCategoryFilter;
+      const matchesActor = logActorFilter === "all" || 
+        (logActorFilter === "staff" && log.actor === "staff") ||
+        (logActorFilter === "admin" && (log.actor === "admin" || log.actorName.toLowerCase().includes("admin"))) ||
+        (logActorFilter === "guest" && log.actor === "guest") ||
+        (logActorFilter === "system" && log.actor === "system");
+
+      return matchesSearch && matchesCategory && matchesActor;
+    });
+  }, [allAuditLogs, logSearchQuery, logCategoryFilter, logActorFilter]);
+
+  const logStats = useMemo(() => {
+    const total = allAuditLogs.length;
+    const staffActions = allAuditLogs.filter(l => l.actor === "staff" || l.actor === "admin").length;
+    const guestActions = allAuditLogs.filter(l => l.actor === "guest").length;
+    const financialActions = allAuditLogs.filter(l => l.category === "financial").length;
+    return { total, staffActions, guestActions, financialActions };
+  }, [allAuditLogs]);
+
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleExportLogsJson = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filteredLogs, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `tamarind_audit_logs_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showToast("Audit logs exported to JSON file");
   };
 
   // Fetch all staff dashboard content on open
@@ -300,7 +431,9 @@ export default function StaffDashboardModal({
       if (inquiriesRes.ok) {
         const data = await inquiriesRes.json();
         console.log("🔍 [StaffDashboard] Parsed inquiries count:", data.inquiries?.length, data.inquiries);
-        setInquiries(data.inquiries || []);
+        const rawInqs = data.inquiries || [];
+        const inqs = rawInqs.map((i: any) => ensureInquiryAuditTrail(i));
+        setInquiries(inqs);
         if (data.database_error) {
           activeDbError = data.database_error;
         }
@@ -379,11 +512,17 @@ export default function StaffDashboardModal({
           } else {
             setStaffUsers(loadStaffUsers());
           }
+
+          if (sData.system_audit_logs && Array.isArray(sData.system_audit_logs)) {
+            setSystemLogs(sData.system_audit_logs);
+            saveSystemAuditLogs(sData.system_audit_logs);
+          }
         } else {
           setVehicles(loadTransferVehicles());
           setEvents(loadEventPackages());
           setBoardingPackages(DEFAULT_BOARDING_PACKAGES);
           setStaffUsers(loadStaffUsers());
+          setSystemLogs(loadSystemAuditLogs());
         }
       } catch (settingsErr) {
         console.warn("Could not load dynamic settings from API, using local fallbacks:", settingsErr);
@@ -391,6 +530,7 @@ export default function StaffDashboardModal({
         setEvents(loadEventPackages());
         setBoardingPackages(DEFAULT_BOARDING_PACKAGES);
         setStaffUsers(loadStaffUsers());
+        setSystemLogs(loadSystemAuditLogs());
       }
 
       setPasteHeroInput(heroImages.join("\n"));
@@ -500,17 +640,46 @@ export default function StaffDashboardModal({
   };
 
   const handleDeleteInquiry = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this inquiry permanently?")) return;
+    if (!confirm("Are you sure you want to delete this inquiry permanently? This action cannot be undone.")) return;
     try {
       const response = await fetch(`/api/inquiries/${id}`, {
         method: "DELETE"
       });
       if (response.ok) {
+        const deletedInq = inquiries.find(i => i.id === id);
         setInquiries(prev => prev.filter(inq => inq.id !== id));
         if (selectedInquiry && selectedInquiry.id === id) {
           setSelectedInquiry(null);
         }
-        showToast("Inquiry deleted from database");
+        showToast("Inquiry permanently deleted from database");
+
+        // System audit log
+        const actorName = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Master Administrator";
+        const newSysLog: SystemAuditLog = {
+          id: "log_" + Date.now(),
+          timestamp: new Date().toISOString(),
+          actor: currentUser?.role || "admin",
+          actorName,
+          action: `Permanently deleted inquiry #${id} (${deletedInq?.payload?.name || "Guest"})`,
+          type: "inquiry_deleted",
+          category: "inquiry",
+          targetName: deletedInq?.payload?.name || id,
+          targetType: "Inquiry"
+        };
+        const updatedLogs = [newSysLog, ...systemLogs];
+        setSystemLogs(updatedLogs);
+        saveSystemAuditLogs(updatedLogs);
+        try {
+          fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key: "system_audit_logs", value: updatedLogs })
+          });
+        } catch (e) {
+          console.warn("Could not sync deletion log to settings API:", e);
+        }
+      } else {
+        throw new Error("Failed to delete from database");
       }
     } catch (err) {
       alert("Could not delete inquiry. Try again.");
@@ -785,12 +954,16 @@ export default function StaffDashboardModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/85 backdrop-blur-md p-4 overflow-y-auto">
+      <div className={`fixed inset-0 z-50 flex ${isFullScreen ? "p-0" : "items-center justify-center p-2 sm:p-4 bg-stone-900/85 backdrop-blur-md overflow-y-auto"}`}>
         <motion.div
           initial={{ opacity: 0, scale: 0.98, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.98, y: 15 }}
-          className="relative w-full max-w-7xl h-[90vh] bg-stone-50 border border-stone-200 shadow-2xl flex flex-col overflow-hidden rounded-none"
+          className={`relative bg-stone-50 flex flex-col overflow-hidden rounded-none ${
+            isFullScreen 
+              ? "w-screen h-screen border-none" 
+              : "w-full max-w-7xl h-[92vh] border border-stone-200 shadow-2xl"
+          }`}
         >
           {/* TOAST NOTIFICATION */}
           {toast && (
@@ -801,13 +974,13 @@ export default function StaffDashboardModal({
           )}
 
           {/* PORTAL HEADER */}
-          <div className="bg-brand-dark text-white border-b border-brand-gold/20 px-8 py-5 flex items-center justify-between shrink-0">
+          <div className="bg-brand-dark text-white border-b border-brand-gold/20 px-6 sm:px-8 py-4 sm:py-5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-brand-gold/10 border border-brand-gold/30">
                 <Sliders className="w-6 h-6 text-brand-gold" />
               </div>
               <div>
-                <h2 className="font-serif text-xl font-bold tracking-widest text-brand-gold uppercase">Tamarind Staff Management Portal</h2>
+                <h2 className="font-serif text-lg sm:text-xl font-bold tracking-widest text-brand-gold uppercase">Tamarind Staff Management Portal</h2>
                 <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">Live Controller & Administrative Dashboard</p>
               </div>
             </div>
@@ -848,8 +1021,16 @@ export default function StaffDashboardModal({
                 Sync Data
               </button>
               <button
+                onClick={() => setIsFullScreen(!isFullScreen)}
+                className="p-1.5 border border-stone-800 hover:bg-stone-800 text-stone-400 hover:text-white transition-colors cursor-pointer focus:outline-none"
+                title={isFullScreen ? "Restore Window Size" : "Maximize Full Screen"}
+              >
+                {isFullScreen ? <Minimize2 className="w-5 h-5 text-brand-gold" /> : <Maximize2 className="w-5 h-5" />}
+              </button>
+              <button
                 onClick={onClose}
                 className="p-1.5 border border-stone-800 hover:bg-stone-800 text-stone-400 hover:text-white transition-colors cursor-pointer focus:outline-none"
+                title="Close Portal"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -959,6 +1140,21 @@ export default function StaffDashboardModal({
                   <span>Team & PIN Access</span>
                   <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
                     {staffUsers.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab("logs"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                    activeTab === "logs"
+                      ? "bg-brand-teal text-brand-dark font-black"
+                      : "hover:bg-stone-800 hover:text-white"
+                  }`}
+                >
+                  <FileText className="w-4.5 h-4.5" />
+                  <span>Audit & Activity Logs</span>
+                  <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
+                    {allAuditLogs.length}
                   </span>
                 </button>
               </nav>
@@ -1428,37 +1624,48 @@ export default function StaffDashboardModal({
                           </div>
 
                           {/* IMMUTABLE AUDIT TRAIL */}
-                          <div className="space-y-1.5 border-t border-stone-100 pt-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[8px] font-bold uppercase tracking-widest text-stone-500 font-mono">
-                                📋 Audit Trail ({selectedInquiry.payload.auditTrail?.length || 0} Events)
-                              </span>
-                              <span className="text-[8px] font-mono text-stone-400">Chronological Log</span>
-                            </div>
-                            <div className="space-y-1 max-h-[120px] overflow-y-auto pr-1">
-                              {selectedInquiry.payload.auditTrail && selectedInquiry.payload.auditTrail.length > 0 ? (
-                                selectedInquiry.payload.auditTrail.slice().reverse().map((ev: any) => (
-                                  <div key={ev.id} className="p-1.5 bg-stone-50 border border-stone-200 text-[9px] flex gap-2 items-start">
-                                    <span className={`px-1 py-0.2 rounded-none text-[7px] font-bold uppercase font-mono flex-shrink-0 mt-0.5 ${
-                                      ev.actor === "guest" ? "bg-purple-100 text-purple-800" :
-                                      ev.actor === "staff" ? "bg-blue-100 text-blue-800" :
-                                      "bg-stone-200 text-stone-700"
-                                    }`}>
-                                      {ev.actor}
-                                    </span>
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-stone-800 leading-tight font-medium">{ev.action}</p>
-                                      <span className="text-[8px] text-stone-400 font-mono block mt-0.5">
-                                        {new Date(ev.timestamp).toLocaleDateString()} {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {ev.actorName || ev.actor}
+                          {(() => {
+                            const inquiryWithLogs = ensureInquiryAuditTrail(selectedInquiry);
+                            const auditList = (inquiryWithLogs.payload.auditTrail || []).slice().reverse();
+                            return (
+                              <div className="space-y-1.5 border-t border-stone-100 pt-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[8px] font-bold uppercase tracking-widest text-stone-500 font-mono">
+                                    📋 Audit Trail ({auditList.length} Events)
+                                  </span>
+                                  <button
+                                    onClick={() => {
+                                      setActiveTab("logs");
+                                      setLogSearchQuery(selectedInquiry.id);
+                                    }}
+                                    className="text-[8px] font-mono text-brand-teal hover:underline flex items-center gap-1 cursor-pointer font-bold uppercase"
+                                    title="Open full chronological history in the Global Audit Ledger"
+                                  >
+                                    View in Global Ledger &rarr;
+                                  </button>
+                                </div>
+                                <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+                                  {auditList.map((ev: any) => (
+                                    <div key={ev.id} className="p-2 bg-stone-50 border border-stone-200 text-[9px] flex gap-2 items-start">
+                                      <span className={`px-1.5 py-0.5 rounded-none text-[7px] font-bold uppercase font-mono flex-shrink-0 mt-0.5 ${
+                                        ev.actor === "guest" ? "bg-purple-100 text-purple-800 border border-purple-200" :
+                                        ev.actor === "staff" ? "bg-blue-100 text-blue-800 border border-blue-200" :
+                                        "bg-stone-200 text-stone-700 border border-stone-300"
+                                      }`}>
+                                        {ev.actor}
                                       </span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-stone-800 leading-tight font-medium">{ev.action}</p>
+                                        <span className="text-[8px] text-stone-400 font-mono block mt-1">
+                                          {new Date(ev.timestamp).toLocaleDateString()} {new Date(ev.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {ev.actorName || ev.actor}
+                                        </span>
+                                      </div>
                                     </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="text-[9px] text-stone-400 italic">No previous audit records for this inquiry.</p>
-                              )}
-                            </div>
-                          </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           {/* STAFF NEGOTIATION NOTES & ACTION LOG */}
                           <div className="space-y-2 border-t border-stone-100 pt-3">
@@ -1502,6 +1709,26 @@ export default function StaffDashboardModal({
                                 Add Note
                               </button>
                             </div>
+                          </div>
+
+                          {/* DANGER ZONE: DELETE INQUIRY */}
+                          <div className="border-t border-rose-200/80 pt-3 mt-2 flex justify-between items-center bg-rose-50/40 p-2.5 border">
+                            <div>
+                              <span className="text-[8px] font-bold uppercase tracking-widest text-rose-700 block">
+                                Delete Inquiry Record
+                              </span>
+                              <span className="text-[9px] text-stone-500">
+                                Permanently purge this test inquiry from live database
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteInquiry(selectedInquiry.id)}
+                              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                              title="Permanently remove this inquiry"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
                           </div>
                         </div>
                       ) : (
@@ -3059,6 +3286,247 @@ export default function StaffDashboardModal({
                         <p className="font-bold uppercase tracking-wide text-stone-800 mb-1">Audit Attribution</p>
                         When a reservationist updates inquiry stages or sends payment links, the inquiry's chronological audit log registers their exact name.
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 8: AUDIT & ACTIVITY LOGS LEDGER */}
+              {activeTab === "logs" && (
+                <div className="space-y-6">
+                  {/* TAB HEADER */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 border border-stone-200 shadow-sm">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-brand-teal" />
+                        <h3 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">
+                          Activity & Audit Trail Ledger
+                        </h3>
+                        <span className="px-2 py-0.5 text-[9px] font-bold font-mono bg-brand-gold/20 text-brand-dark uppercase tracking-widest border border-brand-gold/40">
+                          {filteredLogs.length} Events Logged
+                        </span>
+                      </div>
+                      <p className="text-xs text-stone-500 mt-1 max-w-3xl">
+                        Comprehensive chronological ledger tracking inquiry workflows, staff negotiations, pricing updates, payment confirmations, and team PIN allocations across the Tamarind platform.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleExportLogsJson}
+                        className="px-3.5 py-2 border border-stone-300 hover:bg-stone-50 text-stone-700 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                        title="Download raw audit events as JSON"
+                      >
+                        <Download className="w-3.5 h-3.5 text-stone-500" />
+                        <span>Export JSON</span>
+                      </button>
+                      <button
+                        onClick={loadAllDashboardData}
+                        className="px-3.5 py-2 bg-brand-dark hover:bg-brand-teal text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                        title="Reload live events from server"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Sync Ledger</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 4 AUDIT KPI CARDS */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 border border-stone-200 shadow-sm">
+                      <div className="flex items-center justify-between text-stone-400 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Total Events</span>
+                        <Clock className="w-4 h-4 text-brand-teal" />
+                      </div>
+                      <div className="font-serif text-2xl font-bold text-stone-900">{logStats.total}</div>
+                      <p className="text-[10px] text-stone-400 font-mono mt-0.5">All registered actions</p>
+                    </div>
+
+                    <div className="bg-white p-4 border border-stone-200 shadow-sm">
+                      <div className="flex items-center justify-between text-stone-400 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Staff & Admin Actions</span>
+                        <UserCheck className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div className="font-serif text-2xl font-bold text-blue-700">{logStats.staffActions}</div>
+                      <p className="text-[10px] text-stone-400 font-mono mt-0.5">Status changes & notes</p>
+                    </div>
+
+                    <div className="bg-white p-4 border border-stone-200 shadow-sm">
+                      <div className="flex items-center justify-between text-stone-400 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Guest Engagements</span>
+                        <Users className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <div className="font-serif text-2xl font-bold text-purple-700">{logStats.guestActions}</div>
+                      <p className="text-[10px] text-stone-400 font-mono mt-0.5">Submissions & portal views</p>
+                    </div>
+
+                    <div className="bg-white p-4 border border-stone-200 shadow-sm">
+                      <div className="flex items-center justify-between text-stone-400 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest">Financial Updates</span>
+                        <DollarSign className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <div className="font-serif text-2xl font-bold text-emerald-700">{logStats.financialActions}</div>
+                      <p className="text-[10px] text-stone-400 font-mono mt-0.5">Quotes & payment links</p>
+                    </div>
+                  </div>
+
+                  {/* SEARCH & FILTER CONTROLS */}
+                  <div className="bg-white p-4 border border-stone-200 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                    <div className="flex-1 relative">
+                      <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search by action, staff name, inquiry ID, guest..."
+                        value={logSearchQuery}
+                        onChange={(e) => setLogSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 border border-stone-300 text-xs bg-stone-50 focus:outline-none focus:border-brand-teal focus:bg-white"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-300 px-2.5 py-1.5">
+                        <Filter className="w-3.5 h-3.5 text-stone-500" />
+                        <select
+                          value={logCategoryFilter}
+                          onChange={(e) => setLogCategoryFilter(e.target.value)}
+                          className="bg-transparent text-xs font-bold uppercase tracking-wider text-stone-700 focus:outline-none cursor-pointer"
+                        >
+                          <option value="all">All Categories</option>
+                          <option value="inquiry">Inquiries & Creation</option>
+                          <option value="status">Status Changes</option>
+                          <option value="financial">Financial & Pricing</option>
+                          <option value="notes">Staff Notes</option>
+                          <option value="guest">Guest Actions</option>
+                          <option value="security">Security & PINs</option>
+                        </select>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 bg-stone-50 border border-stone-300 px-2.5 py-1.5">
+                        <select
+                          value={logActorFilter}
+                          onChange={(e) => setLogActorFilter(e.target.value)}
+                          className="bg-transparent text-xs font-bold uppercase tracking-wider text-stone-700 focus:outline-none cursor-pointer"
+                        >
+                          <option value="all">All Actors</option>
+                          <option value="staff">Staff Only</option>
+                          <option value="admin">Administrators Only</option>
+                          <option value="guest">Guests Only</option>
+                          <option value="system">System Only</option>
+                        </select>
+                      </div>
+
+                      {(logSearchQuery !== "" || logCategoryFilter !== "all" || logActorFilter !== "all") && (
+                        <button
+                          onClick={() => {
+                            setLogSearchQuery("");
+                            setLogCategoryFilter("all");
+                            setLogActorFilter("all");
+                          }}
+                          className="px-2.5 py-1.5 text-xs text-rose-600 hover:text-rose-800 font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                        >
+                          Clear Filters
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* AUDIT LOG TABLE */}
+                  <div className="bg-white border border-stone-200 shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-stone-200 bg-stone-50 text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                            <th className="py-3 px-4">Date & Time</th>
+                            <th className="py-3 px-4">Actor</th>
+                            <th className="py-3 px-4">Event Description</th>
+                            <th className="py-3 px-4">Target / Entity</th>
+                            <th className="py-3 px-4">Category</th>
+                            <th className="py-3 px-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-100 text-xs">
+                          {filteredLogs.length > 0 ? (
+                            filteredLogs.map((log) => {
+                              const dateObj = new Date(log.timestamp);
+                              const isToday = new Date().toDateString() === dateObj.toDateString();
+                              const formattedDate = isToday 
+                                ? `Today at ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                                : `${dateObj.toLocaleDateString()} ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+                              return (
+                                <tr key={log.id} className="hover:bg-stone-50/80 transition-colors">
+                                  {/* Timestamp */}
+                                  <td className="py-3 px-4 whitespace-nowrap text-stone-500 font-mono text-[11px]">
+                                    {formattedDate}
+                                  </td>
+
+                                  {/* Actor badge */}
+                                  <td className="py-3 px-4 whitespace-nowrap">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`px-2 py-0.5 text-[8px] font-bold uppercase font-mono border ${
+                                        log.actor === "guest" 
+                                          ? "bg-purple-100 text-purple-800 border-purple-200" :
+                                        log.actor === "admin"
+                                          ? "bg-amber-100 text-amber-900 border-amber-300" :
+                                        log.actor === "staff"
+                                          ? "bg-blue-100 text-blue-800 border-blue-200" :
+                                        "bg-stone-100 text-stone-700 border-stone-200"
+                                      }`}>
+                                        {log.actor}
+                                      </span>
+                                      <span className="font-semibold text-stone-800 text-xs">
+                                        {log.actorName}
+                                      </span>
+                                    </div>
+                                  </td>
+
+                                  {/* Action */}
+                                  <td className="py-3 px-4 text-stone-900 font-medium">
+                                    {log.action}
+                                  </td>
+
+                                  {/* Target */}
+                                  <td className="py-3 px-4 text-stone-600 font-mono text-[11px]">
+                                    {log.targetName || log.targetType || "—"}
+                                  </td>
+
+                                  {/* Category */}
+                                  <td className="py-3 px-4 whitespace-nowrap">
+                                    <span className="px-2 py-0.5 text-[9px] font-mono font-bold uppercase tracking-wider bg-stone-100 text-stone-600 border border-stone-200">
+                                      {log.category}
+                                    </span>
+                                  </td>
+
+                                  {/* Action */}
+                                  <td className="py-3 px-4 text-right whitespace-nowrap">
+                                    {log.inquiry && (
+                                      <button
+                                        onClick={() => {
+                                          setSelectedInquiry(log.inquiry);
+                                          setActiveTab("inquiries");
+                                        }}
+                                        className="text-[10px] font-bold uppercase tracking-wider text-brand-teal hover:underline cursor-pointer flex items-center gap-1 ml-auto"
+                                        title="Open inquiry details drawer"
+                                      >
+                                        <span>View Inquiry</span>
+                                        <ArrowRight className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={6} className="py-12 text-center text-stone-400">
+                                <FileText className="w-8 h-8 mx-auto text-stone-300 mb-2" />
+                                <p className="text-xs font-bold uppercase tracking-wider text-stone-600">No audit events match your search</p>
+                                <p className="text-[11px] text-stone-400 mt-1">Try clearing or broadening your search filters</p>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
