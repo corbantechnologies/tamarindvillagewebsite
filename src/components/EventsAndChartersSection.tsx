@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { Sparkles, Ship, Heart, Briefcase, CheckCircle2, ArrowRight, FileText, ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { loadEventPackages, EventPackage } from "../utils/extrasStore";
@@ -53,7 +54,7 @@ export default function EventsAndChartersSection({ onOpenTransferModal, onOpenCu
   const handleRfpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !phone) {
-      alert("Please provide your Name, Email, and Phone number.");
+      toast.error("Please provide your Name, Email, and Phone number.");
       return;
     }
 
@@ -64,6 +65,7 @@ export default function EventsAndChartersSection({ onOpenTransferModal, onOpenCu
       setRfpRef(ref);
       setIsSubmitting(false);
       setIsSubmitted(true);
+      toast.success("Proposal request received by Tamarind Events team!");
     }, 1200);
   };
 

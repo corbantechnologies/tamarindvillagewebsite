@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import {
   Calendar, Users, MapPin, Phone, Mail, ShieldCheck, CheckCircle2,
   Clock, AlertCircle, ArrowRight, Copy, Check, MessageSquare, CreditCard,
@@ -114,15 +115,16 @@ export default function GuestBookingTrackerModal({
       if (res.ok && data.success) {
         setModSuccess(true);
         setInquiry(data.inquiry);
+        toast.success("Stay modification request sent to Reservations!");
         setTimeout(() => {
           setShowModForm(false);
           setModSuccess(false);
         }, 2500);
       } else {
-        alert(data.error || "Failed to submit modification request.");
+        toast.error(data.error || "Failed to submit modification request.");
       }
     } catch (err: any) {
-      alert("Network error. Please try again.");
+      toast.error("Network error. Please try again.");
     } finally {
       setModSubmitting(false);
     }
@@ -153,15 +155,16 @@ export default function GuestBookingTrackerModal({
       if (res.ok && data.success) {
         setPaymentSuccess(true);
         setInquiry(data.inquiry);
+        toast.success("Payment details submitted successfully!");
         setTimeout(() => {
           setShowPaymentModal(false);
           setPaymentSuccess(false);
         }, 2500);
       } else {
-        alert(data.error || "Failed to record payment.");
+        toast.error(data.error || "Failed to record payment.");
       }
     } catch (err: any) {
-      alert("Payment processing error. Please try again.");
+      toast.error("Payment processing error. Please try again.");
     } finally {
       setPaymentSubmitting(false);
     }

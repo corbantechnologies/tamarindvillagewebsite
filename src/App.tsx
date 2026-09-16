@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ApartmentDetail from "./components/ApartmentDetail";
@@ -409,7 +410,7 @@ export default function App() {
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactName || !contactEmail || !contactMessage) {
-      alert("Please fill out all fields.");
+      toast.error("Please fill out all contact fields.");
       return;
     }
 
@@ -439,6 +440,7 @@ export default function App() {
       }
 
       setIsContactSubmitted(true);
+      toast.success("Your message has been delivered to Tamarind Reservations.");
     } catch (err: any) {
       console.error("Error submitting general inquiry:", err);
       setContactSubmitError(err.message || "Unable to send inquiry. Please try again later.");
@@ -1623,6 +1625,36 @@ export default function App() {
           <MessageSquare className="w-5 h-5 relative z-10 fill-white" />
         </a>
       </motion.div>
+
+      {/* Global React Hot Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "#1c1917",
+            color: "#f5f5f4",
+            borderRadius: "0px",
+            border: "1px solid #44403c",
+            fontSize: "12px",
+            fontFamily: "Outfit, sans-serif",
+            fontWeight: 600,
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)"
+          },
+          success: {
+            iconTheme: {
+              primary: "#2dd4bf",
+              secondary: "#1c1917"
+            }
+          },
+          error: {
+            iconTheme: {
+              primary: "#f43f5e",
+              secondary: "#1c1917"
+            }
+          }
+        }}
+      />
 
     </div>
   );

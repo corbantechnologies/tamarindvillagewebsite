@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import { ApartmentType, PackageType } from "../types";
 import { useLiveRates } from "../utils/profitroom";
 import { PACKAGES } from "../data";
@@ -60,7 +61,7 @@ export default function ApartmentDetail({
   const handleProfitroomBook = (e: React.FormEvent) => {
     e.preventDefault();
     if (!checkIn || !checkOut) {
-      alert("Please select both Check-In and Check-Out dates first to check live rates.");
+      toast.error("Please select both Check-In and Check-Out dates first to check live rates.");
       return;
     }
 
@@ -123,7 +124,7 @@ export default function ApartmentDetail({
   const handleInquirySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inquiryName || !inquiryEmail || !inquiryPhone) {
-      alert("Please fill in all contact information.");
+      toast.error("Please fill in all contact information (Name, Email, Phone).");
       return;
     }
     
@@ -159,8 +160,10 @@ export default function ApartmentDetail({
       }
 
       setIsSubmitted(true);
+      toast.success("Apartment reservation inquiry submitted successfully!");
     } catch (err: any) {
       console.error("Error submitting apartment inquiry:", err);
+      toast.error(err.message || "An error occurred while sending your inquiry. Please try again.");
       setInquiryError(err.message || "An error occurred while sending your inquiry. Please try again.");
     } finally {
       setIsInquirySubmitting(false);

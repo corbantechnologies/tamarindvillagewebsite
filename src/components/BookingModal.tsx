@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import { APARTMENTS, PACKAGES } from "../data";
 import { useLiveRates } from "../utils/profitroom";
 import { X, Calendar, CheckCircle, ArrowRight, DollarSign, Calculator, Info } from "lucide-react";
@@ -58,7 +59,7 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
   const handleProfitroomBook = (e: React.FormEvent) => {
     e.preventDefault();
     if (!checkIn || !checkOut) {
-      alert("Please select both Check-In and Check-Out dates first to check live rates.");
+      toast.error("Please select both Check-In and Check-Out dates first to check live rates.");
       return;
     }
 
@@ -117,7 +118,7 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !phone) {
-      alert("Please enter your contact details.");
+      toast.error("Please enter your contact details (Name, Email, Phone).");
       return;
     }
     
@@ -154,8 +155,10 @@ export default function BookingModal({ isOpen, onClose, initialApartmentId, init
       }
 
       setIsSubmitted(true);
+      toast.success("Reservation inquiry submitted successfully!");
     } catch (err: any) {
       console.error("Error submitting booking inquiry:", err);
+      toast.error(err.message || "An error occurred while sending your request. Please try again.");
       setSubmitError(err.message || "An error occurred while sending your request. Please try again.");
     } finally {
       setIsSubmitting(false);

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import {
   Clock, Calendar, Users, ArrowLeft, Utensils, CheckCircle2,
   MapPin, Sparkles, Wine, Compass, Sunset, Anchor, ArrowRight,
@@ -179,7 +180,7 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestName || !guestEmail || !guestPhone || !reserveDate || !reserveTime) {
-      alert("Please fill out all mandatory guest contact and booking details.");
+      toast.error("Please fill out all mandatory guest contact and booking details.");
       return;
     }
 
@@ -221,8 +222,10 @@ export default function DiningDetail({ dining, onBack, onSelectDining, allDining
       }
 
       setIsSubmitted(true);
+      toast.success("Dining reservation inquiry submitted successfully!");
     } catch (err: any) {
       console.error("Error submitting dining inquiry:", err);
+      toast.error(err.message || "An error occurred while sending your request. Please try again.");
       setDiningSubmitError(err.message || "An error occurred while sending your request. Please try again.");
     } finally {
       setIsDiningSubmitting(false);

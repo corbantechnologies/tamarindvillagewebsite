@@ -160,22 +160,6 @@ const FALLBACK_STAFF_USERS = [
     role: "admin",
     email: "admin@tamarind.co.ke",
     createdAt: "2026-01-01T00:00:00.000Z"
-  },
-  {
-    id: "user_res1",
-    name: "Reservations Lead",
-    pin: "2026",
-    role: "reservationist",
-    email: "reservations.village@tamarind.co.ke",
-    createdAt: "2026-01-01T00:00:00.000Z"
-  },
-  {
-    id: "user_concierge",
-    name: "Front Desk Concierge",
-    pin: "2024",
-    role: "concierge",
-    email: "concierge@tamarind.co.ke",
-    createdAt: "2026-01-01T00:00:00.000Z"
   }
 ];
 

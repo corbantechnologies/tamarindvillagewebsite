@@ -8,22 +8,6 @@ export const DEFAULT_STAFF_USERS: StaffUser[] = [
     role: "admin",
     email: "admin@tamarind.co.ke",
     createdAt: "2026-01-01T00:00:00.000Z"
-  },
-  {
-    id: "user_res1",
-    name: "Reservations Lead",
-    pin: "2026",
-    role: "reservationist",
-    email: "reservations.village@tamarind.co.ke",
-    createdAt: "2026-01-01T00:00:00.000Z"
-  },
-  {
-    id: "user_concierge",
-    name: "Front Desk Concierge",
-    pin: "2024",
-    role: "concierge",
-    email: "concierge@tamarind.co.ke",
-    createdAt: "2026-01-01T00:00:00.000Z"
   }
 ];
 
@@ -106,28 +90,6 @@ export const INITIAL_SYSTEM_LOGS: SystemAuditLog[] = [
     type: "pin_allocated",
     category: "security",
     targetName: "Master Administrator",
-    targetType: "User"
-  },
-  {
-    id: "log_init_03",
-    timestamp: "2026-01-01T00:00:00.000Z",
-    actor: "admin",
-    actorName: "Master Administrator",
-    action: "Allocated access passcode for Reservations Lead (PIN 2026)",
-    type: "pin_allocated",
-    category: "security",
-    targetName: "Reservations Lead",
-    targetType: "User"
-  },
-  {
-    id: "log_init_04",
-    timestamp: "2026-01-01T00:00:00.000Z",
-    actor: "admin",
-    actorName: "Master Administrator",
-    action: "Allocated access passcode for Front Desk Concierge (PIN 2024)",
-    type: "pin_allocated",
-    category: "security",
-    targetName: "Front Desk Concierge",
     targetType: "User"
   }
 ];

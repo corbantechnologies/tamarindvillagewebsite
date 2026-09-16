@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   X, Check, Plus, Trash2, RotateCcw, Sliders, Hotel, Utensils, 
@@ -149,7 +150,6 @@ export default function StaffDashboardModal({
   // Loading and feedback states
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [dbWarning, setDbWarning] = useState<string | null>(null);
   
   // Searching & Filtering inquiries
@@ -265,12 +265,12 @@ export default function StaffDashboardModal({
   const handleAllocateNewStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaffName.trim() || !newStaffPin.trim()) {
-      alert("Please provide both a Name and a PIN.");
+      toast.error("Please provide both a Name and a PIN.");
       return;
     }
     const pin = newStaffPin.trim();
     if (staffUsers.some(u => u.pin === pin)) {
-      alert(`PIN "${pin}" is already allocated to another staff member. Please choose a unique PIN.`);
+      toast.error(`PIN "${pin}" is already allocated to another staff member. Please choose a unique PIN.`);
       return;
     }
     const newUser: StaffUser = {
@@ -291,7 +291,7 @@ export default function StaffDashboardModal({
 
   const handleRevokeStaff = async (id: string, name: string) => {
     if (id === "user_admin" || id === staffUsers[0]?.id) {
-      alert("The primary Administrator account cannot be removed.");
+      toast.error("The primary Administrator account cannot be removed.");
       return;
     }
     if (!confirm(`Are you sure you want to revoke access and deactivate PIN for ${name}?`)) return;
@@ -306,7 +306,7 @@ export default function StaffDashboardModal({
     if (!targetUser) return;
     
     if (staffUsers.some(u => u.id !== id && u.pin === editingStaffPin.trim())) {
-      alert(`PIN "${editingStaffPin.trim()}" is already in use by another user.`);
+      toast.error(`PIN "${editingStaffPin.trim()}" is already in use by another user.`);
       return;
     }
     const updated = staffUsers.map(u => u.id === id ? { ...u, pin: editingStaffPin.trim() } : u);
@@ -401,8 +401,7 @@ export default function StaffDashboardModal({
   }, [allAuditLogs]);
 
   const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+    toast.success(msg);
   };
 
   const handleExportLogsJson = () => {
@@ -571,7 +570,7 @@ export default function StaffDashboardModal({
         throw new Error("Failed to update status");
       }
     } catch (err) {
-      alert("Could not update inquiry status. Try again.");
+      toast.error("Could not update inquiry status. Try again.");
     }
   };
 
@@ -602,7 +601,7 @@ export default function StaffDashboardModal({
         throw new Error("Failed to save note");
       }
     } catch (err) {
-      alert("Could not save note. Try again.");
+      toast.error("Could not save note. Try again.");
     }
   };
 
@@ -630,10 +629,10 @@ export default function StaffDashboardModal({
         setSelectedInquiry(prev => prev ? { ...prev, payload: data.inquiry.payload } : null);
         showToast("Live offer & payment link updated on guest's magic link!");
       } else {
-        alert("Failed to update offer. Please try again.");
+        toast.error("Failed to update offer. Please try again.");
       }
     } catch (e) {
-      alert("Error saving offer updates.");
+      toast.error("Error saving offer updates.");
     } finally {
       setOfferUpdating(false);
     }
@@ -682,7 +681,7 @@ export default function StaffDashboardModal({
         throw new Error("Failed to delete from database");
       }
     } catch (err) {
-      alert("Could not delete inquiry. Try again.");
+      toast.error("Could not delete inquiry. Try again.");
     }
   };
 
@@ -719,7 +718,7 @@ export default function StaffDashboardModal({
         throw new Error("Server error saving apartments");
       }
     } catch (err) {
-      alert("Could not save apartment details. Try again.");
+      toast.error("Could not save apartment details. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -740,7 +739,7 @@ export default function StaffDashboardModal({
         throw new Error("Failed to delete from database");
       }
     } catch (err) {
-      alert("Could not delete apartment. Try again.");
+      toast.error("Could not delete apartment. Try again.");
     }
   };
 
@@ -762,7 +761,7 @@ export default function StaffDashboardModal({
         showToast("Pricing rules saved and applied!");
       }
     } catch (err) {
-      alert("Could not update pricing guidelines. Try again.");
+      toast.error("Could not update pricing guidelines. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -801,7 +800,7 @@ export default function StaffDashboardModal({
         throw new Error("Server error saving dining options");
       }
     } catch (err) {
-      alert("Could not save dining details. Try again.");
+      toast.error("Could not save dining details. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -822,7 +821,7 @@ export default function StaffDashboardModal({
         throw new Error("Failed to delete from database");
       }
     } catch (err) {
-      alert("Could not delete dining experience. Try again.");
+      toast.error("Could not delete dining experience. Try again.");
     }
   };
 
@@ -885,7 +884,7 @@ export default function StaffDashboardModal({
       .filter(line => line.startsWith("http"));
     
     if (lines.length === 0) {
-      alert("Please provide at least one valid image URL starting with http/https.");
+      toast.error("Please provide at least one valid image URL starting with http/https.");
       return;
     }
     onSaveHeroImages(lines);
@@ -965,13 +964,6 @@ export default function StaffDashboardModal({
               : "w-full max-w-7xl h-[92vh] border border-stone-200 shadow-2xl"
           }`}
         >
-          {/* TOAST NOTIFICATION */}
-          {toast && (
-            <div className="absolute top-4 right-4 z-50 bg-stone-900 text-brand-teal px-4 py-3 border-l-4 border-brand-teal flex items-center gap-2 shadow-lg">
-              <CheckCircle className="w-5 h-5 text-brand-teal" />
-              <span className="text-xs font-bold uppercase tracking-wider">{toast}</span>
-            </div>
-          )}
 
           {/* PORTAL HEADER */}
           <div className="bg-brand-dark text-white border-b border-brand-gold/20 px-6 sm:px-8 py-4 sm:py-5 flex items-center justify-between shrink-0">

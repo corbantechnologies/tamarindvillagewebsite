@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import { X, Plane, Train, Car, Calendar, Clock, Users, Luggage, CheckCircle2, ShieldCheck, Sparkles, ArrowRight, Phone, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { loadTransferVehicles, TransferVehicle } from "../utils/extrasStore";
@@ -57,7 +58,7 @@ export default function TransferModal({ isOpen, onClose, vehiclesList }: Transfe
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!transferDate || !name || !phone || !email) {
-      alert("Please fill in all required fields (Date, Name, Email, Phone).");
+      toast.error("Please fill in all required fields (Date, Name, Email, Phone).");
       return;
     }
 
@@ -69,6 +70,7 @@ export default function TransferModal({ isOpen, onClose, vehiclesList }: Transfe
       setBookingRef(refCode);
       setIsSubmitting(false);
       setIsSubmitted(true);
+      toast.success("Airport transfer request submitted!");
     }, 1200);
   };
 
