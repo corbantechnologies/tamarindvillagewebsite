@@ -61,3 +61,12 @@ export interface BookingInquiry {
     total: number;
   };
 }
+
+export interface StaffUser {
+  id: string;
+  name: string;
+  pin: string;
+  role: "admin" | "reservationist" | "concierge";
+  email?: string;
+  createdAt: string;
+}

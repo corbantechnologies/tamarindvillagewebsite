@@ -5,9 +5,9 @@ import {
   Mail, FileText, Calendar, DollarSign, TrendingUp, Percent, 
   ShieldAlert, CheckCircle, Clock, ArrowRight, Search, Filter, 
   Edit3, Eye, CheckSquare, Sparkles, RefreshCw, Car, Heart, Image as ImageIcon,
-  MessageSquare, Copy, ExternalLink, Send
+  MessageSquare, Copy, ExternalLink, Send, Key, Users, ShieldCheck, UserCheck, EyeOff, Lock
 } from "lucide-react";
-import { ApartmentType, DiningExperience } from "../types";
+import { ApartmentType, DiningExperience, StaffUser } from "../types";
 import OptimizedImage from "./OptimizedImage";
 import { 
   TransferVehicle, 
@@ -17,6 +17,7 @@ import {
   loadEventPackages, 
   saveEventPackages 
 } from "../utils/extrasStore";
+import { loadStaffUsers, saveStaffUsers } from "../utils/staffStore";
 
 const DEFAULT_BOARDING_PACKAGES = [
   {
@@ -91,6 +92,11 @@ interface PricingRules {
 interface StaffDashboardModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentUser?: StaffUser | null;
+  onLogout?: () => void;
+  onSwitchUser?: () => void;
+  staffUsersList?: StaffUser[];
+  onStaffUsersUpdated?: (users: StaffUser[]) => void;
   onApartmentsUpdated?: (apts: ApartmentType[]) => void;
   onDiningUpdated?: (dins: DiningExperience[]) => void;
   onPricingUpdated?: (pricing: PricingRules) => void;
@@ -103,6 +109,11 @@ interface StaffDashboardModalProps {
 export default function StaffDashboardModal({
   isOpen,
   onClose,
+  currentUser,
+  onLogout,
+  onSwitchUser,
+  staffUsersList,
+  onStaffUsersUpdated,
   onApartmentsUpdated,
   onDiningUpdated,
   onPricingUpdated,
@@ -112,7 +123,7 @@ export default function StaffDashboardModal({
   onResetHeroImages
 }: StaffDashboardModalProps) {
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<"inquiries" | "apartments" | "pricing" | "dining" | "transfers" | "hero">("inquiries");
+  const [activeTab, setActiveTab] = useState<"inquiries" | "apartments" | "pricing" | "dining" | "transfers" | "hero" | "team">("inquiries");
   
   // Data State loaded from APIs
   const [inquiries, setInquiries] = useState<InquiryData[]>([]);
@@ -165,6 +176,109 @@ export default function StaffDashboardModal({
   const [vehicles, setVehicles] = useState<TransferVehicle[]>([]);
   const [events, setEvents] = useState<EventPackage[]>([]);
   const [pasteHeroInput, setPasteHeroInput] = useState("");
+
+  // Staff Users & Access Allocation states
+  const [staffUsers, setStaffUsers] = useState<StaffUser[]>(() => staffUsersList || loadStaffUsers());
+  const [newStaffName, setNewStaffName] = useState("");
+  const [newStaffRole, setNewStaffRole] = useState<"reservationist" | "admin" | "concierge">("reservationist");
+  const [newStaffPin, setNewStaffPin] = useState("");
+  const [newStaffEmail, setNewStaffEmail] = useState("");
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
+  const [editingStaffPin, setEditingStaffPin] = useState("");
+  const [revealedPins, setRevealedPins] = useState<Record<string, boolean>>({});
+  const [copiedPinId, setCopiedPinId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (staffUsersList && staffUsersList.length > 0) {
+      setStaffUsers(staffUsersList);
+    }
+  }, [staffUsersList]);
+
+  const handleSaveStaffUsersList = async (newList: StaffUser[]) => {
+    setStaffUsers(newList);
+    saveStaffUsers(newList);
+    if (onStaffUsersUpdated) onStaffUsersUpdated(newList);
+    try {
+      const response = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: "staff_users",
+          value: newList
+        })
+      });
+      if (response.ok) {
+        showToast("Team access & PIN allocations saved!");
+      } else {
+        throw new Error("Server error");
+      }
+    } catch (e) {
+      console.warn("Could not save to live API, preserved in local storage:", e);
+      showToast("PIN saved locally (offline fallback active)");
+    }
+  };
+
+  const handleAllocateNewStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStaffName.trim() || !newStaffPin.trim()) {
+      alert("Please provide both a Name and a PIN.");
+      return;
+    }
+    const pin = newStaffPin.trim();
+    if (staffUsers.some(u => u.pin === pin)) {
+      alert(`PIN "${pin}" is already allocated to another staff member. Please choose a unique PIN.`);
+      return;
+    }
+    const newUser: StaffUser = {
+      id: "staff_" + Date.now(),
+      name: newStaffName.trim(),
+      pin,
+      role: newStaffRole,
+      email: newStaffEmail.trim() || undefined,
+      createdAt: new Date().toISOString()
+    };
+    const updated = [...staffUsers, newUser];
+    await handleSaveStaffUsersList(updated);
+    setNewStaffName("");
+    setNewStaffPin("");
+    setNewStaffEmail("");
+    showToast(`Passcode allocated for ${newUser.name} (${newUser.role.toUpperCase()})`);
+  };
+
+  const handleRevokeStaff = async (id: string, name: string) => {
+    if (id === "user_admin" || id === staffUsers[0]?.id) {
+      alert("The primary Administrator account cannot be removed.");
+      return;
+    }
+    if (!confirm(`Are you sure you want to revoke access and deactivate PIN for ${name}?`)) return;
+    const updated = staffUsers.filter(u => u.id !== id);
+    await handleSaveStaffUsersList(updated);
+    showToast(`Access revoked for ${name}`);
+  };
+
+  const handleUpdateStaffPin = async (id: string) => {
+    if (!editingStaffPin.trim()) return;
+    const targetUser = staffUsers.find(u => u.id === id);
+    if (!targetUser) return;
+    
+    if (staffUsers.some(u => u.id !== id && u.pin === editingStaffPin.trim())) {
+      alert(`PIN "${editingStaffPin.trim()}" is already in use by another user.`);
+      return;
+    }
+    const updated = staffUsers.map(u => u.id === id ? { ...u, pin: editingStaffPin.trim() } : u);
+    await handleSaveStaffUsersList(updated);
+    setEditingStaffId(null);
+    setEditingStaffPin("");
+    showToast(`PIN updated for ${targetUser.name}`);
+  };
+
+  const generateRandomPin = () => {
+    let pin = "";
+    do {
+      pin = Math.floor(1000 + Math.random() * 9000).toString();
+    } while (staffUsers.some(u => u.pin === pin));
+    setNewStaffPin(pin);
+  };
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -257,16 +371,26 @@ export default function StaffDashboardModal({
 
           if (sData.boarding_packages) setBoardingPackages(sData.boarding_packages);
           else setBoardingPackages(DEFAULT_BOARDING_PACKAGES);
+
+          if (sData.staff_users && Array.isArray(sData.staff_users)) {
+            setStaffUsers(sData.staff_users);
+            saveStaffUsers(sData.staff_users);
+            if (onStaffUsersUpdated) onStaffUsersUpdated(sData.staff_users);
+          } else {
+            setStaffUsers(loadStaffUsers());
+          }
         } else {
           setVehicles(loadTransferVehicles());
           setEvents(loadEventPackages());
           setBoardingPackages(DEFAULT_BOARDING_PACKAGES);
+          setStaffUsers(loadStaffUsers());
         }
       } catch (settingsErr) {
         console.warn("Could not load dynamic settings from API, using local fallbacks:", settingsErr);
         setVehicles(loadTransferVehicles());
         setEvents(loadEventPackages());
         setBoardingPackages(DEFAULT_BOARDING_PACKAGES);
+        setStaffUsers(loadStaffUsers());
       }
 
       setPasteHeroInput(heroImages.join("\n"));
@@ -287,10 +411,14 @@ export default function StaffDashboardModal({
 
   const handleUpdateInquiryStatus = async (id: string, newStatus: string) => {
     try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Tamarind Reservations";
       const response = await fetch(`/api/inquiries/${id}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ 
+          status: newStatus,
+          actorName: actor
+        })
       });
       if (response.ok) {
         const data = await response.json();
@@ -310,14 +438,16 @@ export default function StaffDashboardModal({
   const handleAddStaffNote = async (id: string, noteText: string) => {
     if (!noteText.trim()) return;
     try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Tamarind Reservations";
       const response = await fetch(`/api/inquiries/${id}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           staffNote: {
-            author: "Tamarind Reservations",
+            author: actor,
             text: noteText.trim()
-          }
+          },
+          actorName: actor
         })
       });
       if (response.ok) {
@@ -328,6 +458,8 @@ export default function StaffDashboardModal({
         }
         setNewNoteInput("");
         showToast("Negotiation note saved to inquiry!");
+      } else {
+        throw new Error("Failed to save note");
       }
     } catch (err) {
       alert("Could not save note. Try again.");
@@ -338,6 +470,7 @@ export default function StaffDashboardModal({
     if (!selectedInquiry) return;
     setOfferUpdating(true);
     try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Tamarind Reservations";
       const payloadUpdates: any = {
         paymentLink: editPaymentLink.trim(),
         totalCost: editTotalCost ? Number(editTotalCost) : selectedInquiry.payload?.totalCost,
@@ -346,7 +479,10 @@ export default function StaffDashboardModal({
       const response = await fetch(`/api/inquiries/${selectedInquiry.id}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: payloadUpdates })
+        body: JSON.stringify({ 
+          payload: payloadUpdates,
+          actorName: actor
+        })
       });
       if (response.ok) {
         const data = await response.json();
@@ -675,7 +811,34 @@ export default function StaffDashboardModal({
                 <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">Live Controller & Administrative Dashboard</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {currentUser && (
+                <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 bg-stone-800/90 border border-stone-700">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <div className="text-left">
+                    <p className="text-[11px] font-bold text-white leading-none">{currentUser.name}</p>
+                    <p className="text-[9px] font-mono text-brand-gold uppercase tracking-wider mt-0.5">{currentUser.role}</p>
+                  </div>
+                  {onSwitchUser && (
+                    <button
+                      onClick={onSwitchUser}
+                      className="ml-2 text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white bg-stone-700/60 hover:bg-stone-700 px-2 py-0.5 transition-colors cursor-pointer"
+                      title="Switch staff user / change PIN"
+                    >
+                      Switch
+                    </button>
+                  )}
+                  {onLogout && (
+                    <button
+                      onClick={onLogout}
+                      className="text-[10px] font-bold uppercase tracking-wider text-red-400 hover:text-red-300 bg-red-950/40 hover:bg-red-900/50 px-2 py-0.5 border border-red-800/50 transition-colors cursor-pointer"
+                      title="End session & lock dashboard"
+                    >
+                      Lock
+                    </button>
+                  )}
+                </div>
+              )}
               {loading && <RefreshCw className="w-4 h-4 text-brand-teal animate-spin" />}
               <button
                 onClick={loadAllDashboardData}
@@ -779,6 +942,24 @@ export default function StaffDashboardModal({
                 >
                   <ImageIcon className="w-4.5 h-4.5" />
                   <span>Hero Slideshow</span>
+                </button>
+
+                <div className="h-px bg-stone-800 my-4 mx-3" />
+                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-600 px-3 mb-2">Access Control</div>
+
+                <button
+                  onClick={() => setActiveTab("team")}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                    activeTab === "team"
+                      ? "bg-brand-teal text-brand-dark font-black"
+                      : "hover:bg-stone-800 hover:text-white"
+                  }`}
+                >
+                  <Users className="w-4.5 h-4.5" />
+                  <span>Team & PIN Access</span>
+                  <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
+                    {staffUsers.length}
+                  </span>
                 </button>
               </nav>
 
@@ -2584,6 +2765,300 @@ export default function StaffDashboardModal({
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>Reset Defaults</span>
                       </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* --- TAB 7: TEAM & PIN ACCESS --- */}
+              {activeTab === "team" && (
+                <div className="space-y-6 flex-1 flex flex-col">
+                  {/* HEADER STRIP */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 border border-stone-200 shadow-sm">
+                    <div>
+                      <div className="flex items-center gap-2 text-brand-teal text-xs font-mono font-bold uppercase tracking-wider mb-1">
+                        <Key className="w-4 h-4 text-brand-gold" />
+                        <span>Security & Multi-Reservationist PINs</span>
+                      </div>
+                      <h3 className="font-serif text-xl font-bold text-stone-900 uppercase tracking-wider">
+                        Staff Passcodes & Access Allocation
+                      </h3>
+                      <p className="text-xs text-stone-500 font-light mt-1 max-w-2xl leading-relaxed">
+                        Allocate individual login PINs to reservationists and administrators. All inquiry stage updates, negotiation notes, rate changes, and payment links are attributed to the specific logged-in user.
+                      </p>
+                    </div>
+
+                    {currentUser && (
+                      <div className="flex items-center gap-3 bg-stone-50 border border-stone-200 p-3.5 shrink-0">
+                        <div className="w-9 h-9 bg-brand-teal/10 border border-brand-teal/30 flex items-center justify-center text-brand-teal">
+                          <UserCheck className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Active Session</p>
+                          <p className="text-xs font-bold text-stone-900">{currentUser.name}</p>
+                          <p className="text-[9px] font-mono text-brand-teal uppercase font-bold tracking-wider">{currentUser.role}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* MASTER PIN RECOVERY BANNER */}
+                  <div className="bg-amber-50/70 border border-amber-200/80 p-4 flex items-start gap-3">
+                    <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-900">
+                      <span className="font-bold uppercase tracking-wide">Emergency Master Override Active: </span>
+                      The default master passcode <span className="font-mono font-bold px-1.5 py-0.5 bg-white border border-amber-300 text-amber-900">1977</span> is permanently reserved as an emergency administrative fallback so management can never be locked out.
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* LEFT 2 COLS: TEAM LIST TABLE */}
+                    <div className="lg:col-span-2 space-y-4">
+                      <div className="bg-white border border-stone-200 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-stone-200 flex items-center justify-between bg-stone-50/50">
+                          <div>
+                            <h4 className="font-serif text-sm font-bold text-stone-900 uppercase tracking-wider">
+                              Allocated Team Members ({staffUsers.length})
+                            </h4>
+                            <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">
+                              Active credentials with access to the dashboard
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="divide-y divide-stone-100 overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-stone-50/80 text-[10px] font-bold uppercase tracking-wider text-stone-500 border-b border-stone-200">
+                                <th className="py-3 px-4">Staff Member</th>
+                                <th className="py-3 px-4">Role</th>
+                                <th className="py-3 px-4">Allocated PIN</th>
+                                <th className="py-3 px-4 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-stone-100 font-medium">
+                              {staffUsers.map((user) => {
+                                const isMaster = user.id === "user_admin" || user.pin === "1977";
+                                const isRevealed = !!revealedPins[user.id];
+                                const isEditing = editingStaffId === user.id;
+
+                                return (
+                                  <tr key={user.id} className="hover:bg-stone-50/60 transition-colors">
+                                    <td className="py-3.5 px-4">
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center font-bold text-stone-700 text-xs shrink-0">
+                                          {user.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                          <p className="font-bold text-stone-900 flex items-center gap-1.5">
+                                            {user.name}
+                                            {currentUser?.id === user.id && (
+                                              <span className="text-[9px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider">
+                                                You
+                                              </span>
+                                            )}
+                                          </p>
+                                          {user.email && (
+                                            <p className="text-[11px] text-stone-400 font-normal">{user.email}</p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </td>
+
+                                    <td className="py-3.5 px-4">
+                                      <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                                        user.role === "admin"
+                                          ? "bg-amber-100 text-amber-900 border border-amber-200"
+                                          : user.role === "reservationist"
+                                          ? "bg-emerald-100 text-emerald-900 border border-emerald-200"
+                                          : "bg-sky-100 text-sky-900 border border-sky-200"
+                                      }`}>
+                                        {user.role}
+                                      </span>
+                                    </td>
+
+                                    <td className="py-3.5 px-4">
+                                      {isEditing ? (
+                                        <div className="flex items-center gap-1.5">
+                                          <input
+                                            type="text"
+                                            value={editingStaffPin}
+                                            onChange={(e) => setEditingStaffPin(e.target.value)}
+                                            className="w-24 px-2 py-1 border border-brand-teal text-xs font-mono font-bold bg-white text-stone-900"
+                                            placeholder="New PIN"
+                                            autoFocus
+                                          />
+                                          <button
+                                            onClick={() => handleUpdateStaffPin(user.id)}
+                                            className="p-1 bg-brand-teal text-brand-dark hover:bg-brand-teal/80 font-bold cursor-pointer"
+                                            title="Save new PIN"
+                                          >
+                                            <Check className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => { setEditingStaffId(null); setEditingStaffPin(""); }}
+                                            className="p-1 bg-stone-200 text-stone-600 hover:bg-stone-300 cursor-pointer"
+                                            title="Cancel"
+                                          >
+                                            <X className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-mono text-xs font-bold tracking-widest px-2 py-1 bg-stone-100 text-stone-800 border border-stone-200 select-all">
+                                            {isRevealed ? user.pin : "••••"}
+                                          </span>
+                                          <button
+                                            onClick={() => setRevealedPins(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
+                                            className="p-1 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+                                            title={isRevealed ? "Hide PIN" : "Reveal PIN"}
+                                          >
+                                            {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              navigator.clipboard.writeText(user.pin);
+                                              setCopiedPinId(user.id);
+                                              setTimeout(() => setCopiedPinId(null), 2000);
+                                              showToast(`PIN for ${user.name} copied to clipboard`);
+                                            }}
+                                            className="p-1 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+                                            title="Copy PIN"
+                                          >
+                                            {copiedPinId === user.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                          </button>
+                                        </div>
+                                      )}
+                                    </td>
+
+                                    <td className="py-3.5 px-4 text-right">
+                                      <div className="flex items-center justify-end gap-2">
+                                        <button
+                                          onClick={() => {
+                                            setEditingStaffId(user.id);
+                                            setEditingStaffPin(user.pin);
+                                          }}
+                                          className="text-[10px] font-bold uppercase tracking-wider text-stone-600 hover:text-brand-teal transition-colors cursor-pointer"
+                                        >
+                                          Change PIN
+                                        </button>
+                                        {!isMaster && (
+                                          <>
+                                            <span className="text-stone-200">|</span>
+                                            <button
+                                              onClick={() => handleRevokeStaff(user.id, user.name)}
+                                              className="text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
+                                            >
+                                              Revoke
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RIGHT 1 COL: ALLOCATE NEW PIN FORM */}
+                    <div className="space-y-4">
+                      <div className="bg-white p-6 border border-stone-200 shadow-sm">
+                        <div className="border-b border-stone-200 pb-3 mb-4">
+                          <h4 className="font-serif text-sm font-bold text-stone-900 uppercase tracking-wider">
+                            Allocate New Passcode
+                          </h4>
+                          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">
+                            Provision a credential for a reservationist
+                          </p>
+                        </div>
+
+                        <form onSubmit={handleAllocateNewStaff} className="space-y-4 text-xs">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
+                              Staff Member Name *
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Brenda Achieng"
+                              value={newStaffName}
+                              onChange={(e) => setNewStaffName(e.target.value)}
+                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-teal"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
+                              Staff Role *
+                            </label>
+                            <select
+                              value={newStaffRole}
+                              onChange={(e) => setNewStaffRole(e.target.value as any)}
+                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-teal text-xs font-medium"
+                            >
+                              <option value="reservationist">Reservationist (Inquiries, Offers & Notes)</option>
+                              <option value="admin">Administrator (Full Access & PIN Management)</option>
+                              <option value="concierge">Concierge (Front Desk & Transfers)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between items-center mb-1">
+                              <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600">
+                                Allocated Passcode (PIN) *
+                              </label>
+                              <button
+                                type="button"
+                                onClick={generateRandomPin}
+                                className="text-[10px] text-brand-teal hover:underline font-bold uppercase tracking-wider cursor-pointer"
+                              >
+                                🎲 Generate
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. 4821"
+                              value={newStaffPin}
+                              onChange={(e) => setNewStaffPin(e.target.value.replace(/\s+/g, ""))}
+                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 font-mono font-bold focus:outline-none focus:border-brand-teal"
+                            />
+                            <span className="text-[10px] text-stone-400 block mt-1">
+                              Must be unique across all active team members.
+                            </span>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
+                              Email / Department (Optional)
+                            </label>
+                            <input
+                              type="email"
+                              placeholder="e.g. brenda@tamarind.co.ke"
+                              value={newStaffEmail}
+                              onChange={(e) => setNewStaffEmail(e.target.value)}
+                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-teal"
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            className="w-full py-3 bg-brand-teal text-brand-dark font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:bg-brand-teal/85 transition-colors cursor-pointer mt-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Allocate & Save Passcode</span>
+                          </button>
+                        </form>
+                      </div>
+
+                      <div className="bg-stone-100 p-4 border border-stone-200 text-stone-600 text-[11px] leading-relaxed">
+                        <p className="font-bold uppercase tracking-wide text-stone-800 mb-1">Audit Attribution</p>
+                        When a reservationist updates inquiry stages or sends payment links, the inquiry's chronological audit log registers their exact name.
+                      </div>
                     </div>
                   </div>
                 </div>

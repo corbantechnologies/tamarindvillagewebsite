@@ -24,7 +24,7 @@ export default async function handler(req: any, res: any) {
       const action = req.query.action;
       
       if (action === "status" && id) {
-        const { status, payload, staffNote } = req.body || {};
+        const { status, payload, staffNote, actorName } = req.body || {};
         if (!status && !payload && !staffNote) {
           return res.status(400).json({ error: "Status, payload, or staffNote is required." });
         }
@@ -51,7 +51,7 @@ export default async function handler(req: any, res: any) {
             id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
             timestamp: new Date().toISOString(),
             actor: "staff",
-            actorName: staffNote?.author || "Tamarind Reservations",
+            actorName: actorName || staffNote?.author || "Tamarind Reservations",
             action: `Status changed from "${current.status}" to "${status}"`,
             type: "status_change"
           });
@@ -63,7 +63,7 @@ export default async function handler(req: any, res: any) {
               id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
               timestamp: new Date().toISOString(),
               actor: "staff",
-              actorName: staffNote?.author || "Tamarind Reservations",
+              actorName: actorName || staffNote?.author || "Tamarind Reservations",
               action: `Direct payment link configured: ${payload.paymentLink}`,
               type: "payment_link"
             });
@@ -73,7 +73,7 @@ export default async function handler(req: any, res: any) {
               id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
               timestamp: new Date().toISOString(),
               actor: "staff",
-              actorName: staffNote?.author || "Tamarind Reservations",
+              actorName: actorName || staffNote?.author || "Tamarind Reservations",
               action: `Agreed rate updated to $${payload.totalCost}`,
               type: "price_update"
             });
@@ -85,7 +85,7 @@ export default async function handler(req: any, res: any) {
           mergedPayload.staffNotes = mergedPayload.staffNotes || [];
           mergedPayload.staffNotes.push({
             id: "note_" + Date.now(),
-            author: staffNote.author || "Tamarind Reservations",
+            author: staffNote.author || actorName || "Tamarind Reservations",
             text: staffNote.text,
             createdAt: new Date().toISOString()
           });
@@ -93,7 +93,7 @@ export default async function handler(req: any, res: any) {
             id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
             timestamp: new Date().toISOString(),
             actor: "staff",
-            actorName: staffNote.author || "Tamarind Reservations",
+            actorName: actorName || staffNote.author || "Tamarind Reservations",
             action: `Added negotiation note: "${staffNote.text}"`,
             type: "staff_note"
           });

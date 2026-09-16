@@ -15,13 +15,15 @@ import OptimizedImage from "./components/OptimizedImage";
 import { getOptimizedImageUrl } from "./utils/media";
 import { loadTransferVehicles, loadEventPackages, saveTransferVehicles, saveEventPackages } from "./utils/extrasStore";
 import { useLiveRates } from "./utils/profitroom";
+import { StaffUser } from "./types";
+import { loadStaffUsers, saveStaffUsers, getCurrentStaffUser, setCurrentStaffUser } from "./utils/staffStore";
 import { APARTMENTS, PACKAGES, DINING, FACILITIES } from "./data";
 import {
   Waves, Users, Maximize2, Coffee, Utensils, Ship,
   MapPin, Phone, Mail, Sparkles, ArrowRight, Clock, ChevronRight,
   ShieldCheck, HelpCircle, CheckCircle2, Star, Calendar, MessageSquare,
   ChevronLeft, Image as ImageIcon, Settings, Plus, Trash2, RotateCcw, Check,
-  Car, Plane, Train
+  Car, Plane, Train, Key, UserCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -106,6 +108,10 @@ export default function App() {
           if (d.event_packages) {
             setEventPackagesList(d.event_packages);
             saveEventPackages(d.event_packages);
+          }
+          if (d.staff_users && Array.isArray(d.staff_users)) {
+            setStaffUsers(d.staff_users);
+            saveStaffUsers(d.staff_users);
           }
         }
       } catch (err) {
@@ -203,13 +209,22 @@ export default function App() {
     }
   });
 
+  const [staffUsers, setStaffUsers] = useState<StaffUser[]>(() => loadStaffUsers());
+  const [currentStaffUser, setCurrentStaffUserState] = useState<StaffUser | null>(() => getCurrentStaffUser());
+
   const [isStaffPinModalOpen, setIsStaffPinModalOpen] = useState(false);
   const [staffPinInput, setStaffPinInput] = useState("");
   const [staffPinError, setStaffPinError] = useState("");
 
   const handleVerifyStaffPin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (staffPinInput.trim() === "1977" || staffPinInput.trim().toLowerCase() === "admin") {
+    const pin = staffPinInput.trim();
+
+    // Check matched staff user
+    const matchedUser = staffUsers.find((u) => u.pin === pin);
+    if (matchedUser) {
+      setCurrentStaffUserState(matchedUser);
+      setCurrentStaffUser(matchedUser);
       setIsAdmin(true);
       try {
         localStorage.setItem("tamarind_staff_unlocked", "true");
@@ -220,14 +235,42 @@ export default function App() {
       setStaffPinInput("");
       setStaffPinError("");
       setIsCustomizerOpen(true);
-      triggerNotification("Access Granted", "Staff Dashboard unlocked. Admin panel is now active.");
-    } else {
-      setStaffPinError("Invalid Staff Passcode. Please contact your system administrator.");
+      triggerNotification("Access Granted", `Welcome ${matchedUser.name} (${matchedUser.role.toUpperCase()})`);
+      return;
     }
+
+    // Master emergency fallback PIN 1977
+    if (pin === "1977" || pin.toLowerCase() === "admin") {
+      const masterAdmin: StaffUser = {
+        id: "user_admin",
+        name: "Master Administrator",
+        pin: "1977",
+        role: "admin",
+        createdAt: new Date().toISOString()
+      };
+      setCurrentStaffUserState(masterAdmin);
+      setCurrentStaffUser(masterAdmin);
+      setIsAdmin(true);
+      try {
+        localStorage.setItem("tamarind_staff_unlocked", "true");
+      } catch (e) {
+        console.error("Failed to store staff state:", e);
+      }
+      setIsStaffPinModalOpen(false);
+      setStaffPinInput("");
+      setStaffPinError("");
+      setIsCustomizerOpen(true);
+      triggerNotification("Access Granted", "Master Administrator unlocked.");
+      return;
+    }
+
+    setStaffPinError("Invalid Staff Passcode. Please contact your system administrator.");
   };
 
   const handleLockStaffMode = () => {
     setIsAdmin(false);
+    setCurrentStaffUserState(null);
+    setCurrentStaffUser(null);
     try {
       localStorage.removeItem("tamarind_staff_unlocked");
     } catch (e) {
@@ -1378,6 +1421,17 @@ export default function App() {
       <StaffDashboardModal
         isOpen={isCustomizerOpen}
         onClose={() => setIsCustomizerOpen(false)}
+        currentUser={currentStaffUser}
+        onLogout={handleLockStaffMode}
+        onSwitchUser={() => {
+          setIsCustomizerOpen(false);
+          setIsStaffPinModalOpen(true);
+        }}
+        staffUsersList={staffUsers}
+        onStaffUsersUpdated={(users) => {
+          setStaffUsers(users);
+          saveStaffUsers(users);
+        }}
         onApartmentsUpdated={(apts) => setApartments(apts)}
         onDiningUpdated={(dins) => setDiningOptions(dins)}
         onPricingUpdated={(pricing) => setPricingRules(pricing)}
@@ -1424,7 +1478,7 @@ export default function App() {
                     <ShieldCheck className="w-4 h-4 text-brand-gold" />
                     <span>Staff Authentication</span>
                   </div>
-                  <h3 className="font-serif text-2xl font-bold text-brand-dark">Resort Content Manager</h3>
+                  <h3 className="font-serif text-2xl font-bold text-brand-dark">Resort Portal Access</h3>
                 </div>
                 <button
                   onClick={() => setIsStaffPinModalOpen(false)}
@@ -1435,7 +1489,7 @@ export default function App() {
               </div>
 
               <p className="text-xs text-stone-500 font-light leading-relaxed mb-6">
-                Please enter the staff passcode to access vehicle fleet, weddings, and customizer controls.
+                Enter your individual staff PIN passcode to access inquiries, quotes, and resort content controls.
               </p>
 
               {staffPinError && (
@@ -1447,18 +1501,21 @@ export default function App() {
               <form onSubmit={handleVerifyStaffPin} className="space-y-4">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
-                    Staff Passcode
+                    Staff Passcode (PIN)
                   </label>
                   <input
                     type="password"
                     autoFocus
                     required
-                    placeholder="Enter staff passcode"
+                    placeholder="Enter 4-digit PIN"
                     value={staffPinInput}
                     onChange={(e) => setStaffPinInput(e.target.value)}
                     className="w-full text-sm px-3.5 py-2.5 border border-stone-300 focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-900 font-mono"
                   />
-                  <span className="text-[10px] text-stone-400 block mt-1">Authorized personnel only. Contact administrative office if you forgot your credentials.</span>
+                  <div className="flex justify-between items-center mt-2 text-[10px] text-stone-400">
+                    <span>Individual PINs allocated per reservationist</span>
+                    <span className="font-mono text-stone-500">Master PIN: 1977</span>
+                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">

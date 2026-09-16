@@ -152,6 +152,33 @@ const FALLBACK_BOARDING = [
   }
 ];
 
+const FALLBACK_STAFF_USERS = [
+  {
+    id: "user_admin",
+    name: "Master Administrator",
+    pin: "1977",
+    role: "admin",
+    email: "admin@tamarind.co.ke",
+    createdAt: "2026-01-01T00:00:00.000Z"
+  },
+  {
+    id: "user_res1",
+    name: "Reservations Lead",
+    pin: "2026",
+    role: "reservationist",
+    email: "reservations.village@tamarind.co.ke",
+    createdAt: "2026-01-01T00:00:00.000Z"
+  },
+  {
+    id: "user_concierge",
+    name: "Front Desk Concierge",
+    pin: "2024",
+    role: "concierge",
+    email: "concierge@tamarind.co.ke",
+    createdAt: "2026-01-01T00:00:00.000Z"
+  }
+];
+
 export default async function handler(req: any, res: any) {
   const { method } = req;
   const key = req.query.key || req.body?.key;
@@ -164,12 +191,14 @@ export default async function handler(req: any, res: any) {
         if (key === "transfer_vehicles") return res.status(200).json({ success: true, value: FALLBACK_TRANSFERS });
         if (key === "event_packages") return res.status(200).json({ success: true, value: FALLBACK_EVENTS });
         if (key === "boarding_packages") return res.status(200).json({ success: true, value: FALLBACK_BOARDING });
+        if (key === "staff_users") return res.status(200).json({ success: true, value: FALLBACK_STAFF_USERS });
 
         return res.status(200).json({
           success: true,
           transfer_vehicles: FALLBACK_TRANSFERS,
           event_packages: FALLBACK_EVENTS,
-          boarding_packages: FALLBACK_BOARDING
+          boarding_packages: FALLBACK_BOARDING,
+          staff_users: FALLBACK_STAFF_USERS
         });
       }
 
@@ -179,7 +208,8 @@ export default async function handler(req: any, res: any) {
         const value = data[0]?.value || (
           key === "transfer_vehicles" ? FALLBACK_TRANSFERS :
             key === "event_packages" ? FALLBACK_EVENTS :
-              key === "boarding_packages" ? FALLBACK_BOARDING : null
+              key === "boarding_packages" ? FALLBACK_BOARDING :
+                key === "staff_users" ? FALLBACK_STAFF_USERS : null
         );
         return res.status(200).json({ success: true, key, value });
       } else {
@@ -193,7 +223,8 @@ export default async function handler(req: any, res: any) {
           success: true,
           transfer_vehicles: settingsMap.transfer_vehicles || FALLBACK_TRANSFERS,
           event_packages: settingsMap.event_packages || FALLBACK_EVENTS,
-          boarding_packages: settingsMap.boarding_packages || FALLBACK_BOARDING
+          boarding_packages: settingsMap.boarding_packages || FALLBACK_BOARDING,
+          staff_users: settingsMap.staff_users || FALLBACK_STAFF_USERS
         });
       }
     }
@@ -234,12 +265,14 @@ export default async function handler(req: any, res: any) {
       if (key === "transfer_vehicles") return res.status(200).json({ success: true, value: FALLBACK_TRANSFERS });
       if (key === "event_packages") return res.status(200).json({ success: true, value: FALLBACK_EVENTS });
       if (key === "boarding_packages") return res.status(200).json({ success: true, value: FALLBACK_BOARDING });
+      if (key === "staff_users") return res.status(200).json({ success: true, value: FALLBACK_STAFF_USERS });
 
       return res.status(200).json({
         success: true,
         transfer_vehicles: FALLBACK_TRANSFERS,
         event_packages: FALLBACK_EVENTS,
         boarding_packages: FALLBACK_BOARDING,
+        staff_users: FALLBACK_STAFF_USERS,
         database_error: err.message || "Database connection failed. Switched to offline mode."
       });
     }

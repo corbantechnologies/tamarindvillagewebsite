@@ -325,6 +325,33 @@ const FALLBACK_BOARDING = [
   }
 ];
 
+const FALLBACK_STAFF_USERS = [
+  {
+    id: "user_admin",
+    name: "Master Administrator",
+    pin: "1977",
+    role: "admin",
+    email: "admin@tamarind.co.ke",
+    createdAt: "2026-01-01T00:00:00.000Z"
+  },
+  {
+    id: "user_res1",
+    name: "Reservations Lead",
+    pin: "2026",
+    role: "reservationist",
+    email: "reservations.village@tamarind.co.ke",
+    createdAt: "2026-01-01T00:00:00.000Z"
+  },
+  {
+    id: "user_concierge",
+    name: "Front Desk Concierge",
+    pin: "2024",
+    role: "concierge",
+    email: "concierge@tamarind.co.ke",
+    createdAt: "2026-01-01T00:00:00.000Z"
+  }
+];
+
 function initLocalStore() {
   if (!fs.existsSync(DATA_STORE_PATH)) {
     const initialData = {
@@ -335,7 +362,8 @@ function initLocalStore() {
       settings: {
         transfer_vehicles: FALLBACK_TRANSFERS,
         event_packages: FALLBACK_EVENTS,
-        boarding_packages: FALLBACK_BOARDING
+        boarding_packages: FALLBACK_BOARDING,
+        staff_users: FALLBACK_STAFF_USERS
       }
     };
     fs.writeFileSync(DATA_STORE_PATH, JSON.stringify(initialData, null, 2), "utf-8");
@@ -357,7 +385,8 @@ function readLocalStore() {
       settings: {
         transfer_vehicles: FALLBACK_TRANSFERS,
         event_packages: FALLBACK_EVENTS,
-        boarding_packages: FALLBACK_BOARDING
+        boarding_packages: FALLBACK_BOARDING,
+        staff_users: FALLBACK_STAFF_USERS
       }
     };
   }
@@ -428,7 +457,7 @@ async function startServer() {
   app.post("/api/inquiries/:id/status", async (req, res) => {
     try {
       const { id } = req.params;
-      const { status, payload, staffNote } = req.body;
+      const { status, payload, staffNote, actorName } = req.body;
       if (!status && !payload && !staffNote) {
         return res.status(400).json({ error: "Status, payload, or staffNote is required." });
       }
@@ -448,7 +477,7 @@ async function startServer() {
             id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
             timestamp: new Date().toISOString(),
             actor: "staff",
-            actorName: staffNote?.author || "Tamarind Reservations",
+            actorName: actorName || staffNote?.author || "Tamarind Reservations",
             action: `Status changed from "${inq.status}" to "${status}"`,
             type: "status_change"
           });
@@ -461,7 +490,7 @@ async function startServer() {
               id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
               timestamp: new Date().toISOString(),
               actor: "staff",
-              actorName: staffNote?.author || "Tamarind Reservations",
+              actorName: actorName || staffNote?.author || "Tamarind Reservations",
               action: `Direct payment link configured: ${payload.paymentLink}`,
               type: "payment_link"
             });
@@ -471,7 +500,7 @@ async function startServer() {
               id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
               timestamp: new Date().toISOString(),
               actor: "staff",
-              actorName: staffNote?.author || "Tamarind Reservations",
+              actorName: actorName || staffNote?.author || "Tamarind Reservations",
               action: `Agreed quote rate updated to $${payload.totalCost}`,
               type: "price_update"
             });
@@ -483,7 +512,7 @@ async function startServer() {
           inq.payload.staffNotes = inq.payload.staffNotes || [];
           inq.payload.staffNotes.push({
             id: "note_" + Date.now(),
-            author: staffNote.author || "Tamarind Reservations",
+            author: staffNote.author || actorName || "Tamarind Reservations",
             text: staffNote.text,
             createdAt: new Date().toISOString()
           });
@@ -491,7 +520,7 @@ async function startServer() {
             id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
             timestamp: new Date().toISOString(),
             actor: "staff",
-            actorName: staffNote.author || "Tamarind Reservations",
+            actorName: actorName || staffNote.author || "Tamarind Reservations",
             action: `Added negotiation note: "${staffNote.text}"`,
             type: "staff_note"
           });
@@ -521,7 +550,7 @@ async function startServer() {
           id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
           timestamp: new Date().toISOString(),
           actor: "staff",
-          actorName: staffNote?.author || "Tamarind Reservations",
+          actorName: actorName || staffNote?.author || "Tamarind Reservations",
           action: `Status changed from "${current.status}" to "${status}"`,
           type: "status_change"
         });
@@ -533,7 +562,7 @@ async function startServer() {
             id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
             timestamp: new Date().toISOString(),
             actor: "staff",
-            actorName: staffNote?.author || "Tamarind Reservations",
+            actorName: actorName || staffNote?.author || "Tamarind Reservations",
             action: `Direct payment link configured: ${payload.paymentLink}`,
             type: "payment_link"
           });
@@ -543,7 +572,7 @@ async function startServer() {
             id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
             timestamp: new Date().toISOString(),
             actor: "staff",
-            actorName: staffNote?.author || "Tamarind Reservations",
+            actorName: actorName || staffNote?.author || "Tamarind Reservations",
             action: `Agreed quote rate updated to $${payload.totalCost}`,
             type: "price_update"
           });
@@ -555,7 +584,7 @@ async function startServer() {
         mergedPayload.staffNotes = mergedPayload.staffNotes || [];
         mergedPayload.staffNotes.push({
           id: "note_" + Date.now(),
-          author: staffNote.author || "Tamarind Reservations",
+          author: staffNote.author || actorName || "Tamarind Reservations",
           text: staffNote.text,
           createdAt: new Date().toISOString()
         });
@@ -563,7 +592,7 @@ async function startServer() {
           id: "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
           timestamp: new Date().toISOString(),
           actor: "staff",
-          actorName: staffNote.author || "Tamarind Reservations",
+          actorName: actorName || staffNote.author || "Tamarind Reservations",
           action: `Added negotiation note: "${staffNote.text}"`,
           type: "staff_note"
         });
@@ -1478,7 +1507,8 @@ async function startServer() {
           const value = data[0]?.value || (
             key === "transfer_vehicles" ? FALLBACK_TRANSFERS :
               key === "event_packages" ? FALLBACK_EVENTS :
-                key === "boarding_packages" ? FALLBACK_BOARDING : null
+                key === "boarding_packages" ? FALLBACK_BOARDING :
+                  key === "staff_users" ? FALLBACK_STAFF_USERS : null
           );
           return res.status(200).json({ success: true, key, value });
         } else {
@@ -1491,7 +1521,8 @@ async function startServer() {
             success: true,
             transfer_vehicles: settingsMap.transfer_vehicles || FALLBACK_TRANSFERS,
             event_packages: settingsMap.event_packages || FALLBACK_EVENTS,
-            boarding_packages: settingsMap.boarding_packages || FALLBACK_BOARDING
+            boarding_packages: settingsMap.boarding_packages || FALLBACK_BOARDING,
+            staff_users: settingsMap.staff_users || FALLBACK_STAFF_USERS
           });
         }
       } else {
@@ -1502,7 +1533,8 @@ async function startServer() {
           const value = settingsMap[key] || (
             key === "transfer_vehicles" ? FALLBACK_TRANSFERS :
               key === "event_packages" ? FALLBACK_EVENTS :
-                key === "boarding_packages" ? FALLBACK_BOARDING : null
+                key === "boarding_packages" ? FALLBACK_BOARDING :
+                  key === "staff_users" ? FALLBACK_STAFF_USERS : null
           );
           return res.status(200).json({ success: true, key, value });
         } else {
@@ -1510,7 +1542,8 @@ async function startServer() {
             success: true,
             transfer_vehicles: settingsMap.transfer_vehicles || FALLBACK_TRANSFERS,
             event_packages: settingsMap.event_packages || FALLBACK_EVENTS,
-            boarding_packages: settingsMap.boarding_packages || FALLBACK_BOARDING
+            boarding_packages: settingsMap.boarding_packages || FALLBACK_BOARDING,
+            staff_users: settingsMap.staff_users || FALLBACK_STAFF_USERS
           });
         }
       }
@@ -1519,7 +1552,8 @@ async function startServer() {
       if (key) {
         const value = key === "transfer_vehicles" ? FALLBACK_TRANSFERS :
           key === "event_packages" ? FALLBACK_EVENTS :
-            key === "boarding_packages" ? FALLBACK_BOARDING : null;
+            key === "boarding_packages" ? FALLBACK_BOARDING :
+              key === "staff_users" ? FALLBACK_STAFF_USERS : null;
         return res.status(200).json({ success: true, key, value, database_error: err.message });
       }
       return res.status(200).json({
@@ -1527,6 +1561,7 @@ async function startServer() {
         transfer_vehicles: FALLBACK_TRANSFERS,
         event_packages: FALLBACK_EVENTS,
         boarding_packages: FALLBACK_BOARDING,
+        staff_users: FALLBACK_STAFF_USERS,
         database_error: err.message || "Database connection failed. Switched to offline mode."
       });
     }
