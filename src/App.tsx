@@ -7,6 +7,10 @@ import BookingModal from "./components/BookingModal";
 import TransferModal from "./components/TransferModal";
 import EventsAndChartersSection from "./components/EventsAndChartersSection";
 import StaffDashboardModal from "./components/StaffDashboardModal";
+import DirectPerksBanner from "./components/DirectPerksBanner";
+import ReviewsSection from "./components/ReviewsSection";
+import MobileBookingBar from "./components/MobileBookingBar";
+import GuestBookingTrackerModal from "./components/GuestBookingTrackerModal";
 import OptimizedImage from "./components/OptimizedImage";
 import { getOptimizedImageUrl } from "./utils/media";
 import { loadTransferVehicles, loadEventPackages, saveTransferVehicles, saveEventPackages } from "./utils/extrasStore";
@@ -28,6 +32,8 @@ export default function App() {
   const [selectedDiningId, setSelectedDiningId] = useState<string>("tamarind-restaurant");
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
+  const [trackingToken, setTrackingToken] = useState("");
   const [preSelectedPkg, setPreSelectedPkg] = useState<string>("ro");
 
   // Dynamic server-synced datasets and pricing rules
@@ -53,6 +59,20 @@ export default function App() {
       setSecurityNotification(prev => prev && prev.title === title ? null : prev);
     }, 5000);
   };
+
+  // Auto-detect secure guest token or track reference from URL (e.g. ?token=tv_guest_... or ?track=inq_...)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token") || params.get("track");
+      if (token) {
+        setTrackingToken(token);
+        setIsTrackingModalOpen(true);
+      }
+    } catch (e) {
+      console.error("Failed to parse URL query params:", e);
+    }
+  }, []);
 
   // Sync data with local server database_store
   useEffect(() => {
@@ -430,6 +450,7 @@ export default function App() {
         onNavigate={navigateToSection}
         onOpenBooking={() => setIsBookingOpen(true)}
         onOpenTransferModal={() => setIsTransferModalOpen(true)}
+        onOpenTracking={() => setIsTrackingModalOpen(true)}
         activeView={activeView}
         onGoHome={() => {
           setActiveView("home");
@@ -584,6 +605,12 @@ export default function App() {
                   </div>
                 </div>
               </section>
+
+              {/* DIRECT ADVANTAGES & PERKS BANNER (BEST RATE GUARANTEE, DAWA COCKTAIL, DIRECT FLEXIBILITY) */}
+              <DirectPerksBanner
+                onOpenBooking={() => setIsBookingOpen(true)}
+                onOpenTracking={() => setIsTrackingModalOpen(true)}
+              />
 
               {/* 2. CORE STRATEGY: RESIDENCES PROMISE BANNER */}
               <section className="bg-brand-teal/5 py-12 border-y border-stone-200" id="strategy-intro">
@@ -1028,6 +1055,9 @@ export default function App() {
                 isAdmin={isAdmin}
               />
 
+              {/* 6D. TRUST & VERIFIED GUEST REVIEWS SECTION */}
+              <ReviewsSection />
+
               {/* 7. CUSTOM GEOGRAPHIC MAP & CONTACT SECTION */}
               <section className="py-20 scroll-mt-12 w-full" id="contact-section">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1462,6 +1492,24 @@ export default function App() {
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
         onOpenStaffPinModal={() => setIsStaffPinModalOpen(true)}
+        onOpenTracking={() => setIsTrackingModalOpen(true)}
+      />
+
+      {/* Guest No-Login Booking Tracker Modal */}
+      <GuestBookingTrackerModal
+        isOpen={isTrackingModalOpen}
+        onClose={() => setIsTrackingModalOpen(false)}
+        initialToken={trackingToken}
+        onOpenBookingModal={() => {
+          setIsTrackingModalOpen(false);
+          setIsBookingOpen(true);
+        }}
+      />
+
+      {/* Mobile Sticky Booking Bar */}
+      <MobileBookingBar
+        onOpenBooking={() => setIsBookingOpen(true)}
+        startingPrice={processedApartments[0]?.pricePerNight || 160}
       />
 
       {/* Custom Premium Toast Notification */}
@@ -1496,12 +1544,12 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Sticky Floating WhatsApp Button */}
+      {/* Sticky Floating WhatsApp Button (offset on mobile to clear MobileBookingBar) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1, duration: 0.5 }}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 group"
+        className="fixed bottom-16 md:bottom-6 right-4 sm:right-6 z-40 flex items-center gap-2 group"
       >
         <span className="hidden sm:inline-block bg-white text-stone-800 text-[10px] font-bold px-3 py-1.5 shadow-md border border-stone-100 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300 pointer-events-none uppercase tracking-wider font-sans">
           Chat with Us

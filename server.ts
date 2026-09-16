@@ -115,7 +115,7 @@ const DEFAULT_APARTMENTS = [
       "In-suite laundry (washing machine & dryer)",
       "Dedicated concierge service",
       "Luxury bathtubs & rainfall showers",
-      "Complimentary airport transfers"
+      "Dedicated chauffeur & concierge assistance"
     ],
     bedrooms: 3,
     bathrooms: 3.5,
@@ -272,7 +272,7 @@ const FALLBACK_EVENTS = [
     ],
     capacityText: "10 - 150 Delegates",
     cateringText: "Full-day Gourmet Delegate Catering",
-    extraHighlight: "Complimentary Airport VIP Shuttle",
+    extraHighlight: "Executive Airport & SGR Shuttle Coordination",
     ctaText: "Request Corporate Proposal"
   },
   {
@@ -428,9 +428,9 @@ async function startServer() {
   app.post("/api/inquiries/:id/status", async (req, res) => {
     try {
       const { id } = req.params;
-      const { status } = req.body;
-      if (!status) {
-        return res.status(400).json({ error: "Status is required." });
+      const { status, payload, staffNote } = req.body;
+      if (!status && !payload && !staffNote) {
+        return res.status(400).json({ error: "Status, payload, or staffNote is required." });
       }
 
       if (!isDbConfigured()) {
@@ -440,21 +440,56 @@ async function startServer() {
         if (!inq) {
           return res.status(404).json({ error: "Inquiry not found." });
         }
-        inq.status = status;
+        if (status) inq.status = status;
+        if (payload) inq.payload = { ...inq.payload, ...payload };
+        if (staffNote) {
+          inq.payload.staffNotes = inq.payload.staffNotes || [];
+          inq.payload.staffNotes.push({
+            id: "note_" + Date.now(),
+            author: staffNote.author || "Tamarind Reservations",
+            text: staffNote.text,
+            createdAt: new Date().toISOString()
+          });
+        }
+        if (!inq.payload.guestToken) {
+          inq.payload.guestToken = "tv_guest_" + Math.random().toString(36).slice(2, 11);
+        }
         writeLocalStore(store);
         return res.json({ success: true, inquiry: inq });
       }
 
       const db = getDb();
+      const existing = await db.select().from(inquiriesTable).where(eq(inquiriesTable.id, id));
+      if (existing.length === 0) {
+        return res.status(404).json({ error: "Inquiry not found." });
+      }
+      
+      const current = existing[0];
+      const updatedFields: any = {};
+      if (status) updatedFields.status = status;
+      
+      const mergedPayload = { ...((current.payload as any) || {}) };
+      if (payload) Object.assign(mergedPayload, payload);
+      if (staffNote) {
+        mergedPayload.staffNotes = mergedPayload.staffNotes || [];
+        mergedPayload.staffNotes.push({
+          id: "note_" + Date.now(),
+          author: staffNote.author || "Tamarind Reservations",
+          text: staffNote.text,
+          createdAt: new Date().toISOString()
+        });
+      }
+      if (!mergedPayload.guestToken) {
+        mergedPayload.guestToken = "tv_guest_" + Math.random().toString(36).slice(2, 11);
+      }
+      updatedFields.payload = mergedPayload;
+
       const updated = await db
         .update(inquiriesTable)
-        .set({ status })
+        .set(updatedFields)
         .where(eq(inquiriesTable.id, id))
         .returning();
 
-      if (updated.length === 0) {
-        return res.status(404).json({ error: "Inquiry not found." });
-      }
       return res.json({ success: true, inquiry: updated[0] });
     } catch (err: any) {
       console.error("Failed to update inquiry status:", err);
@@ -478,6 +513,130 @@ async function startServer() {
       return res.json({ success: true });
     } catch (err: any) {
       console.error("Failed to delete inquiry:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  // GUEST SELF-SERVICE TRACKING & MODIFICATION ENDPOINTS (NO-LOGIN TOKEN LINK)
+  app.get("/api/track", async (req, res) => {
+    try {
+      const token = (req.query.token as string || "").trim();
+      if (!token) {
+        return res.status(400).json({ error: "Booking reference or guest token is required." });
+      }
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        const inquiries = store.inquiries || [];
+        const inq = inquiries.find((i: any) => i.id === token || i.payload?.guestToken === token);
+        if (!inq) {
+          return res.status(404).json({ error: "Reservation or inquiry not found." });
+        }
+        return res.json({ success: true, inquiry: inq });
+      }
+
+      await ensureDatabaseSynced();
+      const db = getDb();
+      const allInquiries = await db.select().from(inquiriesTable);
+      const inq = allInquiries.find((i: any) => i.id === token || (i.payload as any)?.guestToken === token);
+
+      if (!inq) {
+        return res.status(404).json({ error: "Reservation or inquiry not found." });
+      }
+
+      return res.json({ success: true, inquiry: inq });
+    } catch (err: any) {
+      console.error("Failed to track reservation:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/track", async (req, res) => {
+    try {
+      const { token, action, changeData, payment } = req.body || {};
+      if (!token || !action) {
+        return res.status(400).json({ error: "Token and action are required." });
+      }
+
+      if (!isDbConfigured()) {
+        const store = readLocalStore();
+        const inquiries = store.inquiries || [];
+        const inq = inquiries.find((i: any) => i.id === token || i.payload?.guestToken === token);
+        if (!inq) {
+          return res.status(404).json({ error: "Reservation not found." });
+        }
+
+        inq.payload = inq.payload || {};
+        inq.payload.staffNotes = inq.payload.staffNotes || [];
+
+        if (action === "request_change" && changeData) {
+          inq.payload.changeRequests = inq.payload.changeRequests || [];
+          inq.payload.changeRequests.push(changeData);
+          inq.status = "Reviewed";
+          inq.payload.staffNotes.push({
+            id: "note_" + Date.now(),
+            author: "Guest Self-Service Portal",
+            text: `[Guest Modification Request] Requested check-in: ${changeData.checkIn || "unchanged"}, check-out: ${changeData.checkOut || "unchanged"}, guests: ${changeData.guests}. Note: ${changeData.notes || "None"}`,
+            createdAt: new Date().toISOString()
+          });
+        } else if (action === "record_payment" && payment) {
+          inq.payload.paymentStatus = "deposit_paid";
+          inq.payload.paymentDetails = payment;
+          inq.payload.staffNotes.push({
+            id: "note_" + Date.now(),
+            author: "Guest Self-Service Portal",
+            text: `[Guest Payment Recorded] Method: ${payment.method.toUpperCase()}, Ref: ${payment.reference}, Phone: ${payment.phoneNumber || "N/A"}. Staff verification requested.`,
+            createdAt: new Date().toISOString()
+          });
+        }
+
+        writeLocalStore(store);
+        return res.json({ success: true, inquiry: inq });
+      }
+
+      await ensureDatabaseSynced();
+      const db = getDb();
+      const allInquiries = await db.select().from(inquiriesTable);
+      const inq = allInquiries.find((i: any) => i.id === token || (i.payload as any)?.guestToken === token);
+
+      if (!inq) {
+        return res.status(404).json({ error: "Reservation not found." });
+      }
+
+      const mergedPayload = { ...((inq.payload as any) || {}) };
+      mergedPayload.staffNotes = mergedPayload.staffNotes || [];
+      let newStatus = inq.status;
+
+      if (action === "request_change" && changeData) {
+        mergedPayload.changeRequests = mergedPayload.changeRequests || [];
+        mergedPayload.changeRequests.push(changeData);
+        newStatus = "Reviewed";
+        mergedPayload.staffNotes.push({
+          id: "note_" + Date.now(),
+          author: "Guest Self-Service Portal",
+          text: `[Guest Modification Request] Requested check-in: ${changeData.checkIn || "unchanged"}, check-out: ${changeData.checkOut || "unchanged"}, guests: ${changeData.guests}. Note: ${changeData.notes || "None"}`,
+          createdAt: new Date().toISOString()
+        });
+      } else if (action === "record_payment" && payment) {
+        mergedPayload.paymentStatus = "deposit_paid";
+        mergedPayload.paymentDetails = payment;
+        mergedPayload.staffNotes.push({
+          id: "note_" + Date.now(),
+          author: "Guest Self-Service Portal",
+          text: `[Guest Payment Recorded] Method: ${payment.method.toUpperCase()}, Ref: ${payment.reference}, Phone: ${payment.phoneNumber || "N/A"}. Staff verification requested.`,
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      const updated = await db
+        .update(inquiriesTable)
+        .set({ payload: mergedPayload, status: newStatus })
+        .where(eq(inquiriesTable.id, inq.id))
+        .returning();
+
+      return res.json({ success: true, inquiry: updated[0] });
+    } catch (err: any) {
+      console.error("Failed to process guest action:", err);
       return res.status(500).json({ error: err.message });
     }
   });
@@ -784,6 +943,13 @@ async function startServer() {
       }
 
       const newInquiryId = "inq_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+      const guestToken = payload.guestToken || "tv_guest_" + Math.random().toString(36).slice(2, 11);
+      const enrichedPayload = {
+        ...payload,
+        guestToken,
+        paymentStatus: payload.paymentStatus || "unpaid",
+        changeRequests: payload.changeRequests || []
+      };
 
       if (!isDbConfigured()) {
         const store = readLocalStore();
@@ -791,7 +957,7 @@ async function startServer() {
         inquiries.push({
           id: newInquiryId,
           type,
-          payload,
+          payload: enrichedPayload,
           status: "Pending",
           createdAt: new Date().toISOString()
         });
@@ -803,7 +969,7 @@ async function startServer() {
         await db.insert(inquiriesTable).values({
           id: newInquiryId,
           type,
-          payload,
+          payload: enrichedPayload,
           status: "Pending",
           createdAt: new Date().toISOString()
         });
@@ -1096,6 +1262,18 @@ async function startServer() {
               <p style="font-size: 14px; color: #1F1615; line-height: 1.6;">${guestBodyIntro}</p>
               
               ${detailsListHtml}
+
+              <div style="margin: 25px 0; padding: 20px; background-color: #FAF6F0; border-left: 4px solid #821124; text-align: left;">
+                <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: #821124;">
+                  Guest Self-Service Portal (No Password Required)
+                </p>
+                <p style="margin: 0 0 14px 0; font-size: 13px; color: #444; line-height: 1.5;">
+                  You can track your inquiry status, request date/guest modifications, or submit your direct deposit securely anytime:
+                </p>
+                <a href="${process.env.APP_URL || 'https://tamarindvillage.co.ke'}/?token=${guestToken}" style="display: inline-block; background-color: #821124; color: #ffffff; padding: 10px 20px; font-size: 12px; font-weight: bold; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em;">
+                  Track & Manage My Reservation
+                </a>
+              </div>
 
               <p style="font-size: 14px; color: #1F1615; line-height: 1.6;">Please note that this is an acknowledgment of your request and not a finalized booking confirmation. A member of our dedicated guest experience desk will contact you via email or phone within 12-24 hours with your invoice, payment instructions, or further confirmation details.</p>
               

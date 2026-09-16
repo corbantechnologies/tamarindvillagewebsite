@@ -24,9 +24,9 @@ export default async function handler(req: any, res: any) {
       const action = req.query.action;
       
       if (action === "status" && id) {
-        const { status } = req.body || {};
-        if (!status) {
-          return res.status(400).json({ error: "Status is required." });
+        const { status, payload, staffNote } = req.body || {};
+        if (!status && !payload && !staffNote) {
+          return res.status(400).json({ error: "Status, payload, or staffNote is required." });
         }
 
         if (!isDbConfigured()) {
@@ -34,15 +34,37 @@ export default async function handler(req: any, res: any) {
         }
 
         const db = getDb();
+        const existing = await db.select().from(inquiriesTable).where(eq(inquiriesTable.id, id));
+        if (existing.length === 0) {
+          return res.status(404).json({ error: "Inquiry not found." });
+        }
+        
+        const current = existing[0];
+        const updatedFields: any = {};
+        if (status) updatedFields.status = status;
+        
+        const mergedPayload = { ...((current.payload as any) || {}) };
+        if (payload) Object.assign(mergedPayload, payload);
+        if (staffNote) {
+          mergedPayload.staffNotes = mergedPayload.staffNotes || [];
+          mergedPayload.staffNotes.push({
+            id: "note_" + Date.now(),
+            author: staffNote.author || "Tamarind Reservations",
+            text: staffNote.text,
+            createdAt: new Date().toISOString()
+          });
+        }
+        if (!mergedPayload.guestToken) {
+          mergedPayload.guestToken = "tv_guest_" + Math.random().toString(36).slice(2, 11);
+        }
+        updatedFields.payload = mergedPayload;
+
         const updated = await db
           .update(inquiriesTable)
-          .set({ status })
+          .set(updatedFields)
           .where(eq(inquiriesTable.id, id))
           .returning();
         
-        if (updated.length === 0) {
-          return res.status(404).json({ error: "Inquiry not found." });
-        }
         return res.status(200).json({ success: true, inquiry: updated[0] });
       }
 

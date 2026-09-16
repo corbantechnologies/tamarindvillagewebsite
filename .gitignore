@@ -6,3 +6,4 @@ coverage/
 *.log
 .env*
 .env.example
+tamarind-village-review.html

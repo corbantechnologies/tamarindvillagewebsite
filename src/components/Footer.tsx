@@ -7,9 +7,10 @@ interface FooterProps {
   onGoHome: () => void;
   onSelectDining?: (id: string) => void;
   onOpenStaffPinModal?: () => void;
+  onOpenTracking?: () => void;
 }
 
-export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSelectDining, onOpenStaffPinModal }: FooterProps) {
+export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSelectDining, onOpenStaffPinModal, onOpenTracking }: FooterProps) {
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
 
   // Auto-detect logo files
@@ -215,6 +216,13 @@ export default function Footer({ onNavigate, onSelectApartment, onGoHome, onSele
                 Resident Swimming Pools (In-House Guests Only)
               </button>
             </li>
+            {onOpenTracking && (
+              <li>
+                <button onClick={onOpenTracking} className="hover:text-brand-gold text-brand-gold/90 transition-colors cursor-pointer text-left font-medium">
+                  Track Reservation / Magic Link
+                </button>
+              </li>
+            )}
           </ul>
         </div>
 

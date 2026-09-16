@@ -22,6 +22,13 @@ export default async function handler(req: any, res: any) {
     }
 
     const newInquiryId = "inq_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+    const guestToken = payload.guestToken || "tv_guest_" + Math.random().toString(36).slice(2, 11);
+    const enrichedPayload = {
+      ...payload,
+      guestToken,
+      paymentStatus: payload.paymentStatus || "unpaid",
+      changeRequests: payload.changeRequests || []
+    };
 
     // Save inquiry to live PostgreSQL database if configured
     if (isDbConfigured()) {
@@ -30,7 +37,7 @@ export default async function handler(req: any, res: any) {
         await db.insert(inquiriesTable).values({
           id: newInquiryId,
           type,
-          payload,
+          payload: enrichedPayload,
           status: "Pending",
           createdAt: new Date().toISOString()
         });
@@ -327,6 +334,18 @@ export default async function handler(req: any, res: any) {
             <p style="font-size: 14px; color: #1F1615; line-height: 1.6;">${guestBodyIntro}</p>
             
             ${detailsListHtml}
+
+            <div style="margin: 25px 0; padding: 20px; background-color: #FAF6F0; border-left: 4px solid #821124; text-align: left;">
+              <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: #821124;">
+                Guest Self-Service Portal (No Password Required)
+              </p>
+              <p style="margin: 0 0 14px 0; font-size: 13px; color: #444; line-height: 1.5;">
+                You can track your inquiry status, request date/guest modifications, or submit your direct deposit securely anytime:
+              </p>
+              <a href="${process.env.APP_URL || 'https://tamarindvillage.co.ke'}/?token=${guestToken}" style="display: inline-block; background-color: #821124; color: #ffffff; padding: 10px 20px; font-size: 12px; font-weight: bold; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em;">
+                Track & Manage My Reservation
+              </a>
+            </div>
 
             <p style="font-size: 14px; color: #1F1615; line-height: 1.6;">Please note that this is an acknowledgment of your request and not a finalized booking confirmation. A member of our dedicated guest experience desk will contact you via email or phone within 12-24 hours with your invoice, payment instructions, or further confirmation details.</p>
             

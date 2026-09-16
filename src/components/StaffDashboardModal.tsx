@@ -4,7 +4,8 @@ import {
   X, Check, Plus, Trash2, RotateCcw, Sliders, Hotel, Utensils, 
   Mail, FileText, Calendar, DollarSign, TrendingUp, Percent, 
   ShieldAlert, CheckCircle, Clock, ArrowRight, Search, Filter, 
-  Edit3, Eye, CheckSquare, Sparkles, RefreshCw, Car, Heart, Image as ImageIcon
+  Edit3, Eye, CheckSquare, Sparkles, RefreshCw, Car, Heart, Image as ImageIcon,
+  MessageSquare, Copy, ExternalLink, Send
 } from "lucide-react";
 import { ApartmentType, DiningExperience } from "../types";
 import OptimizedImage from "./OptimizedImage";
@@ -48,6 +49,15 @@ const DEFAULT_BOARDING_PACKAGES = [
   }
 ];
 
+export type InquiryStatus = "Pending" | "Reviewed" | "Contacted" | "Offer Sent" | "Booked" | "Cancelled";
+
+export interface StaffNote {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
 interface InquiryData {
   id: string;
   type: "general" | "apartment" | "dining";
@@ -65,8 +75,10 @@ interface InquiryData {
     totalCost?: number;
     message?: string;
     subject?: string;
+    guestToken?: string;
+    staffNotes?: StaffNote[];
   };
-  status: "Pending" | "Reviewed" | "Contacted" | "Approved" | "Cancelled";
+  status: InquiryStatus;
   createdAt: string;
 }
 
@@ -122,6 +134,8 @@ export default function StaffDashboardModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [newNoteInput, setNewNoteInput] = useState("");
+  const [copiedTokenLink, setCopiedTokenLink] = useState(false);
   const [selectedInquiry, setSelectedInquiry] = useState<InquiryData | null>(null);
 
   // Editing forms state
@@ -257,7 +271,6 @@ export default function StaffDashboardModal({
     }
   }, [isOpen]);
 
-  // --- INQUIRY ACTIONS ---
   const handleUpdateInquiryStatus = async (id: string, newStatus: string) => {
     try {
       const response = await fetch(`/api/inquiries/${id}/status`, {
@@ -267,17 +280,43 @@ export default function StaffDashboardModal({
       });
       if (response.ok) {
         const data = await response.json();
-        // Update local state
-        setInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, status: data.inquiry.status } : inq));
+        setInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, status: data.inquiry.status as InquiryStatus } : inq));
         if (selectedInquiry && selectedInquiry.id === id) {
-          setSelectedInquiry(prev => prev ? { ...prev, status: data.inquiry.status as any } : null);
+          setSelectedInquiry(prev => prev ? { ...prev, status: data.inquiry.status as InquiryStatus } : null);
         }
-        showToast(`Inquiry marked as ${newStatus}`);
+        showToast(`Inquiry stage updated: ${newStatus}`);
       } else {
         throw new Error("Failed to update status");
       }
     } catch (err) {
       alert("Could not update inquiry status. Try again.");
+    }
+  };
+
+  const handleAddStaffNote = async (id: string, noteText: string) => {
+    if (!noteText.trim()) return;
+    try {
+      const response = await fetch(`/api/inquiries/${id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          staffNote: {
+            author: "Tamarind Reservations",
+            text: noteText.trim()
+          }
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, payload: data.inquiry.payload } : inq));
+        if (selectedInquiry && selectedInquiry.id === id) {
+          setSelectedInquiry(prev => prev ? { ...prev, payload: data.inquiry.payload } : null);
+        }
+        setNewNoteInput("");
+        showToast("Negotiation note saved to inquiry!");
+      }
+    } catch (err) {
+      alert("Could not save note. Try again.");
     }
   };
 
@@ -520,28 +559,44 @@ export default function StaffDashboardModal({
     return textMatch && statusMatch && typeMatch;
   });
 
-  // Calculations for Inquiry Statistics
+  // Calculations for Inquiry Statistics with true hospitality KPIs
   const getInquiryStats = () => {
     const total = inquiries.length;
-    const pending = inquiries.filter(i => i.status === "Pending").length;
-    const contacted = inquiries.filter(i => i.status === "Contacted" || i.status === "Reviewed" || i.status === "Approved").length;
+    const pending = inquiries.filter(i => (i.status || "").toLowerCase() === "pending").length;
+    const contacted = inquiries.filter(i => {
+      const s = (i.status || "").toLowerCase();
+      return s === "contacted" || s === "offer sent" || s === "booked" || s === "approved";
+    }).length;
+    const bookedCount = inquiries.filter(i => {
+      const s = (i.status || "").toLowerCase();
+      return s === "booked" || s === "approved";
+    }).length;
+    const activeCount = inquiries.filter(i => {
+      const s = (i.status || "").toLowerCase();
+      return s !== "booked" && s !== "approved" && s !== "cancelled";
+    }).length;
     
-    // Calculate total pipeline value (USD estimates)
-    let totalEstValue = 0;
+    let wonValue = 0;
+    let pipelineValue = 0;
     inquiries.forEach(inq => {
-      if (inq.payload.totalCost) {
-        totalEstValue += Number(inq.payload.totalCost);
-      } else {
-        totalEstValue += 160; // Default flat estimate for general or dining leads
+      const cost = inq.payload.totalCost ? Number(inq.payload.totalCost) : 160;
+      const s = (inq.status || "").toLowerCase();
+      if (s === "booked" || s === "approved") {
+        wonValue += cost;
+      } else if (s !== "cancelled") {
+        pipelineValue += cost;
       }
     });
 
     return {
       total,
       pending,
-      contacted,
-      contactRate: total > 0 ? Math.round((contacted / total) * 100) : 0,
-      estValue: totalEstValue
+      activeCount,
+      bookedCount,
+      responseRate: total > 0 ? Math.round((contacted / total) * 100) : 0,
+      conversionRate: total > 0 ? Math.round((bookedCount / total) * 100) : 0,
+      wonValue,
+      pipelineValue
     };
   };
 
@@ -720,6 +775,7 @@ export default function StaffDashboardModal({
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500">Pipeline Total Leads</p>
                         <h3 className="font-serif text-2xl font-bold text-stone-900 mt-1">{stats.total}</h3>
+                        <p className="text-[10px] text-stone-400 mt-0.5">{stats.activeCount} active in discussion</p>
                       </div>
                       <div className="p-3 bg-stone-100 text-stone-600 border border-stone-200">
                         <FileText className="w-5 h-5" />
@@ -728,8 +784,9 @@ export default function StaffDashboardModal({
                     
                     <div className="bg-white p-5 border border-stone-200 flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-brand-teal">Pending Review</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-brand-teal">Pending Action</p>
                         <h3 className="font-serif text-2xl font-bold text-brand-teal mt-1">{stats.pending}</h3>
+                        <p className="text-[10px] text-brand-teal/80 mt-0.5">{stats.responseRate}% response rate</p>
                       </div>
                       <div className="p-3 bg-brand-teal/10 text-brand-teal border border-brand-teal/20">
                         <Clock className="w-5 h-5 animate-pulse" />
@@ -738,18 +795,20 @@ export default function StaffDashboardModal({
 
                     <div className="bg-white p-5 border border-stone-200 flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-brand-gold">Review Conversion</p>
-                        <h3 className="font-serif text-2xl font-bold text-brand-gold mt-1">{stats.contactRate}%</h3>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-purple-700">Confirmed Bookings</p>
+                        <h3 className="font-serif text-2xl font-bold text-purple-900 mt-1">{stats.bookedCount}</h3>
+                        <p className="text-[10px] text-purple-600 font-semibold mt-0.5">True Conversion: {stats.conversionRate}%</p>
                       </div>
-                      <div className="p-3 bg-brand-gold/10 text-brand-gold border border-brand-gold/20">
-                        <TrendingUp className="w-5 h-5" />
+                      <div className="p-3 bg-purple-50 text-purple-700 border border-purple-200">
+                        <CheckCircle className="w-5 h-5" />
                       </div>
                     </div>
 
                     <div className="bg-white p-5 border border-stone-200 flex items-center justify-between">
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Est. Pipeline Value</p>
-                        <h3 className="font-serif text-2xl font-bold text-emerald-800 mt-1">${stats.estValue.toLocaleString()}</h3>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Confirmed Won Value</p>
+                        <h3 className="font-serif text-2xl font-bold text-emerald-800 mt-1">${stats.wonValue.toLocaleString()}</h3>
+                        <p className="text-[10px] text-stone-500 mt-0.5">Pipeline: ${stats.pipelineValue.toLocaleString()}</p>
                       </div>
                       <div className="p-3 bg-emerald-50 text-emerald-700 border border-emerald-100">
                         <DollarSign className="w-5 h-5" />
@@ -798,7 +857,8 @@ export default function StaffDashboardModal({
                           <option value="pending">Pending</option>
                           <option value="reviewed">Reviewed</option>
                           <option value="contacted">Contacted</option>
-                          <option value="approved">Approved</option>
+                          <option value="offer sent">Offer Sent</option>
+                          <option value="booked">Booked (Won)</option>
                           <option value="cancelled">Cancelled</option>
                         </select>
                       </div>
@@ -830,19 +890,27 @@ export default function StaffDashboardModal({
                           ) : (
                             filteredInquiries.map(inq => {
                               const getStatusStyles = (status: string) => {
-                                switch (status.toLowerCase()) {
+                                switch ((status || "").toLowerCase()) {
                                   case "pending":
-                                    return "bg-amber-100 text-amber-800 border-amber-200";
+                                    return "bg-amber-50 text-amber-800 border-amber-300";
                                   case "reviewed":
-                                    return "bg-blue-100 text-blue-800 border-blue-200";
+                                    return "bg-blue-50 text-blue-800 border-blue-300";
                                   case "contacted":
-                                    return "bg-indigo-100 text-indigo-800 border-indigo-200";
+                                    return "bg-indigo-50 text-indigo-800 border-indigo-300";
+                                  case "offer sent":
+                                    return "bg-purple-50 text-purple-800 border-purple-300";
+                                  case "booked":
                                   case "approved":
-                                    return "bg-emerald-100 text-emerald-800 border-emerald-200";
+                                    return "bg-emerald-50 text-emerald-800 border-emerald-300 font-bold";
+                                  case "cancelled":
+                                    return "bg-rose-50 text-rose-800 border-rose-300";
                                   default:
-                                    return "bg-stone-100 text-stone-800 border-stone-200";
+                                    return "bg-stone-50 text-stone-800 border-stone-300";
                                 }
                               };
+
+                              const cleanPhone = inq.payload.phone ? inq.payload.phone.replace(/[^0-9]/g, "") : "";
+                              const waLink = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Hello ${inq.payload.name}, this is Tamarind Village Mombasa regarding your ${inq.payload.apartmentName || inq.payload.diningName || "reservation"} inquiry...`)}` : "";
 
                               return (
                                 <tr 
@@ -858,15 +926,11 @@ export default function StaffDashboardModal({
                                   </td>
                                   <td className="p-3.5">
                                     <div className="flex items-center gap-1.5">
-                                      <span className={`text-[8px] px-1.5 py-0.5 font-bold uppercase border ${
-                                        inq.type === "apartment" ? "bg-brand-teal/10 text-brand-teal border-brand-teal/20" :
-                                        inq.type === "dining" ? "bg-brand-gold/10 text-brand-gold border-brand-gold/20" :
-                                        "bg-stone-100 text-stone-700 border-stone-300"
-                                      }`}>
+                                      <span className="text-[8px] font-mono px-1.5 py-0.5 bg-brand-teal/10 text-brand-teal font-bold uppercase tracking-wider">
                                         {inq.type}
                                       </span>
-                                      <span className="font-medium text-stone-700">
-                                        {inq.payload.apartmentName || inq.payload.diningName || "General Contact"}
+                                      <span className="font-medium text-stone-800 truncate max-w-[150px]">
+                                        {inq.payload.apartmentName || inq.payload.diningName || inq.payload.subject || "General Inq"}
                                       </span>
                                     </div>
                                     <p className="text-[9px] text-stone-400 mt-0.5">{new Date(inq.createdAt).toLocaleString()}</p>
@@ -874,26 +938,39 @@ export default function StaffDashboardModal({
                                   <td className="p-3.5 text-right font-semibold text-stone-800">
                                     ${inq.payload.totalCost ? Number(inq.payload.totalCost).toLocaleString() : "160"}
                                   </td>
-                                  <td className="p-3.5 text-center">
-                                    <span className={`text-[9px] px-2 py-0.5 font-bold uppercase rounded-full border ${getStatusStyles(inq.status)}`}>
-                                      {inq.status}
-                                    </span>
+                                  <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                                    <select
+                                      value={inq.status}
+                                      onChange={(e) => handleUpdateInquiryStatus(inq.id, e.target.value)}
+                                      className={`text-[9px] px-2 py-1 font-bold uppercase rounded-none border cursor-pointer focus:outline-none ${getStatusStyles(inq.status)}`}
+                                    >
+                                      <option value="Pending">Pending</option>
+                                      <option value="Reviewed">Reviewed</option>
+                                      <option value="Contacted">Contacted</option>
+                                      <option value="Offer Sent">Offer Sent</option>
+                                      <option value="Booked">Booked (Won)</option>
+                                      <option value="Cancelled">Cancelled</option>
+                                    </select>
                                   </td>
                                   <td className="p-3.5 text-right" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-center justify-end gap-1.5">
-                                      <button 
-                                        onClick={() => handleUpdateInquiryStatus(inq.id, "Contacted")}
-                                        className="p-1 text-stone-500 hover:text-brand-teal hover:bg-stone-100 transition-all cursor-pointer"
-                                        title="Mark as Contacted"
-                                      >
-                                        <CheckSquare className="w-4 h-4" />
-                                      </button>
+                                    <div className="flex items-center justify-end gap-2">
+                                      {waLink && (
+                                        <a
+                                          href={waLink}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="p-1 text-emerald-600 hover:bg-emerald-50 border border-emerald-200 transition-all cursor-pointer"
+                                          title="Chat on WhatsApp"
+                                        >
+                                          <MessageSquare className="w-3.5 h-3.5" />
+                                        </a>
+                                      )}
                                       <button 
                                         onClick={() => handleDeleteInquiry(inq.id)}
-                                        className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                                        className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 border border-stone-200 transition-all cursor-pointer"
                                         title="Delete Inquiry"
                                       >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </button>
                                     </div>
                                   </td>
@@ -913,11 +990,64 @@ export default function StaffDashboardModal({
                       
                       {selectedInquiry ? (
                         <div className="space-y-4 text-xs">
-                          <div className="space-y-1">
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-stone-400">Guest Contact Info</span>
-                            <p className="font-serif text-sm font-bold text-stone-900">{selectedInquiry.payload.name}</p>
-                            <p className="text-stone-700">{selectedInquiry.payload.email}</p>
-                            <p className="text-stone-700">{selectedInquiry.payload.phone}</p>
+                          {/* Guest Contact Header with Quick Actions */}
+                          <div className="p-3.5 bg-stone-50 border border-stone-200 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="text-[9px] font-bold uppercase tracking-widest text-stone-400">Guest Contact Info</span>
+                                <p className="font-serif text-sm font-bold text-stone-900">{selectedInquiry.payload.name}</p>
+                                <p className="text-stone-700">{selectedInquiry.payload.email}</p>
+                                <p className="text-stone-700">{selectedInquiry.payload.phone}</p>
+                              </div>
+                              <div className="flex gap-1.5">
+                                {selectedInquiry.payload.phone && (
+                                  <a
+                                    href={`https://wa.me/${selectedInquiry.payload.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Hello ${selectedInquiry.payload.name}, this is Tamarind Village Mombasa regarding your ${selectedInquiry.payload.apartmentName || "reservation"} inquiry...`)}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1 font-bold text-[10px] transition-colors"
+                                    title="Open WhatsApp Web"
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5" />
+                                    <span>WhatsApp</span>
+                                  </a>
+                                )}
+                                <a
+                                  href={`mailto:${selectedInquiry.payload.email}?subject=${encodeURIComponent(`Tamarind Village Mombasa - Reservation Quote (#${selectedInquiry.id})`)}`}
+                                  className="p-2 bg-brand-teal hover:bg-brand-teal-dark text-white flex items-center gap-1 font-bold text-[10px] transition-colors"
+                                  title="Send Email"
+                                >
+                                  <Mail className="w-3.5 h-3.5" />
+                                  <span>Email</span>
+                                </a>
+                              </div>
+                            </div>
+
+                            {/* Secure No-Login Guest Portal Link */}
+                            <div className="pt-2.5 border-t border-stone-200">
+                              <span className="text-[8px] font-bold uppercase tracking-widest text-stone-500 block mb-1">
+                                Secure Guest Tracking Magic Link (No-Login)
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  readOnly
+                                  value={`https://tamarindvillage.co.ke/my-booking?ref=${selectedInquiry.id}&token=${selectedInquiry.payload.guestToken || "tv_sec_" + selectedInquiry.id.slice(4)}`}
+                                  className="bg-white border border-stone-300 text-[9px] font-mono p-1.5 flex-1 text-stone-600 select-all"
+                                />
+                                <button
+                                  onClick={() => {
+                                    const link = `https://tamarindvillage.co.ke/my-booking?ref=${selectedInquiry.id}&token=${selectedInquiry.payload.guestToken || "tv_sec_" + selectedInquiry.id.slice(4)}`;
+                                    navigator.clipboard.writeText(link);
+                                    setCopiedTokenLink(true);
+                                    setTimeout(() => setCopiedTokenLink(false), 3000);
+                                  }}
+                                  className="px-2.5 py-1.5 bg-stone-800 hover:bg-stone-900 text-white text-[9px] font-bold uppercase flex items-center gap-1 shrink-0 cursor-pointer"
+                                >
+                                  {copiedTokenLink ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                  <span>{copiedTokenLink ? "Copied" : "Copy Link"}</span>
+                                </button>
+                              </div>
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-3.5 bg-stone-50 p-3 border border-stone-150">
@@ -944,7 +1074,7 @@ export default function StaffDashboardModal({
                           {selectedInquiry.payload.requests && (
                             <div className="space-y-1">
                               <span className="text-[8px] font-bold uppercase tracking-widest text-stone-400">Special requests / Message</span>
-                              <div className="bg-stone-50 p-2.5 border border-stone-200 text-stone-700 max-h-[110px] overflow-y-auto leading-relaxed italic">
+                              <div className="bg-stone-50 p-2.5 border border-stone-200 text-stone-700 max-h-[100px] overflow-y-auto leading-relaxed italic">
                                 "{selectedInquiry.payload.requests}"
                               </div>
                             </div>
@@ -953,45 +1083,117 @@ export default function StaffDashboardModal({
                           {selectedInquiry.payload.message && (
                             <div className="space-y-1">
                               <span className="text-[8px] font-bold uppercase tracking-widest text-stone-400">General Message</span>
-                              <div className="bg-stone-50 p-2.5 border border-stone-200 text-stone-700 max-h-[110px] overflow-y-auto leading-relaxed">
+                              <div className="bg-stone-50 p-2.5 border border-stone-200 text-stone-700 max-h-[100px] overflow-y-auto leading-relaxed">
                                 "{selectedInquiry.payload.message}"
                               </div>
                             </div>
                           )}
 
+                          {/* 6 STAGE WORKFLOW BUTTONS */}
                           <div className="space-y-2 border-t border-stone-100 pt-3">
-                            <span className="text-[8px] font-bold uppercase tracking-widest text-stone-400 block mb-1">Set Operations Status</span>
-                            <div className="grid grid-cols-2 gap-1.5">
+                            <span className="text-[8px] font-bold uppercase tracking-widest text-stone-400 block mb-1">Set Sales Pipeline Stage</span>
+                            <div className="grid grid-cols-3 gap-1.5 text-[9px] font-bold uppercase tracking-wider">
+                              <button
+                                onClick={() => handleUpdateInquiryStatus(selectedInquiry.id, "Pending")}
+                                className={`py-2 border transition-all cursor-pointer ${
+                                  selectedInquiry.status === "Pending" ? "bg-amber-600 text-white border-amber-600 shadow-sm" : "bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200"
+                                }`}
+                              >
+                                1. Pending
+                              </button>
                               <button
                                 onClick={() => handleUpdateInquiryStatus(selectedInquiry.id, "Reviewed")}
-                                className="bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold uppercase tracking-wider text-[9px] py-1.5 transition-colors cursor-pointer"
+                                className={`py-2 border transition-all cursor-pointer ${
+                                  selectedInquiry.status === "Reviewed" ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200"
+                                }`}
                               >
-                                Reviewed
+                                2. Reviewed
                               </button>
                               <button
                                 onClick={() => handleUpdateInquiryStatus(selectedInquiry.id, "Contacted")}
-                                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-100 font-bold uppercase tracking-wider text-[9px] py-1.5 transition-colors cursor-pointer"
+                                className={`py-2 border transition-all cursor-pointer ${
+                                  selectedInquiry.status === "Contacted" ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" : "bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-indigo-200"
+                                }`}
                               >
-                                Contacted
+                                3. Contacted
                               </button>
                               <button
-                                onClick={() => handleUpdateInquiryStatus(selectedInquiry.id, "Approved")}
-                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 font-bold uppercase tracking-wider text-[9px] py-1.5 transition-colors cursor-pointer"
+                                onClick={() => handleUpdateInquiryStatus(selectedInquiry.id, "Offer Sent")}
+                                className={`py-2 border transition-all cursor-pointer ${
+                                  selectedInquiry.status === "Offer Sent" ? "bg-purple-600 text-white border-purple-600 shadow-sm" : "bg-purple-50 hover:bg-purple-100 text-purple-800 border-purple-200"
+                                }`}
                               >
-                                Approve stay
+                                4. Offer Sent
+                              </button>
+                              <button
+                                onClick={() => handleUpdateInquiryStatus(selectedInquiry.id, "Booked")}
+                                className={`py-2 border transition-all cursor-pointer ${
+                                  selectedInquiry.status === "Booked" ? "bg-emerald-600 text-white border-emerald-600 shadow-sm" : "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-200"
+                                }`}
+                              >
+                                5. Booked (Won)
                               </button>
                               <button
                                 onClick={() => handleUpdateInquiryStatus(selectedInquiry.id, "Cancelled")}
-                                className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold uppercase tracking-wider text-[9px] py-1.5 transition-colors cursor-pointer"
+                                className={`py-2 border transition-all cursor-pointer ${
+                                  selectedInquiry.status === "Cancelled" ? "bg-rose-600 text-white border-rose-600 shadow-sm" : "bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200"
+                                }`}
                               >
-                                Cancel stay
+                                6. Lost / Cancel
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* STAFF NEGOTIATION NOTES & ACTION LOG */}
+                          <div className="space-y-2 border-t border-stone-100 pt-3">
+                            <span className="text-[8px] font-bold uppercase tracking-widest text-stone-500 block mb-1">
+                              Staff Negotiation Notes ({selectedInquiry.payload.staffNotes?.length || 0})
+                            </span>
+                            
+                            {selectedInquiry.payload.staffNotes && selectedInquiry.payload.staffNotes.length > 0 ? (
+                              <div className="space-y-1.5 max-h-[130px] overflow-y-auto pr-1">
+                                {selectedInquiry.payload.staffNotes.map(note => (
+                                  <div key={note.id} className="p-2 bg-amber-50/60 border border-amber-200/60 text-[10px] space-y-0.5">
+                                    <div className="flex justify-between text-stone-400 text-[8px] font-mono">
+                                      <span className="font-bold text-stone-600">{note.author}</span>
+                                      <span>{new Date(note.createdAt).toLocaleDateString()} {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                    <p className="text-stone-800 leading-relaxed font-sans">{note.text}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-stone-400 italic">No notes logged yet for this guest inquiry.</p>
+                            )}
+
+                            <div className="flex gap-1.5 pt-1">
+                              <input
+                                type="text"
+                                value={newNoteInput}
+                                onChange={(e) => setNewNoteInput(e.target.value)}
+                                placeholder="Log call notes, discount offer, or guest request..."
+                                className="flex-1 bg-white border border-stone-300 p-1.5 text-xs focus:outline-none focus:border-brand-teal"
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleAddStaffNote(selectedInquiry.id, newNoteInput);
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={() => handleAddStaffNote(selectedInquiry.id, newNoteInput)}
+                                className="px-3 py-1.5 bg-brand-teal hover:bg-brand-teal-dark text-white text-[9px] font-bold uppercase tracking-wider cursor-pointer"
+                              >
+                                Add Note
                               </button>
                             </div>
                           </div>
                         </div>
                       ) : (
-                        <div className="h-[250px] flex items-center justify-center border border-dashed border-stone-200 text-stone-400 font-medium text-center p-4">
-                          Select any guest inquiry row from the table to inspect requests and trigger workflow actions.
+                        <div className="min-h-[300px] flex flex-col items-center justify-center p-8 text-center border-2 border-dashed border-stone-200 text-stone-400 space-y-3">
+                          <CheckSquare className="w-8 h-8 text-stone-300" />
+                          <p className="text-xs max-w-[200px]">
+                            Select any guest inquiry row from the table to inspect requests and trigger workflow actions.
+                          </p>
                         </div>
                       )}
                     </div>

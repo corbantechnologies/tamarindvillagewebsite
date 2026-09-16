@@ -4,11 +4,107 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tamarind Village Mombasa | Luxury Serviced Apartments</title>
+    <meta name="description" content="Luxury oceanfront serviced apartments and world-renowned fine seafood dining perched on Tudor Creek in Nyali, Mombasa. Book direct for best rates and signature welcome perks." />
+    <meta name="keywords" content="Tamarind Village Mombasa, serviced apartments Mombasa, Tamarind Dhow Mombasa, Tamarind Restaurant Mombasa, luxury apartments Nyali, Mombasa holiday apartments" />
+    <link rel="canonical" href="https://tamarindvillage.co.ke/" />
+    <link rel="help" type="text/plain" href="/llms.txt" title="LLM documentation" />
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Structured Data (JSON-LD) for LodgingBusiness, Restaurant, and FAQ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "LodgingBusiness",
+          "@id": "https://tamarindvillage.co.ke/#lodging",
+          "name": "Tamarind Village Mombasa",
+          "description": "Luxury Swahili-styled serviced apartments overlooking Tudor Creek in Nyali, Mombasa, Kenya.",
+          "url": "https://tamarindvillage.co.ke",
+          "telephone": "+254725959552",
+          "priceRange": "$$$",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Cement Silos Road, Nyali",
+            "addressLocality": "Mombasa",
+            "addressRegion": "Coast",
+            "addressCountry": "KE"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -4.0483,
+            "longitude": 39.6766
+          },
+          "starRating": {
+            "@type": "Rating",
+            "ratingValue": "5"
+          },
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "reviewCount": "850"
+          },
+          "amenityFeature": [
+            { "@type": "LocationFeatureSpecification", "name": "Swimming Pools", "value": true },
+            { "@type": "LocationFeatureSpecification", "name": "High-Speed Fiber Wi-Fi", "value": true },
+            { "@type": "LocationFeatureSpecification", "name": "Sea View Verandas", "value": true },
+            { "@type": "LocationFeatureSpecification", "name": "Air Conditioning", "value": true },
+            { "@type": "LocationFeatureSpecification", "name": "Kitchens", "value": true }
+          ]
+        },
+        {
+          "@type": "Restaurant",
+          "@id": "https://tamarindvillage.co.ke/#restaurant",
+          "name": "Tamarind Mombasa Restaurant",
+          "servesCuisine": ["Seafood", "Swahili", "Fine Dining"],
+          "url": "https://tamarindvillage.co.ke",
+          "telephone": "+254725959552",
+          "priceRange": "$$$$",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Cement Silos Road, Nyali",
+            "addressLocality": "Mombasa",
+            "addressRegion": "Coast",
+            "addressCountry": "KE"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://tamarindvillage.co.ke/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What are the perks of booking directly with Tamarind Village?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Direct bookers receive the Guaranteed Best Available Rate, a complimentary signature welcome Dawa cocktail at Dawa Terrace, flexible modification & cancellation terms up to 48 hours prior to arrival, and priority room allocation with early check-in or late checkout upon availability."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Are private airport and SGR transfers available?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, private chauffeured transfers from Moi International Airport and the Miritini SGR Terminus can be arranged upon request with executive saloons, VIP Alphards, and minivans."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does the guest self-service tracking work?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Guests receive a secure, passwordless magic token link where they can view their inquiry status, request dates or guest modifications, and make direct payments anytime without creating an account."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

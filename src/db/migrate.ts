@@ -305,7 +305,7 @@ export async function initAndMigrateDatabase() {
           ],
           capacityText: "10 - 150 Delegates",
           cateringText: "Full-day Gourmet Delegate Catering",
-          extraHighlight: "Complimentary Airport VIP Shuttle",
+          extraHighlight: "Executive Airport & SGR Shuttle Coordination",
           ctaText: "Request Corporate Proposal"
         },
         {

@@ -105,7 +105,7 @@ export const APARTMENTS: ApartmentType[] = [
       "In-suite laundry (washing machine & dryer)",
       "Dedicated concierge service",
       "Luxury bathtubs & rainfall showers",
-      "Complimentary airport transfers"
+      "Dedicated chauffeur & concierge assistance"
     ],
     bedrooms: 3,
     bathrooms: 3.5,

@@ -6,11 +6,12 @@ interface NavbarProps {
   onNavigate: (sectionId: string) => void;
   onOpenBooking: () => void;
   onOpenTransferModal: () => void;
+  onOpenTracking?: () => void;
   activeView: string;
   onGoHome: () => void;
 }
 
-export default function Navbar({ onNavigate, onOpenBooking, onOpenTransferModal, activeView, onGoHome }: NavbarProps) {
+export default function Navbar({ onNavigate, onOpenBooking, onOpenTransferModal, onOpenTracking, activeView, onGoHome }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [logoSrc, setLogoSrc] = useState<string | null>(null);
@@ -91,6 +92,18 @@ export default function Navbar({ onNavigate, onOpenBooking, onOpenTransferModal,
             <Car className="w-3 h-3 text-brand-gold flex-shrink-0" />
             <span>Airport & SGR Transfers</span>
           </button>
+          {onOpenTracking && (
+            <>
+              <span className="text-stone-600">|</span>
+              <button
+                onClick={onOpenTracking}
+                className="text-stone-300 hover:text-brand-gold transition-colors font-semibold whitespace-nowrap cursor-pointer"
+                id="navbar-top-btn-track"
+              >
+                Track Reservation
+              </button>
+            </>
+          )}
           <span className="hidden md:inline text-stone-600">|</span>
           <span className="hidden md:inline text-stone-300">Fully Serviced Apartments</span>
         </div>
@@ -205,6 +218,17 @@ export default function Navbar({ onNavigate, onOpenBooking, onOpenTransferModal,
                     <Car className="w-3.5 h-3.5 text-brand-gold" />
                     <span>Airport & SGR Transfers</span>
                   </button>
+                  {onOpenTracking && (
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenTracking();
+                      }}
+                      className="w-full py-2.5 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold text-xs tracking-wider uppercase transition-all cursor-pointer flex items-center justify-center gap-2 border border-stone-200"
+                    >
+                      <span>Track Reservation / Magic Link</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       setIsOpen(false);
