@@ -576,23 +576,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-brand-sand font-sans text-brand-dark selection:bg-brand-teal selection:text-white flex flex-col w-full max-w-full overflow-x-hidden">
 
-      {/* Staff Mode Active Indicator Banner */}
-      {isAdmin && (
-        <div className="bg-brand-teal text-white text-xs font-mono py-1.5 px-4 flex justify-between items-center z-50 border-b border-brand-teal-dark shadow-inner">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-bold uppercase tracking-wider">Staff Management Mode Active</span>
-            <span className="hidden sm:inline text-brand-sand/80">| Edit Extras & Hero Carousel unlocked</span>
-          </div>
-          <button
-            onClick={handleLockStaffMode}
-            className="bg-black/20 hover:bg-black/40 text-white px-2.5 py-0.5 text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer"
-          >
-            Exit Staff Mode
-          </button>
-        </div>
-      )}
-
       {/* Dynamic Sticky Header */}
       <Navbar
         onNavigate={navigateToSection}
