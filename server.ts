@@ -10,6 +10,13 @@ import { getDb, isDbConfigured } from "./src/db/db";
 import { apartments as apartmentsTable, diningOptions as diningOptionsTable, pricingRules as pricingRulesTable, inquiries as inquiriesTable, globalSettings as globalSettingsTable } from "./src/db/schema";
 import { initAndMigrateDatabase, ensureDatabaseSynced } from "./src/db/migrate";
 import { eq } from "drizzle-orm";
+import { handleLogin, handleForgotPassword, handleResetPassword } from "./api/auth";
+import { handleGetStaff, handleCreateStaff, handleUpdateStaff, handleDeleteStaff } from "./api/staff";
+import { handleGetBookings, handleCreateBooking, handleUpdateBooking, handleDeleteBooking } from "./api/bookings";
+import { handleGetPackages, handleCreatePackage, handleUpdatePackage, handleDeletePackage } from "./api/packages";
+import { handleGetExtras, handleCreateExtra, handleUpdateExtra, handleDeleteExtra } from "./api/extras";
+import { handleGetFacilities, handleCreateFacility, handleUpdateFacility, handleDeleteFacility } from "./api/facilities";
+import { handleGetAuditLogs, handleCreateAuditLog } from "./api/audit-logs";
 
 dotenv.config({ path: fs.existsSync(".env.local") ? ".env.local" : ".env" });
 
@@ -418,6 +425,59 @@ async function startServer() {
       return res.status(500).json({ error: error.message || "Internal Server Error" });
     }
   });
+
+  // ==========================================
+  // AUTHENTICATION & PASSWORD RESET ROUTES
+  // ==========================================
+  app.post("/api/auth/login", handleLogin);
+  app.post("/api/auth/forgot-password", handleForgotPassword);
+  app.post("/api/auth/reset-password", handleResetPassword);
+
+  // ==========================================
+  // STAFF USER MANAGEMENT ROUTES (ADMIN ONLY)
+  // ==========================================
+  app.get("/api/staff", handleGetStaff);
+  app.post("/api/staff", handleCreateStaff);
+  app.put("/api/staff/:id", handleUpdateStaff);
+  app.delete("/api/staff/:id", handleDeleteStaff);
+
+  // ==========================================
+  // BOOKINGS & IN-HOUSE GUESTS ROUTES
+  // ==========================================
+  app.get("/api/bookings", handleGetBookings);
+  app.post("/api/bookings", handleCreateBooking);
+  app.put("/api/bookings/:id", handleUpdateBooking);
+  app.delete("/api/bookings/:id", handleDeleteBooking);
+
+  // ==========================================
+  // BOARDING PACKAGES ROUTES
+  // ==========================================
+  app.get("/api/packages", handleGetPackages);
+  app.post("/api/packages", handleCreatePackage);
+  app.put("/api/packages/:id", handleUpdatePackage);
+  app.delete("/api/packages/:id", handleDeletePackage);
+
+  // ==========================================
+  // EXTRAS (FLEET TRANSFERS & CHARTERS) ROUTES
+  // ==========================================
+  app.get("/api/extras", handleGetExtras);
+  app.post("/api/extras", handleCreateExtra);
+  app.put("/api/extras/:id", handleUpdateExtra);
+  app.delete("/api/extras/:id", handleDeleteExtra);
+
+  // ==========================================
+  // RESORT FACILITIES & CONFERENCES ROUTES
+  // ==========================================
+  app.get("/api/facilities", handleGetFacilities);
+  app.post("/api/facilities", handleCreateFacility);
+  app.put("/api/facilities/:id", handleUpdateFacility);
+  app.delete("/api/facilities/:id", handleDeleteFacility);
+
+  // ==========================================
+  // SYSTEM AUDIT & ACTIVITY LOGS ROUTES
+  // ==========================================
+  app.get("/api/audit-logs", handleGetAuditLogs);
+  app.post("/api/audit-logs", handleCreateAuditLog);
 
 function ensureInquiryAuditTrail(inq: any): any {
   if (!inq) return inq;

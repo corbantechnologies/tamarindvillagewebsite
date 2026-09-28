@@ -1,9 +1,23 @@
 import { getDb, getClient } from "./db.js";
-import { apartments, diningOptions, pricingRules, inquiries, globalSettings } from "./schema.js";
-import { sql } from "drizzle-orm";
+import { 
+  users, 
+  passwordResets, 
+  apartments, 
+  diningOptions, 
+  packages, 
+  extras, 
+  facilities, 
+  pricingRules, 
+  inquiries, 
+  bookings, 
+  auditLogs, 
+  globalSettings 
+} from "./schema.js";
+import bcrypt from "bcryptjs";
 import * as fs from "fs";
 import * as path from "path";
-import { APARTMENTS, DINING } from "../data.js";
+import { APARTMENTS, DINING, PACKAGES, FACILITIES } from "../data.js";
+import { DEFAULT_TRANSFER_VEHICLES, DEFAULT_EVENT_PACKAGES } from "../utils/extrasStore.js";
 
 export async function initAndMigrateDatabase() {
   if (!process.env.DATABASE_URL) {
@@ -14,24 +28,33 @@ export async function initAndMigrateDatabase() {
   const db = getDb();
 
   try {
-    // Check if tables already exist to avoid concurrent DDL lock contention and redundant seeding
-    const tableCheck = await client.unsafe(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'apartments'
+    console.log("🔄 Ensuring PostgreSQL database tables exist...");
+
+    // 1. Create tables if they do not exist
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL,
+        active BOOLEAN NOT NULL DEFAULT true,
+        created_at TEXT NOT NULL,
+        last_login TEXT
       );
     `);
 
-    if (tableCheck[0]?.exists) {
-      console.log("✅ Database schema is already initialized. Verifying and self-healing media assets...");
-      await healLegacyMediaAssets(client, db);
-      return;
-    }
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token TEXT NOT NULL UNIQUE,
+        expires_at TEXT NOT NULL,
+        used BOOLEAN NOT NULL DEFAULT false,
+        created_at TEXT NOT NULL
+      );
+    `);
 
-    console.log("🔄 Starting PostgreSQL Database initialization...");
-    // 1. Create tables if they do not exist
-    console.log("🛠️ Creating tables if not exist...");
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS apartments (
         id TEXT PRIMARY KEY,
@@ -47,7 +70,8 @@ export async function initAndMigrateDatabase() {
         bathrooms DOUBLE PRECISION NOT NULL,
         highlights JSONB NOT NULL,
         bed_config TEXT NOT NULL,
-        view_type TEXT NOT NULL
+        view_type TEXT NOT NULL,
+        is_active BOOLEAN NOT NULL DEFAULT true
       );
     `);
 
@@ -59,7 +83,51 @@ export async function initAndMigrateDatabase() {
         highlights JSONB NOT NULL,
         hours TEXT NOT NULL,
         image TEXT NOT NULL,
-        reservation_link_text TEXT NOT NULL
+        reservation_link_text TEXT NOT NULL,
+        max_capacity INTEGER DEFAULT 100,
+        is_active BOOLEAN NOT NULL DEFAULT true
+      );
+    `);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS packages (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        price_markup_percentage DOUBLE PRECISION NOT NULL DEFAULT 0,
+        price_per_person_per_day DOUBLE PRECISION NOT NULL DEFAULT 0,
+        highlights JSONB NOT NULL,
+        is_active BOOLEAN NOT NULL DEFAULT true
+      );
+    `);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS extras (
+        id TEXT PRIMARY KEY,
+        category TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        price_usd DOUBLE PRECISION NOT NULL DEFAULT 0,
+        price_kes DOUBLE PRECISION NOT NULL DEFAULT 0,
+        capacity INTEGER DEFAULT 4,
+        features JSONB NOT NULL,
+        image TEXT NOT NULL,
+        is_active BOOLEAN NOT NULL DEFAULT true
+      );
+    `);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS facilities (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        icon_name TEXT NOT NULL,
+        image TEXT NOT NULL,
+        details JSONB NOT NULL,
+        is_resident_only BOOLEAN NOT NULL DEFAULT false,
+        operating_hours TEXT,
+        capacity INTEGER,
+        is_active BOOLEAN NOT NULL DEFAULT true
       );
     `);
 
@@ -83,58 +151,116 @@ export async function initAndMigrateDatabase() {
     `);
 
     await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS bookings (
+        id TEXT PRIMARY KEY,
+        booking_reference TEXT NOT NULL UNIQUE,
+        inquiry_id TEXT,
+        apartment_id TEXT NOT NULL,
+        apartment_name TEXT NOT NULL,
+        guest_name TEXT NOT NULL,
+        guest_email TEXT NOT NULL,
+        guest_phone TEXT NOT NULL,
+        check_in TEXT NOT NULL,
+        check_out TEXT NOT NULL,
+        adults INTEGER NOT NULL DEFAULT 1,
+        children INTEGER NOT NULL DEFAULT 0,
+        package_id TEXT,
+        package_name TEXT,
+        total_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+        currency TEXT NOT NULL DEFAULT 'USD',
+        payment_status TEXT NOT NULL DEFAULT 'unpaid',
+        payment_method TEXT,
+        booking_status TEXT NOT NULL DEFAULT 'confirmed',
+        special_requests TEXT,
+        staff_notes JSONB,
+        created_at TEXT NOT NULL
+      );
+    `);
+
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id TEXT PRIMARY KEY,
+        timestamp TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        actor_role TEXT NOT NULL,
+        category TEXT NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT NOT NULL,
+        target_id TEXT,
+        metadata JSONB
+      );
+    `);
+
+    await client.unsafe(`
       CREATE TABLE IF NOT EXISTS global_settings (
         key TEXT PRIMARY KEY,
         value JSONB NOT NULL
       );
     `);
 
-    console.log("✅ Database schema is up-to-date.");
+    console.log("✅ Database schema tables verified.");
 
-    // 2. Check if tables are empty and seed them
+    // ==========================================
+    // 2. SEEDING & DATA HYDRATION
+    // ==========================================
+
+    // A. Seed Staff Users (Admin, Manager, Reservations, Reception)
+    const usersCountRes = await client.unsafe("SELECT COUNT(*) FROM users");
+    const usersCount = parseInt(usersCountRes[0]?.count || "0", 10);
+    if (usersCount === 0) {
+      console.log("🌱 Seeding baseline staff users for all 4 roles...");
+      const defaultPasswordHash = bcrypt.hashSync("Tamarind2026!", 10);
+      const initialUsers = [
+        {
+          id: "usr_admin_1",
+          name: "Master Administrator",
+          email: "admin@tamarind.co.ke",
+          passwordHash: defaultPasswordHash,
+          role: "admin",
+          active: true,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "usr_mgr_1",
+          name: "General Manager",
+          email: "manager@tamarind.co.ke",
+          passwordHash: defaultPasswordHash,
+          role: "manager",
+          active: true,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "usr_res_1",
+          name: "Tamarind Reservations",
+          email: "reservations@tamarind.co.ke",
+          passwordHash: defaultPasswordHash,
+          role: "reservations",
+          active: true,
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "usr_rec_1",
+          name: "Front Desk Reception",
+          email: "reception@tamarind.co.ke",
+          passwordHash: defaultPasswordHash,
+          role: "reception",
+          active: true,
+          createdAt: new Date().toISOString()
+        }
+      ];
+
+      for (const u of initialUsers) {
+        await db.insert(users).values(u);
+      }
+      console.log("✅ Seeded 4 baseline staff accounts with initial credentials.");
+    }
+
+    // B. Seed Apartments if empty
     const apartmentsCountRes = await client.unsafe("SELECT COUNT(*) FROM apartments");
     const apartmentsCount = parseInt(apartmentsCountRes[0]?.count || "0", 10);
-
-    const diningCountRes = await client.unsafe("SELECT COUNT(*) FROM dining_options");
-    const diningCount = parseInt(diningCountRes[0]?.count || "0", 10);
-
-    const pricingCountRes = await client.unsafe("SELECT COUNT(*) FROM pricing_rules");
-    const pricingCount = parseInt(pricingCountRes[0]?.count || "0", 10);
-
-    const inquiriesCountRes = await client.unsafe("SELECT COUNT(*) FROM inquiries");
-    const inquiriesCount = parseInt(inquiriesCountRes[0]?.count || "0", 10);
-
-    // Load original data_store.json if available
-    let seedData: any = null;
-    const storePath = path.join(process.cwd(), "data_store.json");
-    if (fs.existsSync(storePath)) {
-      try {
-        seedData = JSON.parse(fs.readFileSync(storePath, "utf-8"));
-        console.log("📄 Loaded seed data from data_store.json");
-      } catch (e) {
-        console.error("⚠️ Failed to parse data_store.json:", e);
-      }
-    }
-
-    // Fall back to default static datasets if data_store.json is absent (e.g. on Vercel)
-    if (!seedData) {
-      console.log("🌱 data_store.json not found on serverless runtime. Hydrating database using default datasets.");
-      seedData = {
-        apartments: APARTMENTS,
-        dining: DINING,
-        pricing: {
-          markupMultiplier: 1.0,
-          taxRate: 8,
-          seasonalFactor: "regular"
-        },
-        inquiries: []
-      };
-    }
-
-    // A. Seed Apartments
-    if (apartmentsCount === 0 && seedData?.apartments?.length > 0) {
-      console.log("🌱 Seeding apartments table...");
-      for (const apt of seedData.apartments) {
+    if (apartmentsCount === 0) {
+      console.log("🌱 Seeding apartments table from baseline catalog...");
+      for (const apt of APARTMENTS) {
         await db.insert(apartments).values({
           id: apt.id,
           name: apt.name,
@@ -143,376 +269,177 @@ export async function initAndMigrateDatabase() {
           maxGuests: apt.maxGuests,
           pricePerNight: apt.pricePerNight,
           image: apt.image,
-          gallery: apt.gallery || [],
-          amenities: apt.amenities || [],
+          gallery: apt.gallery,
+          amenities: apt.amenities,
           bedrooms: apt.bedrooms,
           bathrooms: apt.bathrooms,
-          highlights: apt.highlights || [],
-          bedConfig: apt.bedConfig || "",
-          viewType: apt.viewType || "",
+          highlights: apt.highlights,
+          bedConfig: apt.bedConfig,
+          viewType: apt.viewType,
+          isActive: true
         });
       }
-      console.log(`✅ Seeded ${seedData.apartments.length} apartments.`);
+      console.log(`... Seeded ${APARTMENTS.length} apartments.`);
     }
 
-    // B. Seed Dining Experiences
-    if (diningCount === 0 && seedData?.dining?.length > 0) {
-      console.log("🌱 Seeding dining_options table...");
-      for (const dine of seedData.dining) {
+    // C. Seed Dining Options if empty
+    const diningCountRes = await client.unsafe("SELECT COUNT(*) FROM dining_options");
+    const diningCount = parseInt(diningCountRes[0]?.count || "0", 10);
+    if (diningCount === 0) {
+      console.log("🌱 Seeding dining options table...");
+      for (const din of DINING) {
         await db.insert(diningOptions).values({
-          id: dine.id,
-          name: dine.name,
-          description: dine.description,
-          highlights: dine.highlights || [],
-          hours: dine.hours || "",
-          image: dine.image,
-          reservationLinkText: dine.reservationLinkText || "Inquire Table",
+          id: din.id,
+          name: din.name,
+          description: din.description,
+          highlights: din.highlights,
+          hours: din.hours,
+          image: din.image,
+          reservationLinkText: din.reservationLinkText,
+          maxCapacity: 100,
+          isActive: true
         });
       }
-      console.log(`✅ Seeded ${seedData.dining.length} dining options.`);
+      console.log(`... Seeded ${DINING.length} dining venues.`);
     }
 
-    // C. Seed Pricing Rules
+    // D. Seed Boarding Packages if empty
+    const packagesCountRes = await client.unsafe("SELECT COUNT(*) FROM packages");
+    const packagesCount = parseInt(packagesCountRes[0]?.count || "0", 10);
+    if (packagesCount === 0) {
+      console.log("🌱 Seeding boarding packages...");
+      for (const pkg of PACKAGES) {
+        await db.insert(packages).values({
+          id: pkg.id,
+          name: pkg.name,
+          description: pkg.description,
+          priceMarkupPercentage: pkg.priceMarkupPercentage,
+          pricePerPersonPerDay: pkg.pricePerPersonPerDay,
+          highlights: pkg.highlights,
+          isActive: true
+        });
+      }
+      console.log(`... Seeded ${PACKAGES.length} packages.`);
+    }
+
+    // E. Seed Extras (Vehicles & Event Charters) if empty
+    const extrasCountRes = await client.unsafe("SELECT COUNT(*) FROM extras");
+    const extrasCount = parseInt(extrasCountRes[0]?.count || "0", 10);
+    if (extrasCount === 0) {
+      console.log("🌱 Seeding extras (fleet and event packages)...");
+      for (const v of DEFAULT_TRANSFER_VEHICLES) {
+        await db.insert(extras).values({
+          id: v.id,
+          category: "transfer",
+          name: v.name,
+          description: v.tagline,
+          priceUsd: v.rateUsd,
+          priceKes: v.rateKes,
+          capacity: v.maxPassengers,
+          features: v.features,
+          image: v.image,
+          isActive: true
+        });
+      }
+      for (const ev of DEFAULT_EVENT_PACKAGES) {
+        await db.insert(extras).values({
+          id: ev.id,
+          category: "event",
+          name: ev.title,
+          description: ev.description,
+          priceUsd: 0,
+          priceKes: 0,
+          capacity: 50,
+          features: ev.features,
+          image: ev.image,
+          isActive: true
+        });
+      }
+      console.log("... Seeded transfer fleet and event charter packages.");
+    }
+
+    // F. Seed Facilities if empty
+    const facilitiesCountRes = await client.unsafe("SELECT COUNT(*) FROM facilities");
+    const facilitiesCount = parseInt(facilitiesCountRes[0]?.count || "0", 10);
+    if (facilitiesCount === 0) {
+      console.log("🌱 Seeding resort facilities...");
+      for (const fac of FACILITIES) {
+        await db.insert(facilities).values({
+          id: fac.id,
+          name: fac.name,
+          description: fac.description,
+          iconName: fac.iconName,
+          image: fac.image,
+          details: fac.details,
+          isResidentOnly: fac.id === "pools",
+          operatingHours: "6:00 AM – 7:00 PM Daily",
+          capacity: fac.id === "conferences" ? 80 : 50,
+          isActive: true
+        });
+      }
+      console.log(`... Seeded ${FACILITIES.length} facilities.`);
+    }
+
+    // G. Seed Pricing Rules if empty
+    const pricingCountRes = await client.unsafe("SELECT COUNT(*) FROM pricing_rules");
+    const pricingCount = parseInt(pricingCountRes[0]?.count || "0", 10);
     if (pricingCount === 0) {
-      console.log("🌱 Seeding default pricing rules...");
-      const pricing = seedData?.pricing || {
+      await db.insert(pricingRules).values({
+        id: "default",
         markupMultiplier: 1.0,
         taxRate: 8,
         seasonalFactor: "regular",
-      };
-      await db.insert(pricingRules).values({
-        id: "default",
-        markupMultiplier: pricing.markupMultiplier || 1.0,
-        taxRate: pricing.taxRate || 8,
-        seasonalFactor: pricing.seasonalFactor || "regular",
       });
-      console.log("✅ Seeded default pricing rules.");
+      console.log("... Seeded default pricing rules.");
     }
 
-    // D. Seed Inquiries if there are any historical ones in the store file
-    if (inquiriesCount === 0 && seedData?.inquiries?.length > 0) {
-      console.log("🌱 Seeding inquiries table...");
-      for (const inq of seedData.inquiries) {
-        await db.insert(inquiries).values({
-          id: inq.id,
-          type: inq.type,
-          payload: inq.payload,
-          status: inq.status || "Pending",
-          createdAt: inq.createdAt || new Date().toISOString(),
-        });
-      }
-      console.log(`... Seeded ${seedData.inquiries.length} historical inquiries.`);
-    }
-
-    // Seed global_settings
-    const settingsCountRes = await client.unsafe("SELECT COUNT(*) FROM global_settings");
-    const settingsCount = parseInt(settingsCountRes[0]?.count || "0", 10);
-    if (settingsCount === 0) {
-      console.log("🌱 Seeding default global settings (transfer fleet, event packages, boarding packages)...");
-      const defaultTransfers = [
-        {
-          id: "executive-saloon",
-          name: "Executive Saloon",
-          tagline: "Sleek, air-conditioned comfort for solo travelers & couples",
-          maxPassengers: 3,
-          maxLuggage: 2,
-          rateUsd: 25,
-          rateKes: 3500,
-          image: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=800&q=80",
-          features: ["Air-Conditioned", "Chauffeur Meet & Greet", "Complimentary Water", "Free Wi-Fi Onboard"]
-        },
-        {
-          id: "luxury-alphard",
-          name: "VIP Alphard / Vellfire",
-          tagline: "First-class executive seating with extra legroom & luxury finish",
-          maxPassengers: 5,
-          maxLuggage: 4,
-          rateUsd: 50,
-          rateKes: 7000,
-          image: "https://images.unsplash.com/photo-1550355291-bbee04a92027?auto=format&fit=crop&w=800&q=80",
-          features: ["Reclining VIP Leather Captain Chairs", "Welcome Cold Dawa Drink", "Chauffeur Signage", "Extra Luggage Storage"]
-        },
-        {
-          id: "safari-landcruiser",
-          name: "VIP Safari 4x4 Landcruiser",
-          tagline: "Rugged elegance with pop-up roof & all-terrain luxury",
-          maxPassengers: 6,
-          maxLuggage: 5,
-          rateUsd: 85,
-          rateKes: 11500,
-          image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
-          features: ["High Clearance 4x4", "Pop-up Roof", "Complimentary Refreshment Cooler", "Chauffeur Guide"]
-        },
-        {
-          id: "group-shuttle",
-          name: "Group Minivan / Shuttle",
-          tagline: "Spacious passenger van ideal for families & travel groups",
-          maxPassengers: 10,
-          maxLuggage: 8,
-          rateUsd: 65,
-          rateKes: 9000,
-          image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80",
-          features: ["High Capacity", "Dedicated Luggage Trailer Option", "Group Assistance", "Group Refreshment Pack"]
-        }
-      ];
-
-      const defaultEvents = [
-        {
-          id: "wedding",
-          title: "Cliffside Weddings & Vows",
-          tag: "Oceanfront Ceremonies",
-          tagIcon: "heart",
-          image: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80",
-          description: "Exchange vows overlooking Tudor Creek on our cliffside garden lawn. Swahili floral decor, sunset cocktail hours on Dawa Terrace, and bespoke banquets.",
-          features: [
-            "Lawn capacity for up to 200 guests",
-            "Plated seafood banquets by Tamarind",
-            "Bridal penthouse accommodation suites"
-          ],
-          capacityText: "Up to 200 Guests",
-          cateringText: "Custom Seafood & Swahili Banquet",
-          extraHighlight: "Includes Honeymoon Penthouse Upgrade",
-          ctaText: "Inquire Wedding Dates"
-        },
-        {
-          id: "dhow-charter",
-          title: "Private Tamarind Dhow Cruises",
-          tag: "Private Vessel Charter",
-          tagIcon: "ship",
-          image: "https://media.tamarind.co.ke/tvl-website-assets/tamarind.drone--2.jpg",
-          description: "Charter an authentic Swahili dhow for private sunset cruises, anniversary dinners, or corporate cocktail parties along Tudor Creek with live Taarab or acoustic music.",
-          features: [
-            "Exclusive charter capacity: 20 to 70 guests",
-            "Freshly grilled lobster & seafood on board",
-            "Signature Dawa cocktail bar service"
-          ],
-          capacityText: "20 - 70 Guests",
-          cateringText: "Live Dhow Grill & Open Bar",
-          extraHighlight: "Live Sunset Acoustic / Taarab Band",
-          ctaText: "Inquire Dhow Charter"
-        },
-        {
-          id: "corporate",
-          title: "Corporate Retreats & Gala Dinners",
-          tag: "Executive Gatherings",
-          tagIcon: "briefcase",
-          image: "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=800&q=80",
-          description: "Executive board retreats, team building, and product launches featuring serviced apartment stay packages combined with dining at Tamarind Restaurant.",
-          features: [
-            "High-speed Wi-Fi & AV meeting setups",
-            "Custom conference hall & lawn seating",
-            "Group rate on 1, 2 & 3 bedroom apartments"
-          ],
-          capacityText: "10 - 150 Delegates",
-          cateringText: "Full-day Gourmet Delegate Catering",
-          extraHighlight: "Executive Airport & SGR Shuttle Coordination",
-          ctaText: "Request Corporate Proposal"
-        },
-        {
-          id: "sundowner-soiree",
-          title: "Sunset Dawa Terrace Soirées",
-          tag: "Bespoke Celebrations",
-          tagIcon: "sparkles",
-          image: "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg",
-          description: "Exclusive terrace booking for milestone birthdays, anniversaries, or intimate sunset cocktail hours overlooking lit-up Old Town Mombasa across the creek.",
-          features: [
-            "Private section of Dawa Terrace overlooking bay",
-            "Dedicated mixologist & gourmet canapé menu",
-            "Custom ambient lighting & DJ / saxophonist"
-          ],
-          capacityText: "15 - 80 Guests",
-          cateringText: "Signature Dawa & Artisanal Tapas",
-          extraHighlight: "Private Creekside Terrace View",
-          ctaText: "Inquire Sundowner Event"
-        }
-      ];
-
-      const defaultBoarding = [
-        {
-          id: "self_catering",
-          name: "Self Catering",
-          slogan: "Prepare your own Swahili feasts using local Mombasa ingredients",
-          rateUsd: 0,
-          features: ["Fully Equipped Modern Kitchen", "Pre-stocked Pantry Option", "Grocery Delivery Available"]
-        },
-        {
-          id: "bed_breakfast",
-          name: "Bed & Breakfast",
-          slogan: "Start each coastal morning with a delicious gourmet breakfast at the restaurant",
-          rateUsd: 15,
-          features: ["Full Tamarind Breakfast", "Fresh Kenyan Coffee & Juices", "Oceanfront Seating Included"]
-        },
-        {
-          id: "half_board",
-          name: "Half Board",
-          slogan: "Indulge in both premium breakfast and your choice of lunch or sunset dinner daily",
-          rateUsd: 45,
-          features: ["Full Breakfast Included", "Multi-Course Seafood Dinner / Lunch", "Non-Alcoholic Dawa Cocktail"]
-        },
-        {
-          id: "full_board",
-          name: "Full Board (VVIP Culinary)",
-          slogan: "Ultimate luxury dining package featuring breakfast, lunch, and spectacular seafood dinner daily",
-          rateUsd: 75,
-          features: ["All Daily Meals", "A La Carte Dining at Tamarind Restaurant", "Signature Tamarind Dhow Seafood Platter", "Priority Seating & Butler Assistance"]
-        }
-      ];
-
-      await db.insert(globalSettings).values({
-        key: "transfer_vehicles",
-        value: defaultTransfers,
+    // H. Seed initial system audit log
+    const auditCountRes = await client.unsafe("SELECT COUNT(*) FROM audit_logs");
+    const auditCount = parseInt(auditCountRes[0]?.count || "0", 10);
+    if (auditCount === 0) {
+      await db.insert(auditLogs).values({
+        id: "log_" + Date.now(),
+        timestamp: new Date().toISOString(),
+        actor: "System Initializer",
+        actorRole: "admin",
+        category: "System",
+        action: "Schema Migration & Initialization",
+        details: "Initialized PostgreSQL database tables and seeded baseline data.",
+        targetId: "system",
+        metadata: { version: "2.0.0" }
       });
-
-      await db.insert(globalSettings).values({
-        key: "event_packages",
-        value: defaultEvents,
-      });
-
-      await db.insert(globalSettings).values({
-        key: "boarding_packages",
-        value: defaultBoarding,
-      });
-
-      console.log("🌱 Default global settings seeded successfully.");
     }
 
     await healLegacyMediaAssets(client, db);
-
-    console.log("🎉 Database initialization completed successfully!");
-  } catch (error) {
-    console.error("❌ Database initialization / migration failed:", error);
-    throw error;
-  }
-}
-
-let isLegacyMediaHealed = false;
-
-export async function healLegacyMediaAssets(client: any, db: any) {
-  if (isLegacyMediaHealed) return;
-
-  try {
-    // 1. Check for legacy Cloudinary images in dining_options
-    const legacyDining = await client.unsafe(`
-      SELECT id, name, image FROM dining_options WHERE image LIKE '%cloudinary%';
-    `);
-
-    // 2. Check for legacy Cloudinary images in apartments
-    const legacyApartments = await client.unsafe(`
-      SELECT id, name, image, gallery FROM apartments 
-      WHERE image LIKE '%cloudinary%' OR gallery::text LIKE '%cloudinary%';
-    `);
-
-    // 3. Check for legacy Cloudinary images in global_settings
-    const legacySettings = await client.unsafe(`
-      SELECT key, value FROM global_settings WHERE value::text LIKE '%cloudinary%';
-    `);
-
-    const hasLegacyData = legacyDining.length > 0 || legacyApartments.length > 0 || legacySettings.length > 0;
-
-    if (!hasLegacyData) {
-      isLegacyMediaHealed = true;
-      return;
-    }
-
-    console.log(`🔄 [Self-Healing] Detected legacy Cloudinary assets (${legacyDining.length} dining, ${legacyApartments.length} apartments, ${legacySettings.length} settings). Self-healing database records...`);
-
-    // Load canonical data from data_store.json if available, or fall back to static data
-    let canonicalData: any = null;
-    const storePath = path.join(process.cwd(), "data_store.json");
-    if (fs.existsSync(storePath)) {
-      try {
-        canonicalData = JSON.parse(fs.readFileSync(storePath, "utf-8"));
-      } catch (e) {
-        console.error("⚠️ Failed to parse data_store.json during self-healing:", e);
-      }
-    }
-
-    if (!canonicalData) {
-      canonicalData = {
-        apartments: APARTMENTS,
-        dining: DINING,
-      };
-    }
-
-    // Default hardcoded self-hosted mappings for dining
-    const FALLBACK_DINING_IMAGES: Record<string, string> = {
-      "tamarind-restaurant": "https://media.tamarind.co.ke/tvl-website-assets/mr6.jpg",
-      "dawa-terrace": "https://media.tamarind.co.ke/tvl-website-assets/t1.jpg",
-      "tamarind-dhow": "https://media.tamarind.co.ke/tvl-website-assets/d2.jpg",
-    };
-
-    // A. Heal dining_options
-    let healedDiningCount = 0;
-    for (const row of legacyDining) {
-      const match = canonicalData.dining?.find((d: any) => d.id === row.id);
-      const targetImage = (match?.image && !match.image.includes("cloudinary"))
-        ? match.image 
-        : (FALLBACK_DINING_IMAGES[row.id] || "https://media.tamarind.co.ke/tvl-website-assets/mr6.jpg");
-
-      if (targetImage) {
-        await client.unsafe(`
-          UPDATE dining_options SET image = $1 WHERE id = $2;
-        `, [targetImage, row.id]);
-        healedDiningCount++;
-        console.log(`  ✅ [Self-Healing] Updated dining '${row.id}' -> ${targetImage}`);
-      }
-    }
-
-    // B. Heal apartments
-    let healedApartmentCount = 0;
-    for (const row of legacyApartments) {
-      const match = canonicalData.apartments?.find((a: any) => a.id === row.id);
-      if (match) {
-        const targetImage = (match.image && !match.image.includes("cloudinary")) ? match.image : row.image;
-        const targetGallery = (match.gallery && Array.isArray(match.gallery)) ? match.gallery : row.gallery;
-        await client.unsafe(`
-          UPDATE apartments SET image = $1, gallery = $2 WHERE id = $3;
-        `, [targetImage, JSON.stringify(targetGallery), row.id]);
-        healedApartmentCount++;
-        console.log(`  ✅ [Self-Healing] Updated apartment '${row.id}' to self-hosted media`);
-      }
-    }
-
-    // C. Heal global_settings
-    let healedSettingsCount = 0;
-    for (const row of legacySettings) {
-      if (row.key === "event_packages" && canonicalData.settings?.event_packages) {
-        await client.unsafe(`
-          UPDATE global_settings SET value = $1 WHERE key = 'event_packages';
-        `, [JSON.stringify(canonicalData.settings.event_packages)]);
-        healedSettingsCount++;
-        console.log(`  ✅ [Self-Healing] Updated global_settings 'event_packages'`);
-      }
-      if (row.key === "transfer_vehicles" && canonicalData.settings?.transfer_vehicles) {
-        await client.unsafe(`
-          UPDATE global_settings SET value = $1 WHERE key = 'transfer_vehicles';
-        `, [JSON.stringify(canonicalData.settings.transfer_vehicles)]);
-        healedSettingsCount++;
-        console.log(`  ✅ [Self-Healing] Updated global_settings 'transfer_vehicles'`);
-      }
-    }
-
-    console.log(`✨ [Self-Healing] Successfully healed ${healedDiningCount} dining options, ${healedApartmentCount} apartments, and ${healedSettingsCount} global settings!`);
-    isLegacyMediaHealed = true;
+    console.log("🎉 Database initialization and verification completed successfully.");
   } catch (err) {
-    console.error("⚠️ [Self-Healing] Failed to auto-heal legacy media assets:", err);
+    console.error("❌ Database initialization error:", err);
   }
 }
 
-let migrationPromise: Promise<void> | null = null;
+async function healLegacyMediaAssets(client: any, db: any) {
+  try {
+    // Self-heal broken unpkg / third-party links to official media.tamarind.co.ke assets
+    await client.unsafe(`
+      UPDATE apartments
+      SET image = 'https://media.tamarind.co.ke/tvl-website-assets/r12.jpg'
+      WHERE id = '1-bedroom' AND (image LIKE '%unpkg%' OR image LIKE '%placeholder%');
+    `);
+    await client.unsafe(`
+      UPDATE apartments
+      SET image = 'https://media.tamarind.co.ke/tvl-website-assets/r22.jpg'
+      WHERE id = '2-bedroom' AND (image LIKE '%unpkg%' OR image LIKE '%placeholder%');
+    `);
+    await client.unsafe(`
+      UPDATE apartments
+      SET image = 'https://media.tamarind.co.ke/tvl-website-assets/r36.jpg'
+      WHERE id = '3-bedroom' AND (image LIKE '%unpkg%' OR image LIKE '%placeholder%');
+    `);
+  } catch (healErr) {
+    console.warn("Media asset healing warning:", healErr);
+  }
+}
 
 export async function ensureDatabaseSynced() {
-  if (!process.env.DATABASE_URL) return;
-  if (!migrationPromise) {
-    migrationPromise = (async () => {
-      try {
-        await initAndMigrateDatabase();
-      } catch (err) {
-        console.error("Lazy database migration failed:", err);
-        migrationPromise = null; // Reset to allow retrying on subsequent requests if it failed
-        throw err;
-      }
-    })();
-  }
-  await migrationPromise;
+  await initAndMigrateDatabase();
 }

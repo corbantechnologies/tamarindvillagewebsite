@@ -7,9 +7,14 @@ import {
   ShieldAlert, CheckCircle, Clock, ArrowRight, Search, Filter, 
   Edit3, Eye, CheckSquare, Sparkles, RefreshCw, Car, Heart, Image as ImageIcon,
   MessageSquare, Copy, ExternalLink, Send, Key, Users, ShieldCheck, UserCheck, EyeOff, Lock,
-  Maximize2, Minimize2, Download
+  Maximize2, Minimize2, Download, ConciergeBell, Waves, Coffee, BedDouble
 } from "lucide-react";
-import { ApartmentType, DiningExperience, StaffUser } from "../types";
+import { ApartmentType, DiningExperience, StaffUser, StaffRole, BookingRecord, FacilityType, PackageType } from "../types";
+import FrontDeskHub from "./admin/FrontDeskHub";
+import BookingsLedger from "./admin/BookingsLedger";
+import FacilitiesManager from "./admin/FacilitiesManager";
+import PackagesManager from "./admin/PackagesManager";
+import StaffAccountsManager from "./admin/StaffAccountsManager";
 import OptimizedImage from "./OptimizedImage";
 import { 
   TransferVehicle, 
@@ -135,7 +140,25 @@ export default function StaffDashboardModal({
   const [isFullScreen, setIsFullScreen] = useState(true);
 
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<"inquiries" | "apartments" | "pricing" | "dining" | "transfers" | "hero" | "team" | "logs">("inquiries");
+  const [activeTab, setActiveTab] = useState<
+    "frontdesk" | "bookings" | "inquiries" | "apartments" | "pricing" | "dining" | "packages" | "transfers" | "facilities" | "hero" | "team" | "logs"
+  >("inquiries");
+
+  // Additional modules data
+  const [bookings, setBookings] = useState<BookingRecord[]>([]);
+  const [facilities, setFacilities] = useState<FacilityType[]>([]);
+
+  // Set default tab based on user role
+  useEffect(() => {
+    if (isOpen && currentUser) {
+      const userRole = (currentUser.role || "").toLowerCase();
+      if (userRole === "reception" || userRole === "concierge") {
+        setActiveTab("frontdesk");
+      } else if (userRole === "reservations" || userRole === "reservationist") {
+        setActiveTab("inquiries");
+      }
+    }
+  }, [isOpen, currentUser]);
   
   // Data State loaded from APIs
   const [inquiries, setInquiries] = useState<InquiryData[]>([]);
@@ -190,14 +213,6 @@ export default function StaffDashboardModal({
 
   // Staff Users & Access Allocation states
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>(() => staffUsersList || loadStaffUsers());
-  const [newStaffName, setNewStaffName] = useState("");
-  const [newStaffRole, setNewStaffRole] = useState<"reservationist" | "admin" | "concierge">("reservationist");
-  const [newStaffPin, setNewStaffPin] = useState("");
-  const [newStaffEmail, setNewStaffEmail] = useState("");
-  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
-  const [editingStaffPin, setEditingStaffPin] = useState("");
-  const [revealedPins, setRevealedPins] = useState<Record<string, boolean>>({});
-  const [copiedPinId, setCopiedPinId] = useState<string | null>(null);
 
   // Audit Logs & Operations Ledger states
   const [systemLogs, setSystemLogs] = useState<SystemAuditLog[]>(() => loadSystemAuditLogs());
@@ -210,119 +225,6 @@ export default function StaffDashboardModal({
       setStaffUsers(staffUsersList);
     }
   }, [staffUsersList]);
-
-  const handleSaveStaffUsersList = async (newList: StaffUser[], auditAction?: string) => {
-    setStaffUsers(newList);
-    saveStaffUsers(newList);
-    if (onStaffUsersUpdated) onStaffUsersUpdated(newList);
-
-    if (auditAction) {
-      const newSysLog: SystemAuditLog = {
-        id: "log_" + Date.now(),
-        timestamp: new Date().toISOString(),
-        actor: currentUser?.role || "admin",
-        actorName: currentUser?.name || "Master Administrator",
-        action: auditAction,
-        type: "pin_management",
-        category: "security",
-        targetName: "Staff Credentials",
-        targetType: "Security"
-      };
-      const updatedLogs = [newSysLog, ...systemLogs];
-      setSystemLogs(updatedLogs);
-      saveSystemAuditLogs(updatedLogs);
-      try {
-        await fetch("/api/settings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: "system_audit_logs", value: updatedLogs })
-        });
-      } catch (e) {
-        console.warn("Could not sync system log to API:", e);
-      }
-    }
-
-    try {
-      const response = await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: "staff_users",
-          value: newList
-        })
-      });
-      if (response.ok) {
-        showToast("Team access & PIN allocations saved!");
-      } else {
-        throw new Error("Server error");
-      }
-    } catch (e) {
-      console.warn("Could not save to live API, preserved in local storage:", e);
-      showToast("PIN saved locally (offline fallback active)");
-    }
-  };
-
-  const handleAllocateNewStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newStaffName.trim() || !newStaffPin.trim()) {
-      toast.error("Please provide both a Name and a PIN.");
-      return;
-    }
-    const pin = newStaffPin.trim();
-    if (staffUsers.some(u => u.pin === pin)) {
-      toast.error(`PIN "${pin}" is already allocated to another staff member. Please choose a unique PIN.`);
-      return;
-    }
-    const newUser: StaffUser = {
-      id: "staff_" + Date.now(),
-      name: newStaffName.trim(),
-      pin,
-      role: newStaffRole,
-      email: newStaffEmail.trim() || undefined,
-      createdAt: new Date().toISOString()
-    };
-    const updated = [...staffUsers, newUser];
-    await handleSaveStaffUsersList(updated, `Allocated access passcode for ${newUser.name} (${newUser.role.toUpperCase()})`);
-    setNewStaffName("");
-    setNewStaffPin("");
-    setNewStaffEmail("");
-    showToast(`Passcode allocated for ${newUser.name} (${newUser.role.toUpperCase()})`);
-  };
-
-  const handleRevokeStaff = async (id: string, name: string) => {
-    if (id === "user_admin" || id === staffUsers[0]?.id) {
-      toast.error("The primary Administrator account cannot be removed.");
-      return;
-    }
-    if (!confirm(`Are you sure you want to revoke access and deactivate PIN for ${name}?`)) return;
-    const updated = staffUsers.filter(u => u.id !== id);
-    await handleSaveStaffUsersList(updated, `Revoked access credentials for ${name}`);
-    showToast(`Access revoked for ${name}`);
-  };
-
-  const handleUpdateStaffPin = async (id: string) => {
-    if (!editingStaffPin.trim()) return;
-    const targetUser = staffUsers.find(u => u.id === id);
-    if (!targetUser) return;
-    
-    if (staffUsers.some(u => u.id !== id && u.pin === editingStaffPin.trim())) {
-      toast.error(`PIN "${editingStaffPin.trim()}" is already in use by another user.`);
-      return;
-    }
-    const updated = staffUsers.map(u => u.id === id ? { ...u, pin: editingStaffPin.trim() } : u);
-    await handleSaveStaffUsersList(updated, `Updated access PIN for ${targetUser.name}`);
-    setEditingStaffId(null);
-    setEditingStaffPin("");
-    showToast(`PIN updated for ${targetUser.name}`);
-  };
-
-  const generateRandomPin = () => {
-    let pin = "";
-    do {
-      pin = Math.floor(1000 + Math.random() * 9000).toString();
-    } while (staffUsers.some(u => u.pin === pin));
-    setNewStaffPin(pin);
-  };
 
   // Combine all inquiry audit events + system-wide audit events
   const allAuditLogs = useMemo(() => {
@@ -532,6 +434,55 @@ export default function StaffDashboardModal({
         setSystemLogs(loadSystemAuditLogs());
       }
 
+      // 6. Fetch Bookings
+      try {
+        const bookingsRes = await fetch("/api/bookings");
+        if (bookingsRes.ok) {
+          const bData = await bookingsRes.json();
+          setBookings(bData.bookings || []);
+        }
+      } catch (bErr) {
+        console.warn("Could not load bookings from API:", bErr);
+      }
+
+      // 7. Fetch Facilities
+      try {
+        const facRes = await fetch("/api/facilities");
+        if (facRes.ok) {
+          const fData = await facRes.json();
+          setFacilities(fData.facilities || []);
+        }
+      } catch (fErr) {
+        console.warn("Could not load facilities from API:", fErr);
+      }
+
+      // 8. Fetch Packages
+      try {
+        const pkgRes = await fetch("/api/packages");
+        if (pkgRes.ok) {
+          const pkgData = await pkgRes.json();
+          if (pkgData.packages && pkgData.packages.length > 0) {
+            setBoardingPackages(pkgData.packages);
+          }
+        }
+      } catch (pErr) {
+        console.warn("Could not load packages from API:", pErr);
+      }
+
+      // 9. Fetch Staff Accounts
+      try {
+        const staffRes = await fetch("/api/staff");
+        if (staffRes.ok) {
+          const stData = await staffRes.json();
+          if (stData.staff) {
+            setStaffUsers(stData.staff);
+            if (onStaffUsersUpdated) onStaffUsersUpdated(stData.staff);
+          }
+        }
+      } catch (stErr) {
+        console.warn("Could not load staff accounts:", stErr);
+      }
+
       setPasteHeroInput(heroImages.join("\n"));
       console.log("🔍 [StaffDashboard] Local and cloud resources loaded successfully.");
     } catch (err) {
@@ -547,6 +498,231 @@ export default function StaffDashboardModal({
       loadAllDashboardData();
     }
   }, [isOpen]);
+
+  // --- BOOKINGS ACTIONS ---
+  const handleUpdateBookingStatus = async (id: string, newStatus: "confirmed" | "checked_in" | "checked_out" | "cancelled") => {
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingStatus: newStatus, actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, bookingStatus: newStatus } : b));
+        toast.success(`Booking status changed to ${newStatus.replace('_', ' ').toUpperCase()}`);
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update booking status.");
+    }
+  };
+
+  const handleCreateNewBooking = async (bookingData: any) => {
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...bookingData, actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBookings(prev => [data.booking, ...prev]);
+        toast.success(`Reservation ${data.booking.bookingReference} confirmed!`);
+      } else {
+        throw new Error(data.error || "Failed to save booking");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not save booking.");
+    }
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this booking record?")) return;
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setBookings(prev => prev.filter(b => b.id !== id));
+        toast.success("Booking record removed.");
+      } else {
+        throw new Error("Delete failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete booking.");
+    }
+  };
+
+  // --- FACILITIES ACTIONS ---
+  const handleSaveFacility = async (fac: FacilityType) => {
+    try {
+      const existing = facilities.find(f => f.id === fac.id);
+      const url = existing ? `/api/facilities/${fac.id}` : "/api/facilities";
+      const method = existing ? "PUT" : "POST";
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...fac, actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setFacilities(prev => {
+          const idx = prev.findIndex(f => f.id === fac.id);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = fac;
+            return updated;
+          }
+          return [...prev, fac];
+        });
+        toast.success(`Facility "${fac.name}" saved!`);
+      } else {
+        throw new Error("Save failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not save facility.");
+    }
+  };
+
+  const handleDeleteFacility = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this facility?")) return;
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(`/api/facilities/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setFacilities(prev => prev.filter(f => f.id !== id));
+        toast.success("Facility removed.");
+      } else {
+        throw new Error("Delete failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete facility.");
+    }
+  };
+
+  // --- BOARDING PACKAGES ACTIONS ---
+  const handleSavePackageItem = async (pkg: any) => {
+    try {
+      const existing = boardingPackages.find(p => p.id === pkg.id);
+      const url = existing ? `/api/packages/${pkg.id}` : "/api/packages";
+      const method = existing ? "PUT" : "POST";
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...pkg, actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setBoardingPackages(prev => {
+          const idx = prev.findIndex(p => p.id === pkg.id);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = pkg;
+            return updated;
+          }
+          return [...prev, pkg];
+        });
+        toast.success(`Package "${pkg.name}" saved!`);
+      } else {
+        throw new Error("Save failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not save package.");
+    }
+  };
+
+  const handleDeletePackageItem = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this boarding package?")) return;
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(`/api/packages/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setBoardingPackages(prev => prev.filter(p => p.id !== id));
+        toast.success("Package removed.");
+      } else {
+        throw new Error("Delete failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete package.");
+    }
+  };
+
+  // --- STAFF ACCOUNTS ACTIONS (ADMIN) ---
+  const handleSaveStaffAccount = async (userData: { name: string; email: string; password: string; role: StaffRole }) => {
+    try {
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...userData, actorName: currentUser?.name || "Administrator" })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setStaffUsers(prev => [...prev, data.user]);
+        if (onStaffUsersUpdated) onStaffUsersUpdated([...staffUsers, data.user]);
+        toast.success(`Account for ${data.user.name} provisioned!`);
+      } else {
+        throw new Error(data.error || "Provisioning failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not create staff account.");
+    }
+  };
+
+  const handleUpdateStaffAccount = async (id: string, updates: Partial<StaffUser> & { password?: string }) => {
+    try {
+      const res = await fetch(`/api/staff/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...updates, actorName: currentUser?.name || "Administrator" })
+      });
+      if (res.ok) {
+        const updated = staffUsers.map(u => u.id === id ? { ...u, ...updates } : u);
+        setStaffUsers(updated);
+        if (onStaffUsersUpdated) onStaffUsersUpdated(updated);
+        toast.success("Staff account updated.");
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not update staff account.");
+    }
+  };
+
+  const handleDeleteStaffAccount = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this staff account?")) return;
+    try {
+      const res = await fetch(`/api/staff/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorName: currentUser?.name || "Administrator" })
+      });
+      if (res.ok) {
+        const filtered = staffUsers.filter(u => u.id !== id);
+        setStaffUsers(filtered);
+        if (onStaffUsersUpdated) onStaffUsersUpdated(filtered);
+        toast.success("Staff account deleted.");
+      } else {
+        const d = await res.json();
+        throw new Error(d.error || "Delete failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete staff account.");
+    }
+  };
 
   const handleUpdateInquiryStatus = async (id: string, newStatus: string) => {
     try {
@@ -949,6 +1125,21 @@ export default function StaffDashboardModal({
 
   const stats = getInquiryStats();
 
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayArrivals = bookings.filter(b => b.checkIn === todayStr);
+  const activeBookingsCount = bookings.filter(b => b.bookingStatus !== "cancelled").length;
+
+  const userRole = (currentUser?.role || "admin").toLowerCase();
+  const isSuperAdmin = userRole === "admin";
+  const isManagerRole = userRole === "manager";
+  const isReservationsRole = userRole === "reservations" || userRole === "reservationist";
+  const isReceptionRole = userRole === "reception" || userRole === "concierge";
+
+  const canAccessPricing = isSuperAdmin || isManagerRole || isReservationsRole;
+  const canAccessTeam = isSuperAdmin;
+  const canAccessLogs = isSuperAdmin || isManagerRole;
+  const canCheckIn = isSuperAdmin || isReceptionRole;
+
   if (!isOpen) return null;
 
   return (
@@ -1034,9 +1225,41 @@ export default function StaffDashboardModal({
             
             {/* PORTAL SIDEBAR */}
             <div className="w-64 bg-stone-900 text-stone-400 border-r border-stone-800 flex flex-col shrink-0 justify-between py-6">
-              <nav className="space-y-1.5 px-4">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-600 px-3 mb-3">Core Modules</div>
+              <nav className="space-y-1.5 px-4 overflow-y-auto">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 mb-2">Operations</div>
                 
+                <button
+                  onClick={() => { setActiveTab("frontdesk"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                    activeTab === "frontdesk"
+                      ? "bg-brand-teal text-brand-dark font-black"
+                      : "hover:bg-stone-800 hover:text-white"
+                  }`}
+                >
+                  <ConciergeBell className="w-4.5 h-4.5" />
+                  <span>Front Desk Hub</span>
+                  {todayArrivals.length > 0 && (
+                    <span className="ml-auto bg-amber-500 text-stone-950 text-[9px] px-1.5 py-0.5 font-black rounded-full">
+                      {todayArrivals.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab("bookings"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                    activeTab === "bookings"
+                      ? "bg-brand-teal text-brand-dark font-black"
+                      : "hover:bg-stone-800 hover:text-white"
+                  }`}
+                >
+                  <BedDouble className="w-4.5 h-4.5" />
+                  <span>Bookings Ledger</span>
+                  <span className="ml-auto bg-stone-800 text-stone-300 text-[9px] px-1.5 py-0.5 font-bold">
+                    {activeBookingsCount}
+                  </span>
+                </button>
+
                 <button
                   onClick={() => { setActiveTab("inquiries"); setSelectedInquiry(null); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
@@ -1054,8 +1277,11 @@ export default function StaffDashboardModal({
                   )}
                 </button>
 
+                <div className="h-px bg-stone-800 my-3 mx-3" />
+                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 mb-2">Resort & Website CMS</div>
+
                 <button
-                  onClick={() => setActiveTab("apartments")}
+                  onClick={() => { setActiveTab("apartments"); setSelectedInquiry(null); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
                     activeTab === "apartments"
                       ? "bg-brand-teal text-brand-dark font-black"
@@ -1063,23 +1289,14 @@ export default function StaffDashboardModal({
                   }`}
                 >
                   <Hotel className="w-4.5 h-4.5" />
-                  <span>Apartment Editor</span>
+                  <span>Suites & Inventory</span>
+                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
+                    {apartments.length}
+                  </span>
                 </button>
 
                 <button
-                  onClick={() => setActiveTab("pricing")}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === "pricing"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <DollarSign className="w-4.5 h-4.5" />
-                  <span>Pricing & Rates</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab("dining")}
+                  onClick={() => { setActiveTab("dining"); setSelectedInquiry(null); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
                     activeTab === "dining"
                       ? "bg-brand-teal text-brand-dark font-black"
@@ -1087,14 +1304,29 @@ export default function StaffDashboardModal({
                   }`}
                 >
                   <Utensils className="w-4.5 h-4.5" />
-                  <span>Dining experiences</span>
+                  <span>Dining & Dhow</span>
+                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
+                    {dining.length}
+                  </span>
                 </button>
 
-                <div className="h-px bg-stone-800 my-4 mx-3" />
-                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-600 px-3 mb-2">Resort Extras</div>
+                <button
+                  onClick={() => { setActiveTab("packages"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                    activeTab === "packages"
+                      ? "bg-brand-teal text-brand-dark font-black"
+                      : "hover:bg-stone-800 hover:text-white"
+                  }`}
+                >
+                  <Coffee className="w-4.5 h-4.5" />
+                  <span>Boarding Packages</span>
+                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
+                    {boardingPackages.length}
+                  </span>
+                </button>
 
                 <button
-                  onClick={() => setActiveTab("transfers")}
+                  onClick={() => { setActiveTab("transfers"); setSelectedInquiry(null); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
                     activeTab === "transfers"
                       ? "bg-brand-teal text-brand-dark font-black"
@@ -1102,11 +1334,29 @@ export default function StaffDashboardModal({
                   }`}
                 >
                   <Car className="w-4.5 h-4.5" />
-                  <span>Transfer Fleet</span>
+                  <span>Transfers & Fleet</span>
+                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
+                    {vehicles.length}
+                  </span>
                 </button>
 
                 <button
-                  onClick={() => setActiveTab("hero")}
+                  onClick={() => { setActiveTab("facilities"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                    activeTab === "facilities"
+                      ? "bg-brand-teal text-brand-dark font-black"
+                      : "hover:bg-stone-800 hover:text-white"
+                  }`}
+                >
+                  <Waves className="w-4.5 h-4.5" />
+                  <span>Resort Facilities</span>
+                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
+                    {facilities.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab("hero"); setSelectedInquiry(null); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
                     activeTab === "hero"
                       ? "bg-brand-teal text-brand-dark font-black"
@@ -1117,38 +1367,60 @@ export default function StaffDashboardModal({
                   <span>Hero Slideshow</span>
                 </button>
 
-                <div className="h-px bg-stone-800 my-4 mx-3" />
-                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-600 px-3 mb-2">Access Control</div>
+                {(canAccessPricing || canAccessTeam || canAccessLogs) && (
+                  <>
+                    <div className="h-px bg-stone-800 my-3 mx-3" />
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 mb-2">Governance & Rates</div>
+                  </>
+                )}
 
-                <button
-                  onClick={() => setActiveTab("team")}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === "team"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <Users className="w-4.5 h-4.5" />
-                  <span>Team & PIN Access</span>
-                  <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
-                    {staffUsers.length}
-                  </span>
-                </button>
+                {canAccessPricing && (
+                  <button
+                    onClick={() => { setActiveTab("pricing"); setSelectedInquiry(null); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                      activeTab === "pricing"
+                        ? "bg-brand-teal text-brand-dark font-black"
+                        : "hover:bg-stone-800 hover:text-white"
+                    }`}
+                  >
+                    <DollarSign className="w-4.5 h-4.5" />
+                    <span>Rates & Pricing</span>
+                  </button>
+                )}
 
-                <button
-                  onClick={() => { setActiveTab("logs"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === "logs"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <FileText className="w-4.5 h-4.5" />
-                  <span>Audit & Activity Logs</span>
-                  <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
-                    {allAuditLogs.length}
-                  </span>
-                </button>
+                {canAccessTeam && (
+                  <button
+                    onClick={() => { setActiveTab("team"); setSelectedInquiry(null); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                      activeTab === "team"
+                        ? "bg-brand-teal text-brand-dark font-black"
+                        : "hover:bg-stone-800 hover:text-white"
+                    }`}
+                  >
+                    <Users className="w-4.5 h-4.5" />
+                    <span>Staff Accounts</span>
+                    <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
+                      {staffUsers.length}
+                    </span>
+                  </button>
+                )}
+
+                {canAccessLogs && (
+                  <button
+                    onClick={() => { setActiveTab("logs"); setSelectedInquiry(null); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                      activeTab === "logs"
+                        ? "bg-brand-teal text-brand-dark font-black"
+                        : "hover:bg-stone-800 hover:text-white"
+                    }`}
+                  >
+                    <FileText className="w-4.5 h-4.5" />
+                    <span>Audit & Activity Logs</span>
+                    <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
+                      {allAuditLogs.length}
+                    </span>
+                  </button>
+                )}
               </nav>
 
               {/* SECURITY SIGNATURE */}
@@ -1177,6 +1449,29 @@ export default function StaffDashboardModal({
                 </div>
               )}
               
+              {/* --- OPERATIONS: FRONT DESK HUB --- */}
+              {activeTab === "frontdesk" && (
+                <FrontDeskHub
+                  bookings={bookings}
+                  apartments={apartments}
+                  onUpdateBookingStatus={handleUpdateBookingStatus}
+                  onOpenNewBooking={() => setActiveTab("bookings")}
+                  canCheckIn={canCheckIn}
+                />
+              )}
+
+              {/* --- OPERATIONS: BOOKINGS LEDGER --- */}
+              {activeTab === "bookings" && (
+                <BookingsLedger
+                  bookings={bookings}
+                  apartments={apartments}
+                  onUpdateStatus={handleUpdateBookingStatus}
+                  onDeleteBooking={handleDeleteBooking}
+                  onCreateBooking={handleCreateNewBooking}
+                  userRole={currentUser?.role || "admin"}
+                />
+              )}
+
               {/* --- TAB 1: GUEST INQUIRIES & BOOKINGS --- */}
               {activeTab === "inquiries" && (
                 <div className="space-y-6 flex-1 flex flex-col">
@@ -2944,6 +3239,24 @@ export default function StaffDashboardModal({
                 </div>
               )}
 
+              {/* --- TAB: BOARDING PACKAGES --- */}
+              {activeTab === "packages" && (
+                <PackagesManager
+                  packages={boardingPackages}
+                  onSavePackage={handleSavePackageItem}
+                  onDeletePackage={handleDeletePackageItem}
+                />
+              )}
+
+              {/* --- TAB: RESORT FACILITIES --- */}
+              {activeTab === "facilities" && (
+                <FacilitiesManager
+                  facilities={facilities}
+                  onSaveFacility={handleSaveFacility}
+                  onDeleteFacility={handleDeleteFacility}
+                />
+              )}
+
               {/* --- TAB 6: HERO SLIDESHOW IMAGES --- */}
               {activeTab === "hero" && (
                 <div className="space-y-6 max-w-3xl">
@@ -2989,298 +3302,15 @@ export default function StaffDashboardModal({
                 </div>
               )}
 
-              {/* --- TAB 7: TEAM & PIN ACCESS --- */}
+              {/* --- TAB 7: STAFF ACCOUNTS & PERMISSIONS (ADMIN ONLY) --- */}
               {activeTab === "team" && (
-                <div className="space-y-6 flex-1 flex flex-col">
-                  {/* HEADER STRIP */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 border border-stone-200 shadow-sm">
-                    <div>
-                      <div className="flex items-center gap-2 text-brand-teal text-xs font-mono font-bold uppercase tracking-wider mb-1">
-                        <Key className="w-4 h-4 text-brand-gold" />
-                        <span>Security & Multi-Reservationist PINs</span>
-                      </div>
-                      <h3 className="font-serif text-xl font-bold text-stone-900 uppercase tracking-wider">
-                        Staff Passcodes & Access Allocation
-                      </h3>
-                      <p className="text-xs text-stone-500 font-light mt-1 max-w-2xl leading-relaxed">
-                        Allocate individual login PINs to reservationists and administrators. All inquiry stage updates, negotiation notes, rate changes, and payment links are attributed to the specific logged-in user.
-                      </p>
-                    </div>
-
-                    {currentUser && (
-                      <div className="flex items-center gap-3 bg-stone-50 border border-stone-200 p-3.5 shrink-0">
-                        <div className="w-9 h-9 bg-brand-teal/10 border border-brand-teal/30 flex items-center justify-center text-brand-teal">
-                          <UserCheck className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Active Session</p>
-                          <p className="text-xs font-bold text-stone-900">{currentUser.name}</p>
-                          <p className="text-[9px] font-mono text-brand-teal uppercase font-bold tracking-wider">{currentUser.role}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* MASTER PIN RECOVERY BANNER */}
-                  <div className="bg-amber-50/70 border border-amber-200/80 p-4 flex items-start gap-3">
-                    <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                    <div className="text-xs text-amber-900">
-                      <span className="font-bold uppercase tracking-wide">Emergency Master Override Active: </span>
-                      The default master passcode <span className="font-mono font-bold px-1.5 py-0.5 bg-white border border-amber-300 text-amber-900">1977</span> is permanently reserved as an emergency administrative fallback so management can never be locked out.
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* LEFT 2 COLS: TEAM LIST TABLE */}
-                    <div className="lg:col-span-2 space-y-4">
-                      <div className="bg-white border border-stone-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-stone-200 flex items-center justify-between bg-stone-50/50">
-                          <div>
-                            <h4 className="font-serif text-sm font-bold text-stone-900 uppercase tracking-wider">
-                              Allocated Team Members ({staffUsers.length})
-                            </h4>
-                            <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">
-                              Active credentials with access to the dashboard
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="divide-y divide-stone-100 overflow-x-auto">
-                          <table className="w-full text-left text-xs border-collapse">
-                            <thead>
-                              <tr className="bg-stone-50/80 text-[10px] font-bold uppercase tracking-wider text-stone-500 border-b border-stone-200">
-                                <th className="py-3 px-4">Staff Member</th>
-                                <th className="py-3 px-4">Role</th>
-                                <th className="py-3 px-4">Allocated PIN</th>
-                                <th className="py-3 px-4 text-right">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-stone-100 font-medium">
-                              {staffUsers.map((user) => {
-                                const isMaster = user.id === "user_admin" || user.pin === "1977";
-                                const isRevealed = !!revealedPins[user.id];
-                                const isEditing = editingStaffId === user.id;
-
-                                return (
-                                  <tr key={user.id} className="hover:bg-stone-50/60 transition-colors">
-                                    <td className="py-3.5 px-4">
-                                      <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center font-bold text-stone-700 text-xs shrink-0">
-                                          {user.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                          <p className="font-bold text-stone-900 flex items-center gap-1.5">
-                                            {user.name}
-                                            {currentUser?.id === user.id && (
-                                              <span className="text-[9px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider">
-                                                You
-                                              </span>
-                                            )}
-                                          </p>
-                                          {user.email && (
-                                            <p className="text-[11px] text-stone-400 font-normal">{user.email}</p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </td>
-
-                                    <td className="py-3.5 px-4">
-                                      <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                                        user.role === "admin"
-                                          ? "bg-amber-100 text-amber-900 border border-amber-200"
-                                          : user.role === "reservationist"
-                                          ? "bg-emerald-100 text-emerald-900 border border-emerald-200"
-                                          : "bg-sky-100 text-sky-900 border border-sky-200"
-                                      }`}>
-                                        {user.role}
-                                      </span>
-                                    </td>
-
-                                    <td className="py-3.5 px-4">
-                                      {isEditing ? (
-                                        <div className="flex items-center gap-1.5">
-                                          <input
-                                            type="text"
-                                            value={editingStaffPin}
-                                            onChange={(e) => setEditingStaffPin(e.target.value)}
-                                            className="w-24 px-2 py-1 border border-brand-teal text-xs font-mono font-bold bg-white text-stone-900"
-                                            placeholder="New PIN"
-                                            autoFocus
-                                          />
-                                          <button
-                                            onClick={() => handleUpdateStaffPin(user.id)}
-                                            className="p-1 bg-brand-teal text-brand-dark hover:bg-brand-teal/80 font-bold cursor-pointer"
-                                            title="Save new PIN"
-                                          >
-                                            <Check className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={() => { setEditingStaffId(null); setEditingStaffPin(""); }}
-                                            className="p-1 bg-stone-200 text-stone-600 hover:bg-stone-300 cursor-pointer"
-                                            title="Cancel"
-                                          >
-                                            <X className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-mono text-xs font-bold tracking-widest px-2 py-1 bg-stone-100 text-stone-800 border border-stone-200 select-all">
-                                            {isRevealed ? user.pin : "••••"}
-                                          </span>
-                                          <button
-                                            onClick={() => setRevealedPins(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
-                                            className="p-1 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
-                                            title={isRevealed ? "Hide PIN" : "Reveal PIN"}
-                                          >
-                                            {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              navigator.clipboard.writeText(user.pin);
-                                              setCopiedPinId(user.id);
-                                              setTimeout(() => setCopiedPinId(null), 2000);
-                                              showToast(`PIN for ${user.name} copied to clipboard`);
-                                            }}
-                                            className="p-1 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
-                                            title="Copy PIN"
-                                          >
-                                            {copiedPinId === user.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                                          </button>
-                                        </div>
-                                      )}
-                                    </td>
-
-                                    <td className="py-3.5 px-4 text-right">
-                                      <div className="flex items-center justify-end gap-2">
-                                        <button
-                                          onClick={() => {
-                                            setEditingStaffId(user.id);
-                                            setEditingStaffPin(user.pin);
-                                          }}
-                                          className="text-[10px] font-bold uppercase tracking-wider text-stone-600 hover:text-brand-teal transition-colors cursor-pointer"
-                                        >
-                                          Change PIN
-                                        </button>
-                                        {!isMaster && (
-                                          <>
-                                            <span className="text-stone-200">|</span>
-                                            <button
-                                              onClick={() => handleRevokeStaff(user.id, user.name)}
-                                              className="text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
-                                            >
-                                              Revoke
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* RIGHT 1 COL: ALLOCATE NEW PIN FORM */}
-                    <div className="space-y-4">
-                      <div className="bg-white p-6 border border-stone-200 shadow-sm">
-                        <div className="border-b border-stone-200 pb-3 mb-4">
-                          <h4 className="font-serif text-sm font-bold text-stone-900 uppercase tracking-wider">
-                            Allocate New Passcode
-                          </h4>
-                          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">
-                            Provision a credential for a reservationist
-                          </p>
-                        </div>
-
-                        <form onSubmit={handleAllocateNewStaff} className="space-y-4 text-xs">
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
-                              Staff Member Name *
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="e.g. Brenda Achieng"
-                              value={newStaffName}
-                              onChange={(e) => setNewStaffName(e.target.value)}
-                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-teal"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
-                              Staff Role *
-                            </label>
-                            <select
-                              value={newStaffRole}
-                              onChange={(e) => setNewStaffRole(e.target.value as any)}
-                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-teal text-xs font-medium"
-                            >
-                              <option value="reservationist">Reservationist (Inquiries, Offers & Notes)</option>
-                              <option value="admin">Administrator (Full Access & PIN Management)</option>
-                              <option value="concierge">Concierge (Front Desk & Transfers)</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600">
-                                Allocated Passcode (PIN) *
-                              </label>
-                              <button
-                                type="button"
-                                onClick={generateRandomPin}
-                                className="text-[10px] text-brand-teal hover:underline font-bold uppercase tracking-wider cursor-pointer"
-                              >
-                                🎲 Generate
-                              </button>
-                            </div>
-                            <input
-                              type="text"
-                              required
-                              placeholder="e.g. 4821"
-                              value={newStaffPin}
-                              onChange={(e) => setNewStaffPin(e.target.value.replace(/\s+/g, ""))}
-                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 font-mono font-bold focus:outline-none focus:border-brand-teal"
-                            />
-                            <span className="text-[10px] text-stone-400 block mt-1">
-                              Must be unique across all active team members.
-                            </span>
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
-                              Email / Department (Optional)
-                            </label>
-                            <input
-                              type="email"
-                              placeholder="e.g. brenda@tamarind.co.ke"
-                              value={newStaffEmail}
-                              onChange={(e) => setNewStaffEmail(e.target.value)}
-                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-teal"
-                            />
-                          </div>
-
-                          <button
-                            type="submit"
-                            className="w-full py-3 bg-brand-teal text-brand-dark font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:bg-brand-teal/85 transition-colors cursor-pointer mt-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            <span>Allocate & Save Passcode</span>
-                          </button>
-                        </form>
-                      </div>
-
-                      <div className="bg-stone-100 p-4 border border-stone-200 text-stone-600 text-[11px] leading-relaxed">
-                        <p className="font-bold uppercase tracking-wide text-stone-800 mb-1">Audit Attribution</p>
-                        When a reservationist updates inquiry stages or sends payment links, the inquiry's chronological audit log registers their exact name.
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <StaffAccountsManager
+                  staffUsers={staffUsers}
+                  onSaveUser={handleSaveStaffAccount}
+                  onUpdateUser={handleUpdateStaffAccount}
+                  onDeleteUser={handleDeleteStaffAccount}
+                  currentUserId={currentUser?.id}
+                />
               )}
 
               {/* TAB 8: AUDIT & ACTIVITY LOGS LEDGER */}
