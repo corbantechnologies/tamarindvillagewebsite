@@ -1,4 +1,4 @@
-import { StaffUser } from "../types";
+import { StaffUser, StaffRole } from "../types";
 
 export const DEFAULT_STAFF_USERS: StaffUser[] = [
   {
@@ -59,7 +59,7 @@ export function setCurrentStaffUser(user: StaffUser | null): void {
 export interface SystemAuditLog {
   id: string;
   timestamp: string;
-  actor: "admin" | "reservationist" | "guest" | "system";
+  actor: StaffRole | "guest" | "system" | string;
   actorName: string;
   action: string;
   type: string;

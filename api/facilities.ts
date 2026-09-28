@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { eq } from "drizzle-orm";
 import { getDb, isDbConfigured } from "../src/db/db.js";
+import { ensureDatabaseSynced } from "../src/db/migrate.js";
 import { facilities, auditLogs } from "../src/db/schema.js";
 import { FACILITIES as DEFAULT_FACILITIES } from "../src/data.js";
 import fs from "fs";
@@ -107,7 +108,7 @@ export async function handleCreateFacility(req: Request, res: Response) {
 
 export async function handleUpdateFacility(req: Request, res: Response) {
   try {
-    const { id } = req.params;
+    const id = req.params?.id || (req.query?.id as string);
     const updates = req.body;
 
     if (isDbConfigured()) {
@@ -143,7 +144,7 @@ export async function handleUpdateFacility(req: Request, res: Response) {
 
 export async function handleDeleteFacility(req: Request, res: Response) {
   try {
-    const { id } = req.params;
+    const id = req.params?.id || (req.query?.id as string);
 
     if (isDbConfigured()) {
       const db = getDb();
@@ -168,5 +169,20 @@ export async function handleDeleteFacility(req: Request, res: Response) {
   } catch (err: any) {
     console.error("Error deleting facility:", err);
     return res.status(500).json({ error: "Failed to delete facility: " + err.message });
+  }
+}
+
+export default async function handler(req: any, res: any) {
+  try {
+    await ensureDatabaseSynced();
+    const { method } = req;
+    if (method === "GET") return handleGetFacilities(req, res);
+    if (method === "POST") return handleCreateFacility(req, res);
+    if (method === "PUT") return handleUpdateFacility(req, res);
+    if (method === "DELETE") return handleDeleteFacility(req, res);
+    return res.status(405).json({ error: "Method not allowed" });
+  } catch (err: any) {
+    console.error("Facilities handler error:", err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }

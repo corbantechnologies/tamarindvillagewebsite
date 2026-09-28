@@ -417,7 +417,7 @@ export async function initAndMigrateDatabase() {
   }
 }
 
-async function healLegacyMediaAssets(client: any, db: any) {
+export async function healLegacyMediaAssets(client: any, db: any) {
   try {
     // Self-heal broken unpkg / third-party links to official media.tamarind.co.ke assets
     await client.unsafe(`

@@ -1,6 +1,30 @@
 {
   "rewrites": [
     {
+      "source": "/api/auth/:action",
+      "destination": "/api/auth?action=:action"
+    },
+    {
+      "source": "/api/staff/:id",
+      "destination": "/api/staff?id=:id"
+    },
+    {
+      "source": "/api/bookings/:id",
+      "destination": "/api/bookings?id=:id"
+    },
+    {
+      "source": "/api/packages/:id",
+      "destination": "/api/packages?id=:id"
+    },
+    {
+      "source": "/api/extras/:id",
+      "destination": "/api/extras?id=:id"
+    },
+    {
+      "source": "/api/facilities/:id",
+      "destination": "/api/facilities?id=:id"
+    },
+    {
       "source": "/api/inquiries/:id/status",
       "destination": "/api/inquiries?id=:id&action=status"
     },

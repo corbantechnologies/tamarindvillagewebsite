@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { getDb, isDbConfigured } from "../src/db/db.js";
+import { ensureDatabaseSynced } from "../src/db/migrate.js";
 import { users, auditLogs } from "../src/db/schema.js";
 import fs from "fs";
 import path from "path";
@@ -124,7 +125,7 @@ export async function handleCreateStaff(req: Request, res: Response) {
 
 export async function handleUpdateStaff(req: Request, res: Response) {
   try {
-    const { id } = req.params;
+    const id = req.params?.id || (req.query?.id as string);
     const { name, email, role, active, password } = req.body;
 
     if (isDbConfigured()) {
@@ -178,7 +179,7 @@ export async function handleUpdateStaff(req: Request, res: Response) {
 
 export async function handleDeleteStaff(req: Request, res: Response) {
   try {
-    const { id } = req.params;
+    const id = req.params?.id || (req.query?.id as string);
 
     if (id === "usr_admin_1" || id === "user_admin") {
       return res.status(400).json({ error: "The primary root administrator cannot be deleted." });
@@ -209,5 +210,20 @@ export async function handleDeleteStaff(req: Request, res: Response) {
   } catch (err: any) {
     console.error("Error deleting staff:", err);
     return res.status(500).json({ error: "Failed to delete staff member: " + err.message });
+  }
+}
+
+export default async function handler(req: any, res: any) {
+  try {
+    await ensureDatabaseSynced();
+    const { method } = req;
+    if (method === "GET") return handleGetStaff(req, res);
+    if (method === "POST") return handleCreateStaff(req, res);
+    if (method === "PUT") return handleUpdateStaff(req, res);
+    if (method === "DELETE") return handleDeleteStaff(req, res);
+    return res.status(405).json({ error: "Method not allowed" });
+  } catch (err: any) {
+    console.error("Staff handler error:", err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }

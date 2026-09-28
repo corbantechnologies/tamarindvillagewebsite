@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { Resend } from "resend";
 import { eq, and, gt } from "drizzle-orm";
 import { getDb, isDbConfigured } from "../src/db/db.js";
+import { ensureDatabaseSynced } from "../src/db/migrate.js";
 import { users, passwordResets, auditLogs } from "../src/db/schema.js";
 import fs from "fs";
 import path from "path";
@@ -271,5 +272,25 @@ export async function handleResetPassword(req: Request, res: Response) {
   } catch (err: any) {
     console.error("Reset password error:", err);
     return res.status(500).json({ error: "Failed to reset password: " + (err.message || "") });
+  }
+}
+
+export default async function handler(req: any, res: any) {
+  try {
+    await ensureDatabaseSynced();
+    const action = req.query?.action || (req.url ? req.url.split("/").pop()?.split("?")[0] : "");
+    if (action === "login") {
+      return handleLogin(req, res);
+    }
+    if (action === "forgot-password") {
+      return handleForgotPassword(req, res);
+    }
+    if (action === "reset-password") {
+      return handleResetPassword(req, res);
+    }
+    return res.status(404).json({ error: `Auth action "${action}" not recognized` });
+  } catch (err: any) {
+    console.error("Auth handler error:", err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }
