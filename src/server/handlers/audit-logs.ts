@@ -1,8 +1,7 @@
 import { Request, Response } from "express";
 import { desc } from "drizzle-orm";
-import { getDb, isDbConfigured } from "../src/db/db.js";
-import { ensureDatabaseSynced } from "../src/db/migrate.js";
-import { auditLogs } from "../src/db/schema.js";
+import { getDb, isDbConfigured } from "../../db/db.js";
+import { auditLogs } from "../../db/schema.js";
 import fs from "fs";
 import path from "path";
 
@@ -82,18 +81,5 @@ export async function handleCreateAuditLog(req: Request, res: Response) {
   } catch (err: any) {
     console.error("Error creating audit log:", err);
     return res.status(500).json({ error: "Failed to create audit log: " + err.message });
-  }
-}
-
-export default async function handler(req: any, res: any) {
-  try {
-    await ensureDatabaseSynced();
-    const { method } = req;
-    if (method === "GET") return handleGetAuditLogs(req, res);
-    if (method === "POST") return handleCreateAuditLog(req, res);
-    return res.status(405).json({ error: "Method not allowed" });
-  } catch (err: any) {
-    console.error("Audit logs handler error:", err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }

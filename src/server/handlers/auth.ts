@@ -3,9 +3,9 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { Resend } from "resend";
 import { eq, and, gt } from "drizzle-orm";
-import { getDb, isDbConfigured } from "../src/db/db.js";
-import { ensureDatabaseSynced } from "../src/db/migrate.js";
-import { users, passwordResets, auditLogs } from "../src/db/schema.js";
+import { getDb, isDbConfigured } from "../../db/db.js";
+import { ensureDatabaseSynced } from "../../db/migrate.js";
+import { users, passwordResets, auditLogs } from "../../db/schema.js";
 import fs from "fs";
 import path from "path";
 
@@ -80,7 +80,6 @@ export async function handleLogin(req: Request, res: Response) {
     const localUsers = getLocalUsers();
     const fallbackMatch = localUsers.find((u: any) => u.email?.toLowerCase() === cleanEmail);
     if (fallbackMatch) {
-      // Check legacy PIN or password
       const isPinMatch = fallbackMatch.pin && fallbackMatch.pin === password;
       const isPwMatch = fallbackMatch.password && (
         (fallbackMatch.password.startsWith("$2") && bcrypt.compareSync(password, fallbackMatch.password)) ||
@@ -144,14 +143,12 @@ export async function handleForgotPassword(req: Request, res: Response) {
       }
     }
 
-    // Always return success message to prevent user enumeration attacks
     const standardMessage = "If an account with that email exists, password reset instructions have been sent.";
 
     if (!userFound) {
       return res.status(200).json({ success: true, message: standardMessage });
     }
 
-    // Generate token
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 3600000).toISOString(); // 1 hour
 
@@ -167,7 +164,6 @@ export async function handleForgotPassword(req: Request, res: Response) {
       });
     }
 
-    // Send email using Resend
     const resendApiKey = process.env.RESEND_API_KEY;
     const origin = req.headers.origin || "http://localhost:3000";
     const resetLink = `${origin}?action=reset-password&token=${token}`;
@@ -206,7 +202,7 @@ export async function handleForgotPassword(req: Request, res: Response) {
     return res.status(200).json({
       success: true,
       message: standardMessage,
-      devToken: !resendApiKey ? token : undefined // convenient for local dev / preview
+      devToken: !resendApiKey ? token : undefined
     });
   } catch (err: any) {
     console.error("Forgot password error:", err);
@@ -272,25 +268,5 @@ export async function handleResetPassword(req: Request, res: Response) {
   } catch (err: any) {
     console.error("Reset password error:", err);
     return res.status(500).json({ error: "Failed to reset password: " + (err.message || "") });
-  }
-}
-
-export default async function handler(req: any, res: any) {
-  try {
-    await ensureDatabaseSynced();
-    const action = req.query?.action || (req.url ? req.url.split("/").pop()?.split("?")[0] : "");
-    if (action === "login") {
-      return handleLogin(req, res);
-    }
-    if (action === "forgot-password") {
-      return handleForgotPassword(req, res);
-    }
-    if (action === "reset-password") {
-      return handleResetPassword(req, res);
-    }
-    return res.status(404).json({ error: `Auth action "${action}" not recognized` });
-  } catch (err: any) {
-    console.error("Auth handler error:", err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }

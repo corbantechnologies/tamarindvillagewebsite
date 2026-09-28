@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { getDb, isDbConfigured } from "../src/db/db.js";
-import { ensureDatabaseSynced } from "../src/db/migrate.js";
-import { users, auditLogs } from "../src/db/schema.js";
+import { getDb, isDbConfigured } from "../../db/db.js";
+import { users, auditLogs } from "../../db/schema.js";
 import fs from "fs";
 import path from "path";
 
@@ -91,7 +90,6 @@ export async function handleCreateStaff(req: Request, res: Response) {
 
     if (isDbConfigured()) {
       const db = getDb();
-      // Check for existing email
       const existing = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
       if (existing.length > 0) {
         return res.status(400).json({ error: "A staff member with this email already exists." });
@@ -210,20 +208,5 @@ export async function handleDeleteStaff(req: Request, res: Response) {
   } catch (err: any) {
     console.error("Error deleting staff:", err);
     return res.status(500).json({ error: "Failed to delete staff member: " + err.message });
-  }
-}
-
-export default async function handler(req: any, res: any) {
-  try {
-    await ensureDatabaseSynced();
-    const { method } = req;
-    if (method === "GET") return handleGetStaff(req, res);
-    if (method === "POST") return handleCreateStaff(req, res);
-    if (method === "PUT") return handleUpdateStaff(req, res);
-    if (method === "DELETE") return handleDeleteStaff(req, res);
-    return res.status(405).json({ error: "Method not allowed" });
-  } catch (err: any) {
-    console.error("Staff handler error:", err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }

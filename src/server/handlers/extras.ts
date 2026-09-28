@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
 import { eq } from "drizzle-orm";
-import { getDb, isDbConfigured } from "../src/db/db.js";
-import { ensureDatabaseSynced } from "../src/db/migrate.js";
-import { extras, auditLogs } from "../src/db/schema.js";
-import { DEFAULT_TRANSFER_VEHICLES, DEFAULT_EVENT_PACKAGES } from "../src/utils/extrasStore.js";
+import { getDb, isDbConfigured } from "../../db/db.js";
+import { extras, auditLogs } from "../../db/schema.js";
+import { DEFAULT_TRANSFER_VEHICLES, DEFAULT_EVENT_PACKAGES } from "../../utils/extrasStore.js";
 import fs from "fs";
 import path from "path";
 
@@ -64,7 +63,6 @@ export async function handleGetExtras(req: Request, res: Response) {
     const { category } = req.query;
     if (isDbConfigured()) {
       const db = getDb();
-      let query = db.select().from(extras);
       const all = await (category ? db.select().from(extras).where(eq(extras.category, String(category))) : db.select().from(extras));
       if (all.length > 0) {
         return res.status(200).json({ success: true, extras: all });
@@ -190,20 +188,5 @@ export async function handleDeleteExtra(req: Request, res: Response) {
   } catch (err: any) {
     console.error("Error deleting extra:", err);
     return res.status(500).json({ error: "Failed to delete extra: " + err.message });
-  }
-}
-
-export default async function handler(req: any, res: any) {
-  try {
-    await ensureDatabaseSynced();
-    const { method } = req;
-    if (method === "GET") return handleGetExtras(req, res);
-    if (method === "POST") return handleCreateExtra(req, res);
-    if (method === "PUT") return handleUpdateExtra(req, res);
-    if (method === "DELETE") return handleDeleteExtra(req, res);
-    return res.status(405).json({ error: "Method not allowed" });
-  } catch (err: any) {
-    console.error("Extras handler error:", err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }

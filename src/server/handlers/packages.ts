@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
 import { eq } from "drizzle-orm";
-import { getDb, isDbConfigured } from "../src/db/db.js";
-import { ensureDatabaseSynced } from "../src/db/migrate.js";
-import { packages, auditLogs } from "../src/db/schema.js";
-import { PACKAGES as DEFAULT_PACKAGES } from "../src/data.js";
+import { getDb, isDbConfigured } from "../../db/db.js";
+import { packages, auditLogs } from "../../db/schema.js";
+import { PACKAGES as DEFAULT_PACKAGES } from "../../data.js";
 import fs from "fs";
 import path from "path";
 
@@ -155,20 +154,5 @@ export async function handleDeletePackage(req: Request, res: Response) {
   } catch (err: any) {
     console.error("Error deleting package:", err);
     return res.status(500).json({ error: "Failed to delete package: " + err.message });
-  }
-}
-
-export default async function handler(req: any, res: any) {
-  try {
-    await ensureDatabaseSynced();
-    const { method } = req;
-    if (method === "GET") return handleGetPackages(req, res);
-    if (method === "POST") return handleCreatePackage(req, res);
-    if (method === "PUT") return handleUpdatePackage(req, res);
-    if (method === "DELETE") return handleDeletePackage(req, res);
-    return res.status(405).json({ error: "Method not allowed" });
-  } catch (err: any) {
-    console.error("Packages handler error:", err);
-    return res.status(500).json({ error: err.message || "Internal server error" });
   }
 }
