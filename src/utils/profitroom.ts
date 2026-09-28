@@ -39,7 +39,7 @@ const CORS_PROXIES = [
  */
 async function fetchXmlContent(url: string): Promise<string> {
   const isRooms = url.toLowerCase().includes("rooms.xml");
-  const localProxyPath = isRooms ? "/api/rooms" : "/api/offers";
+  const localProxyPath = isRooms ? "/api/profitroom/rooms" : "/api/profitroom/offers";
 
   try {
     console.log(`[Profitroom] Attempting to fetch via secure server-side proxy: ${localProxyPath}`);

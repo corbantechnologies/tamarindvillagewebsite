@@ -7,9 +7,16 @@ import {
   ShieldAlert, CheckCircle, Clock, ArrowRight, Search, Filter, 
   Edit3, Eye, CheckSquare, Sparkles, RefreshCw, Car, Heart, Image as ImageIcon,
   MessageSquare, Copy, ExternalLink, Send, Key, Users, ShieldCheck, UserCheck, EyeOff, Lock,
-  Maximize2, Minimize2, Download
+  Maximize2, Minimize2, Download, ConciergeBell, Waves, Coffee, BedDouble,
+  PanelLeft, PanelLeftClose, ChevronLeft, ChevronRight, Menu
 } from "lucide-react";
-import { ApartmentType, DiningExperience, StaffUser } from "../types";
+import { APARTMENTS, DINING } from "../data.js";
+import { ApartmentType, DiningExperience, StaffUser, StaffRole, BookingRecord, FacilityType, PackageType } from "../types";
+import FrontDeskHub from "./admin/FrontDeskHub";
+import BookingsLedger from "./admin/BookingsLedger";
+import FacilitiesManager from "./admin/FacilitiesManager";
+import PackagesManager from "./admin/PackagesManager";
+import StaffAccountsManager from "./admin/StaffAccountsManager";
 import OptimizedImage from "./OptimizedImage";
 import { 
   TransferVehicle, 
@@ -135,17 +142,38 @@ export default function StaffDashboardModal({
   const [isFullScreen, setIsFullScreen] = useState(true);
 
   // Navigation tabs
-  const [activeTab, setActiveTab] = useState<"inquiries" | "apartments" | "pricing" | "dining" | "transfers" | "hero" | "team" | "logs">("inquiries");
+  const [activeTab, setActiveTab] = useState<
+    "frontdesk" | "bookings" | "inquiries" | "apartments" | "pricing" | "dining" | "packages" | "transfers" | "facilities" | "hero" | "team" | "logs"
+  >("inquiries");
+
+  // Additional modules data
+  const [bookings, setBookings] = useState<BookingRecord[]>([]);
+  const [facilities, setFacilities] = useState<FacilityType[]>([]);
+
+  // Set default tab based on user role
+  useEffect(() => {
+    if (isOpen && currentUser) {
+      const userRole = (currentUser.role || "").toLowerCase();
+      if (userRole === "reception" || userRole === "concierge") {
+        setActiveTab("frontdesk");
+      } else if (userRole === "reservations" || userRole === "reservationist") {
+        setActiveTab("inquiries");
+      }
+    }
+  }, [isOpen, currentUser]);
   
   // Data State loaded from APIs
   const [inquiries, setInquiries] = useState<InquiryData[]>([]);
-  const [apartments, setApartments] = useState<ApartmentType[]>([]);
-  const [dining, setDining] = useState<DiningExperience[]>([]);
+  const [apartments, setApartments] = useState<ApartmentType[]>(APARTMENTS);
+  const [dining, setDining] = useState<DiningExperience[]>(DINING);
   const [pricing, setPricing] = useState<PricingRules>({
     markupMultiplier: 1.0,
     taxRate: 8,
     seasonalFactor: "regular"
   });
+
+  // Collapsible sidebar state (modern drawer)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Loading and feedback states
   const [loading, setLoading] = useState(false);
@@ -190,14 +218,6 @@ export default function StaffDashboardModal({
 
   // Staff Users & Access Allocation states
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>(() => staffUsersList || loadStaffUsers());
-  const [newStaffName, setNewStaffName] = useState("");
-  const [newStaffRole, setNewStaffRole] = useState<"reservationist" | "admin" | "concierge">("reservationist");
-  const [newStaffPin, setNewStaffPin] = useState("");
-  const [newStaffEmail, setNewStaffEmail] = useState("");
-  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
-  const [editingStaffPin, setEditingStaffPin] = useState("");
-  const [revealedPins, setRevealedPins] = useState<Record<string, boolean>>({});
-  const [copiedPinId, setCopiedPinId] = useState<string | null>(null);
 
   // Audit Logs & Operations Ledger states
   const [systemLogs, setSystemLogs] = useState<SystemAuditLog[]>(() => loadSystemAuditLogs());
@@ -210,119 +230,6 @@ export default function StaffDashboardModal({
       setStaffUsers(staffUsersList);
     }
   }, [staffUsersList]);
-
-  const handleSaveStaffUsersList = async (newList: StaffUser[], auditAction?: string) => {
-    setStaffUsers(newList);
-    saveStaffUsers(newList);
-    if (onStaffUsersUpdated) onStaffUsersUpdated(newList);
-
-    if (auditAction) {
-      const newSysLog: SystemAuditLog = {
-        id: "log_" + Date.now(),
-        timestamp: new Date().toISOString(),
-        actor: currentUser?.role || "admin",
-        actorName: currentUser?.name || "Master Administrator",
-        action: auditAction,
-        type: "pin_management",
-        category: "security",
-        targetName: "Staff Credentials",
-        targetType: "Security"
-      };
-      const updatedLogs = [newSysLog, ...systemLogs];
-      setSystemLogs(updatedLogs);
-      saveSystemAuditLogs(updatedLogs);
-      try {
-        await fetch("/api/settings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key: "system_audit_logs", value: updatedLogs })
-        });
-      } catch (e) {
-        console.warn("Could not sync system log to API:", e);
-      }
-    }
-
-    try {
-      const response = await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: "staff_users",
-          value: newList
-        })
-      });
-      if (response.ok) {
-        showToast("Team access & PIN allocations saved!");
-      } else {
-        throw new Error("Server error");
-      }
-    } catch (e) {
-      console.warn("Could not save to live API, preserved in local storage:", e);
-      showToast("PIN saved locally (offline fallback active)");
-    }
-  };
-
-  const handleAllocateNewStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newStaffName.trim() || !newStaffPin.trim()) {
-      toast.error("Please provide both a Name and a PIN.");
-      return;
-    }
-    const pin = newStaffPin.trim();
-    if (staffUsers.some(u => u.pin === pin)) {
-      toast.error(`PIN "${pin}" is already allocated to another staff member. Please choose a unique PIN.`);
-      return;
-    }
-    const newUser: StaffUser = {
-      id: "staff_" + Date.now(),
-      name: newStaffName.trim(),
-      pin,
-      role: newStaffRole,
-      email: newStaffEmail.trim() || undefined,
-      createdAt: new Date().toISOString()
-    };
-    const updated = [...staffUsers, newUser];
-    await handleSaveStaffUsersList(updated, `Allocated access passcode for ${newUser.name} (${newUser.role.toUpperCase()})`);
-    setNewStaffName("");
-    setNewStaffPin("");
-    setNewStaffEmail("");
-    showToast(`Passcode allocated for ${newUser.name} (${newUser.role.toUpperCase()})`);
-  };
-
-  const handleRevokeStaff = async (id: string, name: string) => {
-    if (id === "user_admin" || id === staffUsers[0]?.id) {
-      toast.error("The primary Administrator account cannot be removed.");
-      return;
-    }
-    if (!confirm(`Are you sure you want to revoke access and deactivate PIN for ${name}?`)) return;
-    const updated = staffUsers.filter(u => u.id !== id);
-    await handleSaveStaffUsersList(updated, `Revoked access credentials for ${name}`);
-    showToast(`Access revoked for ${name}`);
-  };
-
-  const handleUpdateStaffPin = async (id: string) => {
-    if (!editingStaffPin.trim()) return;
-    const targetUser = staffUsers.find(u => u.id === id);
-    if (!targetUser) return;
-    
-    if (staffUsers.some(u => u.id !== id && u.pin === editingStaffPin.trim())) {
-      toast.error(`PIN "${editingStaffPin.trim()}" is already in use by another user.`);
-      return;
-    }
-    const updated = staffUsers.map(u => u.id === id ? { ...u, pin: editingStaffPin.trim() } : u);
-    await handleSaveStaffUsersList(updated, `Updated access PIN for ${targetUser.name}`);
-    setEditingStaffId(null);
-    setEditingStaffPin("");
-    showToast(`PIN updated for ${targetUser.name}`);
-  };
-
-  const generateRandomPin = () => {
-    let pin = "";
-    do {
-      pin = Math.floor(1000 + Math.random() * 9000).toString();
-    } while (staffUsers.some(u => u.pin === pin));
-    setNewStaffPin(pin);
-  };
 
   // Combine all inquiry audit events + system-wide audit events
   const allAuditLogs = useMemo(() => {
@@ -442,32 +349,50 @@ export default function StaffDashboardModal({
 
       // 2. Fetch Apartments
       console.log("🔍 [StaffDashboard] Fetching apartments from /api/apartments...");
-      const aptsRes = await fetch("/api/apartments");
-      console.log("🔍 [StaffDashboard] Apartments response status:", aptsRes.status);
-      if (aptsRes.ok) {
-        const data = await aptsRes.json();
-        console.log("🔍 [StaffDashboard] Parsed apartments count:", data.apartments?.length, data.apartments);
-        setApartments(data.apartments || []);
-        if (data.database_error) {
-          activeDbError = data.database_error;
+      try {
+        const aptsRes = await fetch("/api/apartments");
+        console.log("🔍 [StaffDashboard] Apartments response status:", aptsRes.status);
+        if (aptsRes.ok) {
+          const data = await aptsRes.json();
+          console.log("🔍 [StaffDashboard] Parsed apartments count:", data.apartments?.length);
+          if (data.apartments && Array.isArray(data.apartments) && data.apartments.length > 0) {
+            setApartments(data.apartments);
+          } else {
+            setApartments(APARTMENTS);
+          }
+          if (data.database_error) {
+            activeDbError = data.database_error;
+          }
+        } else {
+          setApartments(APARTMENTS);
         }
-      } else {
-        console.error("❌ [StaffDashboard] Failed to fetch apartments, status:", aptsRes.status);
+      } catch (aptErr) {
+        console.warn("Failed to fetch apartments, using default catalog:", aptErr);
+        setApartments(APARTMENTS);
       }
 
       // 3. Fetch Dining Options
       console.log("🔍 [StaffDashboard] Fetching dining options from /api/dining...");
-      const diningRes = await fetch("/api/dining");
-      console.log("🔍 [StaffDashboard] Dining response status:", diningRes.status);
-      if (diningRes.ok) {
-        const data = await diningRes.json();
-        console.log("🔍 [StaffDashboard] Parsed dining count:", data.dining?.length, data.dining);
-        setDining(data.dining || []);
-        if (data.database_error) {
-          activeDbError = data.database_error;
+      try {
+        const diningRes = await fetch("/api/dining");
+        console.log("🔍 [StaffDashboard] Dining response status:", diningRes.status);
+        if (diningRes.ok) {
+          const data = await diningRes.json();
+          console.log("🔍 [StaffDashboard] Parsed dining count:", data.dining?.length);
+          if (data.dining && Array.isArray(data.dining) && data.dining.length > 0) {
+            setDining(data.dining);
+          } else {
+            setDining(DINING);
+          }
+          if (data.database_error) {
+            activeDbError = data.database_error;
+          }
+        } else {
+          setDining(DINING);
         }
-      } else {
-        console.error("❌ [StaffDashboard] Failed to fetch dining options, status:", diningRes.status);
+      } catch (dinErr) {
+        console.warn("Failed to fetch dining options, using default venues:", dinErr);
+        setDining(DINING);
       }
 
       // 4. Fetch Pricing rules
@@ -532,6 +457,55 @@ export default function StaffDashboardModal({
         setSystemLogs(loadSystemAuditLogs());
       }
 
+      // 6. Fetch Bookings
+      try {
+        const bookingsRes = await fetch("/api/bookings");
+        if (bookingsRes.ok) {
+          const bData = await bookingsRes.json();
+          setBookings(bData.bookings || []);
+        }
+      } catch (bErr) {
+        console.warn("Could not load bookings from API:", bErr);
+      }
+
+      // 7. Fetch Facilities
+      try {
+        const facRes = await fetch("/api/facilities");
+        if (facRes.ok) {
+          const fData = await facRes.json();
+          setFacilities(fData.facilities || []);
+        }
+      } catch (fErr) {
+        console.warn("Could not load facilities from API:", fErr);
+      }
+
+      // 8. Fetch Packages
+      try {
+        const pkgRes = await fetch("/api/packages");
+        if (pkgRes.ok) {
+          const pkgData = await pkgRes.json();
+          if (pkgData.packages && pkgData.packages.length > 0) {
+            setBoardingPackages(pkgData.packages);
+          }
+        }
+      } catch (pErr) {
+        console.warn("Could not load packages from API:", pErr);
+      }
+
+      // 9. Fetch Staff Accounts
+      try {
+        const staffRes = await fetch("/api/staff");
+        if (staffRes.ok) {
+          const stData = await staffRes.json();
+          if (stData.staff) {
+            setStaffUsers(stData.staff);
+            if (onStaffUsersUpdated) onStaffUsersUpdated(stData.staff);
+          }
+        }
+      } catch (stErr) {
+        console.warn("Could not load staff accounts:", stErr);
+      }
+
       setPasteHeroInput(heroImages.join("\n"));
       console.log("🔍 [StaffDashboard] Local and cloud resources loaded successfully.");
     } catch (err) {
@@ -547,6 +521,231 @@ export default function StaffDashboardModal({
       loadAllDashboardData();
     }
   }, [isOpen]);
+
+  // --- BOOKINGS ACTIONS ---
+  const handleUpdateBookingStatus = async (id: string, newStatus: "confirmed" | "checked_in" | "checked_out" | "cancelled") => {
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingStatus: newStatus, actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, bookingStatus: newStatus } : b));
+        toast.success(`Booking status changed to ${newStatus.replace('_', ' ').toUpperCase()}`);
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update booking status.");
+    }
+  };
+
+  const handleCreateNewBooking = async (bookingData: any) => {
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...bookingData, actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setBookings(prev => [data.booking, ...prev]);
+        toast.success(`Reservation ${data.booking.bookingReference} confirmed!`);
+      } else {
+        throw new Error(data.error || "Failed to save booking");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not save booking.");
+    }
+  };
+
+  const handleDeleteBooking = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this booking record?")) return;
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(`/api/bookings/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setBookings(prev => prev.filter(b => b.id !== id));
+        toast.success("Booking record removed.");
+      } else {
+        throw new Error("Delete failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete booking.");
+    }
+  };
+
+  // --- FACILITIES ACTIONS ---
+  const handleSaveFacility = async (fac: FacilityType) => {
+    try {
+      const existing = facilities.find(f => f.id === fac.id);
+      const url = existing ? `/api/facilities/${fac.id}` : "/api/facilities";
+      const method = existing ? "PUT" : "POST";
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...fac, actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setFacilities(prev => {
+          const idx = prev.findIndex(f => f.id === fac.id);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = fac;
+            return updated;
+          }
+          return [...prev, fac];
+        });
+        toast.success(`Facility "${fac.name}" saved!`);
+      } else {
+        throw new Error("Save failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not save facility.");
+    }
+  };
+
+  const handleDeleteFacility = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this facility?")) return;
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(`/api/facilities/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setFacilities(prev => prev.filter(f => f.id !== id));
+        toast.success("Facility removed.");
+      } else {
+        throw new Error("Delete failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete facility.");
+    }
+  };
+
+  // --- BOARDING PACKAGES ACTIONS ---
+  const handleSavePackageItem = async (pkg: any) => {
+    try {
+      const existing = boardingPackages.find(p => p.id === pkg.id);
+      const url = existing ? `/api/packages/${pkg.id}` : "/api/packages";
+      const method = existing ? "PUT" : "POST";
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...pkg, actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setBoardingPackages(prev => {
+          const idx = prev.findIndex(p => p.id === pkg.id);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = pkg;
+            return updated;
+          }
+          return [...prev, pkg];
+        });
+        toast.success(`Package "${pkg.name}" saved!`);
+      } else {
+        throw new Error("Save failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not save package.");
+    }
+  };
+
+  const handleDeletePackageItem = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this boarding package?")) return;
+    try {
+      const actor = currentUser?.name ? `${currentUser.name} (${currentUser.role.toUpperCase()})` : "Staff";
+      const res = await fetch(`/api/packages/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorName: actor, actorRole: currentUser?.role || "staff" })
+      });
+      if (res.ok) {
+        setBoardingPackages(prev => prev.filter(p => p.id !== id));
+        toast.success("Package removed.");
+      } else {
+        throw new Error("Delete failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete package.");
+    }
+  };
+
+  // --- STAFF ACCOUNTS ACTIONS (ADMIN) ---
+  const handleSaveStaffAccount = async (userData: { name: string; email: string; password: string; role: StaffRole }) => {
+    try {
+      const res = await fetch("/api/staff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...userData, actorName: currentUser?.name || "Administrator" })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setStaffUsers(prev => [...prev, data.user]);
+        if (onStaffUsersUpdated) onStaffUsersUpdated([...staffUsers, data.user]);
+        toast.success(`Account for ${data.user.name} provisioned!`);
+      } else {
+        throw new Error(data.error || "Provisioning failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not create staff account.");
+    }
+  };
+
+  const handleUpdateStaffAccount = async (id: string, updates: Partial<StaffUser> & { password?: string }) => {
+    try {
+      const res = await fetch(`/api/staff/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...updates, actorName: currentUser?.name || "Administrator" })
+      });
+      if (res.ok) {
+        const updated = staffUsers.map(u => u.id === id ? { ...u, ...updates } : u);
+        setStaffUsers(updated);
+        if (onStaffUsersUpdated) onStaffUsersUpdated(updated);
+        toast.success("Staff account updated.");
+      } else {
+        throw new Error("Update failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not update staff account.");
+    }
+  };
+
+  const handleDeleteStaffAccount = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this staff account?")) return;
+    try {
+      const res = await fetch(`/api/staff/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actorName: currentUser?.name || "Administrator" })
+      });
+      if (res.ok) {
+        const filtered = staffUsers.filter(u => u.id !== id);
+        setStaffUsers(filtered);
+        if (onStaffUsersUpdated) onStaffUsersUpdated(filtered);
+        toast.success("Staff account deleted.");
+      } else {
+        const d = await res.json();
+        throw new Error(d.error || "Delete failed");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Could not delete staff account.");
+    }
+  };
 
   const handleUpdateInquiryStatus = async (id: string, newStatus: string) => {
     try {
@@ -949,6 +1148,21 @@ export default function StaffDashboardModal({
 
   const stats = getInquiryStats();
 
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayArrivals = bookings.filter(b => b.checkIn === todayStr);
+  const activeBookingsCount = bookings.filter(b => b.bookingStatus !== "cancelled").length;
+
+  const userRole = (currentUser?.role || "admin").toLowerCase();
+  const isSuperAdmin = userRole === "admin";
+  const isManagerRole = userRole === "manager";
+  const isReservationsRole = userRole === "reservations" || userRole === "reservationist";
+  const isReceptionRole = userRole === "reception" || userRole === "concierge";
+
+  const canAccessPricing = isSuperAdmin || isManagerRole || isReservationsRole;
+  const canAccessTeam = isSuperAdmin;
+  const canAccessLogs = isSuperAdmin || isManagerRole;
+  const canCheckIn = isSuperAdmin || isReceptionRole;
+
   if (!isOpen) return null;
 
   return (
@@ -966,28 +1180,69 @@ export default function StaffDashboardModal({
         >
 
           {/* PORTAL HEADER */}
-          <div className="bg-brand-dark text-white border-b border-brand-gold/20 px-6 sm:px-8 py-4 sm:py-5 flex items-center justify-between shrink-0">
+          <div className="bg-[#10141d] text-stone-100 border-b border-stone-800 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0 relative z-20 shadow-md">
+            {/* Left: Drawer toggle + Brand Branding */}
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-brand-gold/10 border border-brand-gold/30">
-                <Sliders className="w-6 h-6 text-brand-gold" />
-              </div>
-              <div>
-                <h2 className="font-serif text-lg sm:text-xl font-bold tracking-widest text-brand-gold uppercase">Tamarind Staff Management Portal</h2>
-                <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">Live Controller & Administrative Dashboard</p>
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 text-stone-400 hover:text-brand-gold hover:bg-stone-800/80 rounded border border-stone-700/60 transition-all cursor-pointer shadow-sm flex items-center justify-center focus:outline-none"
+                title={sidebarCollapsed ? "Expand Navigation Drawer" : "Collapse Navigation Drawer"}
+                aria-label="Toggle Navigation Drawer"
+              >
+                {sidebarCollapsed ? (
+                  <PanelLeft className="w-5 h-5 text-brand-gold" />
+                ) : (
+                  <PanelLeftClose className="w-5 h-5" />
+                )}
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded bg-gradient-to-br from-amber-500/20 to-amber-700/10 border border-brand-gold/40 flex items-center justify-center shadow-inner">
+                  <span className="font-serif font-black text-brand-gold text-xs tracking-wider">TV</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-serif text-sm sm:text-base font-bold tracking-widest text-stone-100 uppercase">
+                      Tamarind Village
+                    </h2>
+                    <span className="hidden md:inline-block text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-brand-gold/15 text-brand-gold border border-brand-gold/30">
+                      Staff Portal
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-stone-400 font-medium tracking-wide hidden sm:block">
+                    Executive Resort Controller & CMS
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            {/* Right: Cloud sync status, Current User, Controls */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Cloud Sync Status */}
+              <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-stone-900/90 border border-stone-800 rounded text-[10px] font-mono text-stone-300">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-emerald-400 font-bold uppercase tracking-wider">Cloud Live</span>
+              </div>
+
+              {/* Logged in Staff Badge */}
               {currentUser && (
-                <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 bg-stone-800/90 border border-stone-700">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-stone-900/90 border border-stone-800 rounded">
+                  <div className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[10px] font-bold text-brand-gold">
+                    {(currentUser.name || "ST").slice(0, 2).toUpperCase()}
+                  </div>
                   <div className="text-left">
-                    <p className="text-[11px] font-bold text-white leading-none">{currentUser.name}</p>
+                    <p className="text-[11px] font-bold text-stone-200 leading-none truncate max-w-[120px]">{currentUser.name}</p>
                     <p className="text-[9px] font-mono text-brand-gold uppercase tracking-wider mt-0.5">{currentUser.role}</p>
                   </div>
                   {onSwitchUser && (
                     <button
+                      type="button"
                       onClick={onSwitchUser}
-                      className="ml-2 text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white bg-stone-700/60 hover:bg-stone-700 px-2 py-0.5 transition-colors cursor-pointer"
+                      className="ml-1 text-[9px] font-bold uppercase tracking-wider text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 px-2 py-1 rounded transition-colors cursor-pointer border border-stone-700"
                       title="Switch staff user / change PIN"
                     >
                       Switch
@@ -995,8 +1250,9 @@ export default function StaffDashboardModal({
                   )}
                   {onLogout && (
                     <button
+                      type="button"
                       onClick={onLogout}
-                      className="text-[10px] font-bold uppercase tracking-wider text-red-400 hover:text-red-300 bg-red-950/40 hover:bg-red-900/50 px-2 py-0.5 border border-red-800/50 transition-colors cursor-pointer"
+                      className="text-[9px] font-bold uppercase tracking-wider text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-900/80 px-2 py-1 rounded border border-rose-800/60 transition-colors cursor-pointer"
                       title="End session & lock dashboard"
                     >
                       Lock
@@ -1004,27 +1260,37 @@ export default function StaffDashboardModal({
                   )}
                 </div>
               )}
-              {loading && <RefreshCw className="w-4 h-4 text-brand-teal animate-spin" />}
+
+              {/* Sync data button */}
               <button
+                type="button"
                 onClick={loadAllDashboardData}
-                className="text-xs text-stone-400 hover:text-white border border-stone-700 hover:border-stone-500 px-3 py-1.5 font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                title="Refresh Live Data"
+                disabled={loading}
+                className="flex items-center gap-1.5 text-xs text-stone-300 hover:text-white bg-stone-900/80 hover:bg-stone-800 border border-stone-700 px-3 py-1.5 rounded font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
+                title="Sync Live Cloud Data"
               >
-                Sync Data
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-brand-gold" : "text-stone-400"}`} />
+                <span className="hidden sm:inline">Sync Data</span>
               </button>
+
+              {/* Fullscreen Toggle */}
               <button
+                type="button"
                 onClick={() => setIsFullScreen(!isFullScreen)}
-                className="p-1.5 border border-stone-800 hover:bg-stone-800 text-stone-400 hover:text-white transition-colors cursor-pointer focus:outline-none"
+                className="p-1.5 rounded border border-stone-700 bg-stone-900/80 hover:bg-stone-800 text-stone-400 hover:text-white transition-colors cursor-pointer focus:outline-none"
                 title={isFullScreen ? "Restore Window Size" : "Maximize Full Screen"}
               >
-                {isFullScreen ? <Minimize2 className="w-5 h-5 text-brand-gold" /> : <Maximize2 className="w-5 h-5" />}
+                {isFullScreen ? <Minimize2 className="w-4 h-4 text-brand-gold" /> : <Maximize2 className="w-4 h-4" />}
               </button>
+
+              {/* Close Button */}
               <button
+                type="button"
                 onClick={onClose}
-                className="p-1.5 border border-stone-800 hover:bg-stone-800 text-stone-400 hover:text-white transition-colors cursor-pointer focus:outline-none"
+                className="p-1.5 rounded border border-stone-700 bg-stone-900/80 hover:bg-stone-800 text-stone-400 hover:text-rose-400 transition-colors cursor-pointer focus:outline-none"
                 title="Close Portal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -1032,132 +1298,380 @@ export default function StaffDashboardModal({
           {/* MAIN BODY GRID */}
           <div className="flex flex-1 overflow-hidden min-h-0">
             
-            {/* PORTAL SIDEBAR */}
-            <div className="w-64 bg-stone-900 text-stone-400 border-r border-stone-800 flex flex-col shrink-0 justify-between py-6">
-              <nav className="space-y-1.5 px-4">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-600 px-3 mb-3">Core Modules</div>
-                
+            {/* MODERN COLLAPSIBLE DRAWER SIDEBAR */}
+            <div 
+              className={`bg-[#0d1017] text-stone-400 border-r border-stone-800/80 flex flex-col shrink-0 justify-between transition-all duration-300 ease-in-out z-10 ${
+                sidebarCollapsed ? "w-20" : "w-68"
+              }`}
+            >
+              <nav className="space-y-1 p-3 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-stone-800 hover:scrollbar-thumb-stone-700">
+                {/* Section: Operations */}
+                {!sidebarCollapsed ? (
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 pt-1 pb-1">
+                    Operations
+                  </div>
+                ) : (
+                  <div className="my-1 border-t border-stone-800/80 mx-2" />
+                )}
+
+                {/* Tab: Front Desk */}
                 <button
-                  onClick={() => { setActiveTab("inquiries"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === "inquiries"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                  type="button"
+                  onClick={() => { setActiveTab("frontdesk"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                    activeTab === "frontdesk"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Front Desk Hub" : undefined}
                 >
-                  <Mail className="w-4.5 h-4.5" />
-                  <span>Guest Inquiries</span>
-                  {stats.pending > 0 && (
-                    <span className="ml-auto bg-brand-gold text-brand-dark text-[9px] px-1.5 py-0.5 font-bold rounded-full">
-                      {stats.pending}
+                  <ConciergeBell className={`w-4.5 h-4.5 shrink-0 ${activeTab === "frontdesk" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Front Desk Hub</span>}
+                  {todayArrivals.length > 0 && (
+                    sidebarCollapsed ? (
+                      <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-[#0d1017]" />
+                    ) : (
+                      <span className="ml-auto bg-amber-500 text-stone-950 text-[9px] px-1.5 py-0.5 font-black rounded-full">
+                        {todayArrivals.length}
+                      </span>
+                    )
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Front Desk Hub {todayArrivals.length > 0 ? `(${todayArrivals.length})` : ""}
                     </span>
                   )}
                 </button>
 
+                {/* Tab: Bookings Ledger */}
                 <button
-                  onClick={() => setActiveTab("apartments")}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  type="button"
+                  onClick={() => { setActiveTab("bookings"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                    activeTab === "bookings"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                  }`}
+                  title={sidebarCollapsed ? "Bookings Ledger" : undefined}
+                >
+                  <BedDouble className={`w-4.5 h-4.5 shrink-0 ${activeTab === "bookings" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Bookings Ledger</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-300 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {activeBookingsCount}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Bookings Ledger ({activeBookingsCount})
+                    </span>
+                  )}
+                </button>
+
+                {/* Tab: Guest Inquiries */}
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("inquiries"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                    activeTab === "inquiries"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                  }`}
+                  title={sidebarCollapsed ? "Guest Inquiries" : undefined}
+                >
+                  <Mail className={`w-4.5 h-4.5 shrink-0 ${activeTab === "inquiries" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Guest Inquiries</span>}
+                  {stats.pending > 0 && (
+                    sidebarCollapsed ? (
+                      <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-brand-gold ring-2 ring-[#0d1017]" />
+                    ) : (
+                      <span className="ml-auto bg-brand-gold text-brand-dark text-[9px] px-1.5 py-0.5 font-black rounded-full">
+                        {stats.pending}
+                      </span>
+                    )
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Guest Inquiries {stats.pending > 0 ? `(${stats.pending})` : ""}
+                    </span>
+                  )}
+                </button>
+
+                {/* Section: Resort CMS */}
+                {!sidebarCollapsed ? (
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 pt-3 pb-1 border-t border-stone-800/60 mt-2">
+                    Resort & CMS
+                  </div>
+                ) : (
+                  <div className="my-2 border-t border-stone-800/80 mx-2" />
+                )}
+
+                {/* Tab: Suites & Inventory */}
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("apartments"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "apartments"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Suites & Inventory" : undefined}
                 >
-                  <Hotel className="w-4.5 h-4.5" />
-                  <span>Apartment Editor</span>
+                  <Hotel className={`w-4.5 h-4.5 shrink-0 ${activeTab === "apartments" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Suites & Inventory</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {apartments.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Suites & Inventory ({apartments.length})
+                    </span>
+                  )}
                 </button>
 
+                {/* Tab: Dining & Dhow */}
                 <button
-                  onClick={() => setActiveTab("pricing")}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === "pricing"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <DollarSign className="w-4.5 h-4.5" />
-                  <span>Pricing & Rates</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab("dining")}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  type="button"
+                  onClick={() => { setActiveTab("dining"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "dining"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Dining & Dhow" : undefined}
                 >
-                  <Utensils className="w-4.5 h-4.5" />
-                  <span>Dining experiences</span>
+                  <Utensils className={`w-4.5 h-4.5 shrink-0 ${activeTab === "dining" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Dining & Dhow</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {dining.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Dining & Dhow ({dining.length})
+                    </span>
+                  )}
                 </button>
 
-                <div className="h-px bg-stone-800 my-4 mx-3" />
-                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-600 px-3 mb-2">Resort Extras</div>
-
+                {/* Tab: Boarding Packages */}
                 <button
-                  onClick={() => setActiveTab("transfers")}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  type="button"
+                  onClick={() => { setActiveTab("packages"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                    activeTab === "packages"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                  }`}
+                  title={sidebarCollapsed ? "Boarding Packages" : undefined}
+                >
+                  <Coffee className={`w-4.5 h-4.5 shrink-0 ${activeTab === "packages" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Boarding Packages</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {boardingPackages.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Boarding Packages ({boardingPackages.length})
+                    </span>
+                  )}
+                </button>
+
+                {/* Tab: Transfers & Fleet */}
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("transfers"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "transfers"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Transfers & Fleet" : undefined}
                 >
-                  <Car className="w-4.5 h-4.5" />
-                  <span>Transfer Fleet</span>
+                  <Car className={`w-4.5 h-4.5 shrink-0 ${activeTab === "transfers" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Transfers & Fleet</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {vehicles.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Transfers & Fleet ({vehicles.length})
+                    </span>
+                  )}
                 </button>
 
+                {/* Tab: Resort Facilities */}
                 <button
-                  onClick={() => setActiveTab("hero")}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  type="button"
+                  onClick={() => { setActiveTab("facilities"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                    activeTab === "facilities"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                  }`}
+                  title={sidebarCollapsed ? "Resort Facilities" : undefined}
+                >
+                  <Waves className={`w-4.5 h-4.5 shrink-0 ${activeTab === "facilities" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Resort Facilities</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {facilities.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Resort Facilities ({facilities.length})
+                    </span>
+                  )}
+                </button>
+
+                {/* Tab: Hero Slideshow */}
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("hero"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "hero"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Hero Slideshow" : undefined}
                 >
-                  <ImageIcon className="w-4.5 h-4.5" />
-                  <span>Hero Slideshow</span>
+                  <ImageIcon className={`w-4.5 h-4.5 shrink-0 ${activeTab === "hero" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Hero Slideshow</span>}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Hero Slideshow
+                    </span>
+                  )}
                 </button>
 
-                <div className="h-px bg-stone-800 my-4 mx-3" />
-                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-600 px-3 mb-2">Access Control</div>
+                {/* Section: Governance & Rates */}
+                {(canAccessPricing || canAccessTeam || canAccessLogs) && (
+                  <>
+                    {!sidebarCollapsed ? (
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 pt-3 pb-1 border-t border-stone-800/60 mt-2">
+                        Governance & Rates
+                      </div>
+                    ) : (
+                      <div className="my-2 border-t border-stone-800/80 mx-2" />
+                    )}
 
-                <button
-                  onClick={() => setActiveTab("team")}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === "team"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <Users className="w-4.5 h-4.5" />
-                  <span>Team & PIN Access</span>
-                  <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
-                    {staffUsers.length}
-                  </span>
-                </button>
+                    {canAccessPricing && (
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab("pricing"); setSelectedInquiry(null); }}
+                        className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                          activeTab === "pricing"
+                            ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                            : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                        }`}
+                        title={sidebarCollapsed ? "Rates & Pricing" : undefined}
+                      >
+                        <DollarSign className={`w-4.5 h-4.5 shrink-0 ${activeTab === "pricing" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                        {!sidebarCollapsed && <span className="truncate">Rates & Pricing</span>}
+                        {sidebarCollapsed && (
+                          <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                            Rates & Dynamic Pricing
+                          </span>
+                        )}
+                      </button>
+                    )}
 
-                <button
-                  onClick={() => { setActiveTab("logs"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === "logs"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <FileText className="w-4.5 h-4.5" />
-                  <span>Audit & Activity Logs</span>
-                  <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
-                    {allAuditLogs.length}
-                  </span>
-                </button>
+                    {canAccessTeam && (
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab("team"); setSelectedInquiry(null); }}
+                        className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                          activeTab === "team"
+                            ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                            : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                        }`}
+                        title={sidebarCollapsed ? "Staff Accounts" : undefined}
+                      >
+                        <Users className={`w-4.5 h-4.5 shrink-0 ${activeTab === "team" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                        {!sidebarCollapsed && <span className="truncate">Staff Accounts</span>}
+                        {!sidebarCollapsed && (
+                          <span className="ml-auto bg-stone-800/80 text-brand-gold text-[9px] px-1.5 py-0.5 rounded font-mono">
+                            {staffUsers.length}
+                          </span>
+                        )}
+                        {sidebarCollapsed && (
+                          <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                            Staff Accounts ({staffUsers.length})
+                          </span>
+                        )}
+                      </button>
+                    )}
+
+                    {canAccessLogs && (
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab("logs"); setSelectedInquiry(null); }}
+                        className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                          activeTab === "logs"
+                            ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                            : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                        }`}
+                        title={sidebarCollapsed ? "Audit & Activity Logs" : undefined}
+                      >
+                        <FileText className={`w-4.5 h-4.5 shrink-0 ${activeTab === "logs" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                        {!sidebarCollapsed && <span className="truncate">Audit & Activity Logs</span>}
+                        {!sidebarCollapsed && (
+                          <span className="ml-auto bg-stone-800/80 text-brand-gold text-[9px] px-1.5 py-0.5 rounded font-mono">
+                            {allAuditLogs.length}
+                          </span>
+                        )}
+                        {sidebarCollapsed && (
+                          <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                            Audit & Activity Logs ({allAuditLogs.length})
+                          </span>
+                        )}
+                      </button>
+                    )}
+                  </>
+                )}
               </nav>
 
-              {/* SECURITY SIGNATURE */}
-              <div className="px-6 text-[10px] text-stone-600 space-y-1">
-                <div className="flex items-center gap-1.5 text-brand-gold/70 font-bold uppercase tracking-widest">
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  <span>SECURE CHANNEL</span>
-                </div>
-                <p>Tamarind Staff Gateways strictly logged & monitored.</p>
+              {/* SIDEBAR FOOTER: DRAWER COLLAPSE BUTTON & SECURITY BADGE */}
+              <div className="border-t border-stone-800/80 bg-stone-950/40 p-3 space-y-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between px-3"} py-2 rounded text-stone-400 hover:text-brand-gold hover:bg-stone-800/60 transition-colors text-[10px] font-bold uppercase tracking-wider cursor-pointer border border-transparent hover:border-stone-700`}
+                  title={sidebarCollapsed ? "Expand Navigation Drawer" : "Collapse Navigation Drawer"}
+                >
+                  {!sidebarCollapsed ? (
+                    <>
+                      <span className="flex items-center gap-2">
+                        <PanelLeftClose className="w-3.5 h-3.5 text-brand-gold" />
+                        <span>Collapse Menu</span>
+                      </span>
+                      <ChevronLeft className="w-3.5 h-3.5 text-stone-500" />
+                    </>
+                  ) : (
+                    <PanelLeft className="w-4 h-4 text-brand-gold" />
+                  )}
+                </button>
+
+                {!sidebarCollapsed ? (
+                  <div className="px-3 pt-1 text-[9px] text-stone-500 space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-brand-gold/70 font-bold uppercase tracking-widest">
+                      <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                      <span>SECURE CHANNEL</span>
+                    </div>
+                    <p className="text-[8px] text-stone-500 leading-tight">Mombasa Cloud Gateways strictly encrypted.</p>
+                  </div>
+                ) : (
+                  <div className="flex justify-center pt-1" title="Encrypted Staff Gateway">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/80" />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1177,6 +1691,29 @@ export default function StaffDashboardModal({
                 </div>
               )}
               
+              {/* --- OPERATIONS: FRONT DESK HUB --- */}
+              {activeTab === "frontdesk" && (
+                <FrontDeskHub
+                  bookings={bookings}
+                  apartments={apartments}
+                  onUpdateBookingStatus={handleUpdateBookingStatus}
+                  onOpenNewBooking={() => setActiveTab("bookings")}
+                  canCheckIn={canCheckIn}
+                />
+              )}
+
+              {/* --- OPERATIONS: BOOKINGS LEDGER --- */}
+              {activeTab === "bookings" && (
+                <BookingsLedger
+                  bookings={bookings}
+                  apartments={apartments}
+                  onUpdateStatus={handleUpdateBookingStatus}
+                  onDeleteBooking={handleDeleteBooking}
+                  onCreateBooking={handleCreateNewBooking}
+                  userRole={currentUser?.role || "admin"}
+                />
+              )}
+
               {/* --- TAB 1: GUEST INQUIRIES & BOOKINGS --- */}
               {activeTab === "inquiries" && (
                 <div className="space-y-6 flex-1 flex flex-col">
@@ -1739,36 +2276,57 @@ export default function StaffDashboardModal({
               {/* --- TAB 2: APARTMENTS EDITOR --- */}
               {activeTab === "apartments" && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-stone-200 pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-5">
                     <div>
-                      <h3 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">Apartments & Suites Editor</h3>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">Customize texts, capacities, base pricing, and presentation images</p>
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 uppercase tracking-wider">Apartments & Suites Inventory</h3>
+                        <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-800 border border-amber-500/30 px-2 py-0.5 rounded">
+                          {apartments.length} Active Suites
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 font-medium tracking-wide mt-1">
+                        Manage room categories, maximum capacities, live pricing tariffs, and visual presentations
+                      </p>
                     </div>
                     {!editingApartment && (
-                      <button
-                        onClick={() => {
-                          setEditingApartment({
-                            id: "apt_" + Date.now(),
-                            name: "",
-                            description: "",
-                            size: "85 m²",
-                            maxGuests: 4,
-                            pricePerNight: 200,
-                            image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
-                            gallery: [],
-                            amenities: ["Air Conditioning", "WiFi", "Minibar", "Ocean View", "En-suite Bathroom"],
-                            bedrooms: 2,
-                            bathrooms: 2,
-                            highlights: ["Direct Ocean Access", "Private Terrace"],
-                            bedConfig: "1 King Bed, 2 Single Beds",
-                            viewType: "Ocean & Horizon View",
-                          });
-                        }}
-                        className="px-4 py-2 bg-brand-teal hover:bg-brand-teal/80 text-brand-dark font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Add New Suite</span>
-                      </button>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        {apartments.length < APARTMENTS.length && (
+                          <button
+                            type="button"
+                            onClick={() => setApartments(APARTMENTS)}
+                            className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer rounded border border-stone-300 transition-colors"
+                            title="Restore default catalog suites"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Reset Baseline</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingApartment({
+                              id: "apt_" + Date.now(),
+                              name: "",
+                              description: "",
+                              size: "85 m²",
+                              maxGuests: 4,
+                              pricePerNight: 200,
+                              image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+                              gallery: [],
+                              amenities: ["Air Conditioning", "WiFi", "Minibar", "Ocean View", "En-suite Bathroom"],
+                              bedrooms: 2,
+                              bathrooms: 2,
+                              highlights: ["Direct Ocean Access", "Private Terrace"],
+                              bedConfig: "1 King Bed, 2 Single Beds",
+                              viewType: "Ocean & Horizon View",
+                            });
+                          }}
+                          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer rounded shadow-sm transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add New Suite</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -1949,46 +2507,99 @@ export default function StaffDashboardModal({
                         </button>
                       </div>
                     </form>
+                  ) : apartments.length === 0 ? (
+                    <div className="bg-white border border-stone-200 p-12 text-center max-w-xl mx-auto my-8 shadow-sm rounded-lg">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 border border-amber-200 text-amber-700 rounded-full flex items-center justify-center">
+                        <Hotel className="w-8 h-8" />
+                      </div>
+                      <h4 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">No Suites Currently In Catalog</h4>
+                      <p className="text-stone-500 text-xs mt-2 leading-relaxed">
+                        There are currently no suites loaded in the live inventory catalog. You can restore Tamarind's baseline luxury suites or add a custom suite.
+                      </p>
+                      <div className="flex items-center justify-center gap-3 mt-6">
+                        <button
+                          type="button"
+                          onClick={() => setApartments(APARTMENTS)}
+                          className="px-4 py-2.5 bg-amber-600 text-white font-bold uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer hover:bg-amber-500 rounded shadow-sm transition-colors"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          <span>Load Baseline Catalog</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingApartment({
+                              id: "apt_" + Date.now(),
+                              name: "",
+                              description: "",
+                              size: "85 m²",
+                              maxGuests: 4,
+                              pricePerNight: 200,
+                              image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+                              gallery: [],
+                              amenities: ["Air Conditioning", "WiFi", "Minibar", "Ocean View", "En-suite Bathroom"],
+                              bedrooms: 2,
+                              bathrooms: 2,
+                              highlights: ["Direct Ocean Access", "Private Terrace"],
+                              bedConfig: "1 King Bed, 2 Single Beds",
+                              viewType: "Ocean & Horizon View",
+                            });
+                          }}
+                          className="px-4 py-2.5 bg-stone-900 text-white font-bold uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer hover:bg-stone-800 rounded transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Create Suite</span>
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {apartments.map(apt => (
-                        <div key={apt.id} className="bg-white border border-stone-200 overflow-hidden flex flex-col shadow-sm">
-                          <OptimizedImage 
-                            src={apt.image} 
-                            preset="thumb"
-                            alt={apt.name} 
-                            className="w-full h-48 object-cover border-b border-stone-150"
-                          />
+                        <div key={apt.id} className="bg-white border border-stone-200 rounded overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow group">
+                          <div className="relative">
+                            <OptimizedImage 
+                              src={apt.image} 
+                              preset="thumb"
+                              alt={apt.name} 
+                              className="w-full h-52 object-cover border-b border-stone-150 group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute top-3 right-3 bg-stone-950/85 backdrop-blur-sm border border-stone-700/60 text-brand-gold font-mono text-xs font-bold px-2.5 py-1 rounded shadow-sm">
+                              ${apt.pricePerNight} <span className="text-[10px] text-stone-300 font-normal">/ night</span>
+                            </div>
+                            <div className="absolute bottom-3 left-3 bg-stone-950/75 backdrop-blur-sm text-stone-200 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                              {apt.size} • Max {apt.maxGuests} Guests
+                            </div>
+                          </div>
                           <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                             <div>
-                              <div className="flex items-start justify-between gap-1">
-                                <h4 className="font-serif text-sm font-bold text-stone-900 leading-tight uppercase tracking-wide">
-                                  {apt.name}
-                                </h4>
-                                <span className="font-serif text-sm font-bold text-brand-teal shrink-0">
-                                  ${apt.pricePerNight}/N
-                                </span>
-                              </div>
+                              <h4 className="font-serif text-base font-bold text-stone-900 leading-snug uppercase tracking-wide">
+                                {apt.name}
+                              </h4>
                               <p className="text-stone-500 text-xs mt-2 line-clamp-3 leading-relaxed">
                                 {apt.description}
                               </p>
-                              <div className="grid grid-cols-2 gap-1.5 pt-3.5 border-t border-stone-100 mt-3 text-[10px] text-stone-600 font-semibold uppercase">
-                                <div>Size: {apt.size}</div>
-                                <div>Max Guests: {apt.maxGuests}</div>
+                              <div className="flex flex-wrap gap-1.5 pt-3.5 border-t border-stone-100 mt-3 text-[10px]">
+                                {(apt.highlights || []).slice(0, 2).map((h, i) => (
+                                  <span key={i} className="bg-stone-100 text-stone-700 px-2 py-0.5 rounded font-medium">
+                                    {h}
+                                  </span>
+                                ))}
                               </div>
                             </div>
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 pt-2">
                               <button
+                                type="button"
                                 onClick={() => handleStartEditApartment(apt)}
-                                className="flex-1 py-2 bg-stone-900 hover:bg-brand-teal hover:text-brand-dark text-white font-bold uppercase tracking-widest text-[9px] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                className="flex-1 py-2.5 bg-stone-900 hover:bg-stone-800 text-brand-gold hover:text-white font-bold uppercase tracking-widest text-[10px] rounded transition-all cursor-pointer flex items-center justify-center gap-1.5"
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
+                                <Edit3 className="w-3.5 h-3.5 text-brand-gold" />
                                 <span>Edit Details</span>
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDeleteApartment(apt.id)}
-                                className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
+                                className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
                                 title="Delete Suite"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2122,29 +2733,50 @@ export default function StaffDashboardModal({
               {/* --- TAB 4: DINING OPTIONS MANAGER --- */}
               {activeTab === "dining" && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-stone-200 pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-5">
                     <div>
-                      <h3 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">Dining & Experiences Manager</h3>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">Edit operational hours, titles, and highlight descriptors of restaurants</p>
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 uppercase tracking-wider">Dining & Experiences Manager</h3>
+                        <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-800 border border-amber-500/30 px-2 py-0.5 rounded">
+                          {dining.length} Venues
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 font-medium tracking-wide mt-1">
+                        Edit operational timings, restaurant culinary narratives, and oceanfront dhow experiences
+                      </p>
                     </div>
                     {!editingDining && (
-                      <button
-                        onClick={() => {
-                          setEditingDining({
-                            id: "dining_" + Date.now(),
-                            name: "",
-                            description: "",
-                            highlights: ["Fine Dining", "Oceanside Views"],
-                            hours: "7:00 AM - 11:00 PM",
-                            image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
-                            reservationLinkText: "Inquire Table",
-                          });
-                        }}
-                        className="px-4 py-2 bg-brand-teal hover:bg-brand-teal/80 text-brand-dark font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Add New Venue</span>
-                      </button>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        {dining.length < DINING.length && (
+                          <button
+                            type="button"
+                            onClick={() => setDining(DINING)}
+                            className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer rounded border border-stone-300 transition-colors"
+                            title="Restore default dining venues"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Reset Baseline</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingDining({
+                              id: "dining_" + Date.now(),
+                              name: "",
+                              description: "",
+                              highlights: ["Fine Dining", "Oceanside Views"],
+                              hours: "7:00 AM - 11:00 PM",
+                              image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+                              reservationLinkText: "Inquire Table",
+                            });
+                          }}
+                          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer rounded shadow-sm transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add New Venue</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -2251,40 +2883,89 @@ export default function StaffDashboardModal({
                         </button>
                       </div>
                     </form>
+                  ) : dining.length === 0 ? (
+                    <div className="bg-white border border-stone-200 p-12 text-center max-w-xl mx-auto my-8 shadow-sm rounded-lg">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 border border-amber-200 text-amber-700 rounded-full flex items-center justify-center">
+                        <Utensils className="w-8 h-8" />
+                      </div>
+                      <h4 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">No Dining Venues Available</h4>
+                      <p className="text-stone-500 text-xs mt-2 leading-relaxed">
+                        No dining venues or dhow experiences are currently loaded in the database. You can restore Tamarind's baseline culinary experiences or create a new venue.
+                      </p>
+                      <div className="flex items-center justify-center gap-3 mt-6">
+                        <button
+                          type="button"
+                          onClick={() => setDining(DINING)}
+                          className="px-4 py-2.5 bg-amber-600 text-white font-bold uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer hover:bg-amber-500 rounded shadow-sm transition-colors"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          <span>Load Baseline Venues</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingDining({
+                              id: "dining_" + Date.now(),
+                              name: "",
+                              description: "",
+                              highlights: ["Fine Dining", "Oceanside Views"],
+                              hours: "7:00 AM - 11:00 PM",
+                              image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+                              reservationLinkText: "Inquire Table",
+                            });
+                          }}
+                          className="px-4 py-2.5 bg-stone-900 text-white font-bold uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer hover:bg-stone-800 rounded transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Create Venue</span>
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {dining.map(d => (
-                        <div key={d.id} className="bg-white border border-stone-200 overflow-hidden flex flex-col shadow-sm">
-                          <OptimizedImage 
-                            src={d.image} 
-                            preset="thumb"
-                            alt={d.name} 
-                            className="w-full h-48 object-cover border-b border-stone-150"
-                          />
+                        <div key={d.id} className="bg-white border border-stone-200 rounded overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow group">
+                          <div className="relative">
+                            <OptimizedImage 
+                              src={d.image} 
+                              preset="thumb"
+                              alt={d.name} 
+                              className="w-full h-52 object-cover border-b border-stone-150 group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute top-3 right-3 bg-stone-950/85 backdrop-blur-sm border border-stone-700/60 text-brand-gold font-mono text-[11px] font-bold px-2.5 py-1 rounded shadow-sm">
+                              {d.hours}
+                            </div>
+                          </div>
                           <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                             <div>
-                              <h4 className="font-serif text-sm font-bold text-stone-900 uppercase tracking-wide">
-                                  {d.name}
+                              <h4 className="font-serif text-base font-bold text-stone-900 uppercase tracking-wide">
+                                {d.name}
                               </h4>
                               <p className="text-stone-500 text-xs mt-2 line-clamp-3 leading-relaxed">
                                 {d.description}
                               </p>
-                              <div className="text-[10px] text-stone-600 font-bold uppercase mt-3.5 pt-3.5 border-t border-stone-100">
-                                Timing: {d.hours}
+                              <div className="flex flex-wrap gap-1.5 pt-3.5 border-t border-stone-100 mt-3 text-[10px]">
+                                {(d.highlights || []).slice(0, 3).map((h, i) => (
+                                  <span key={i} className="bg-stone-100 text-stone-700 px-2 py-0.5 rounded font-medium">
+                                    {h}
+                                  </span>
+                                ))}
                               </div>
                             </div>
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 pt-2">
                               <button
+                                type="button"
                                 onClick={() => handleStartEditDining(d)}
-                                className="flex-1 py-2 bg-stone-900 hover:bg-brand-teal hover:text-brand-dark text-white font-bold uppercase tracking-widest text-[9px] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                className="flex-1 py-2.5 bg-stone-900 hover:bg-stone-800 text-brand-gold hover:text-white font-bold uppercase tracking-widest text-[10px] rounded transition-all cursor-pointer flex items-center justify-center gap-1.5"
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
+                                <Edit3 className="w-3.5 h-3.5 text-brand-gold" />
                                 <span>Edit Details</span>
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDeleteDining(d.id)}
-                                className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
+                                className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
                                 title="Delete Venue"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2944,6 +3625,24 @@ export default function StaffDashboardModal({
                 </div>
               )}
 
+              {/* --- TAB: BOARDING PACKAGES --- */}
+              {activeTab === "packages" && (
+                <PackagesManager
+                  packages={boardingPackages}
+                  onSavePackage={handleSavePackageItem}
+                  onDeletePackage={handleDeletePackageItem}
+                />
+              )}
+
+              {/* --- TAB: RESORT FACILITIES --- */}
+              {activeTab === "facilities" && (
+                <FacilitiesManager
+                  facilities={facilities}
+                  onSaveFacility={handleSaveFacility}
+                  onDeleteFacility={handleDeleteFacility}
+                />
+              )}
+
               {/* --- TAB 6: HERO SLIDESHOW IMAGES --- */}
               {activeTab === "hero" && (
                 <div className="space-y-6 max-w-3xl">
@@ -2989,298 +3688,15 @@ export default function StaffDashboardModal({
                 </div>
               )}
 
-              {/* --- TAB 7: TEAM & PIN ACCESS --- */}
+              {/* --- TAB 7: STAFF ACCOUNTS & PERMISSIONS (ADMIN ONLY) --- */}
               {activeTab === "team" && (
-                <div className="space-y-6 flex-1 flex flex-col">
-                  {/* HEADER STRIP */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 border border-stone-200 shadow-sm">
-                    <div>
-                      <div className="flex items-center gap-2 text-brand-teal text-xs font-mono font-bold uppercase tracking-wider mb-1">
-                        <Key className="w-4 h-4 text-brand-gold" />
-                        <span>Security & Multi-Reservationist PINs</span>
-                      </div>
-                      <h3 className="font-serif text-xl font-bold text-stone-900 uppercase tracking-wider">
-                        Staff Passcodes & Access Allocation
-                      </h3>
-                      <p className="text-xs text-stone-500 font-light mt-1 max-w-2xl leading-relaxed">
-                        Allocate individual login PINs to reservationists and administrators. All inquiry stage updates, negotiation notes, rate changes, and payment links are attributed to the specific logged-in user.
-                      </p>
-                    </div>
-
-                    {currentUser && (
-                      <div className="flex items-center gap-3 bg-stone-50 border border-stone-200 p-3.5 shrink-0">
-                        <div className="w-9 h-9 bg-brand-teal/10 border border-brand-teal/30 flex items-center justify-center text-brand-teal">
-                          <UserCheck className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Active Session</p>
-                          <p className="text-xs font-bold text-stone-900">{currentUser.name}</p>
-                          <p className="text-[9px] font-mono text-brand-teal uppercase font-bold tracking-wider">{currentUser.role}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* MASTER PIN RECOVERY BANNER */}
-                  <div className="bg-amber-50/70 border border-amber-200/80 p-4 flex items-start gap-3">
-                    <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                    <div className="text-xs text-amber-900">
-                      <span className="font-bold uppercase tracking-wide">Emergency Master Override Active: </span>
-                      The default master passcode <span className="font-mono font-bold px-1.5 py-0.5 bg-white border border-amber-300 text-amber-900">1977</span> is permanently reserved as an emergency administrative fallback so management can never be locked out.
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* LEFT 2 COLS: TEAM LIST TABLE */}
-                    <div className="lg:col-span-2 space-y-4">
-                      <div className="bg-white border border-stone-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-stone-200 flex items-center justify-between bg-stone-50/50">
-                          <div>
-                            <h4 className="font-serif text-sm font-bold text-stone-900 uppercase tracking-wider">
-                              Allocated Team Members ({staffUsers.length})
-                            </h4>
-                            <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">
-                              Active credentials with access to the dashboard
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="divide-y divide-stone-100 overflow-x-auto">
-                          <table className="w-full text-left text-xs border-collapse">
-                            <thead>
-                              <tr className="bg-stone-50/80 text-[10px] font-bold uppercase tracking-wider text-stone-500 border-b border-stone-200">
-                                <th className="py-3 px-4">Staff Member</th>
-                                <th className="py-3 px-4">Role</th>
-                                <th className="py-3 px-4">Allocated PIN</th>
-                                <th className="py-3 px-4 text-right">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-stone-100 font-medium">
-                              {staffUsers.map((user) => {
-                                const isMaster = user.id === "user_admin" || user.pin === "1977";
-                                const isRevealed = !!revealedPins[user.id];
-                                const isEditing = editingStaffId === user.id;
-
-                                return (
-                                  <tr key={user.id} className="hover:bg-stone-50/60 transition-colors">
-                                    <td className="py-3.5 px-4">
-                                      <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center font-bold text-stone-700 text-xs shrink-0">
-                                          {user.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                          <p className="font-bold text-stone-900 flex items-center gap-1.5">
-                                            {user.name}
-                                            {currentUser?.id === user.id && (
-                                              <span className="text-[9px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 font-bold uppercase tracking-wider">
-                                                You
-                                              </span>
-                                            )}
-                                          </p>
-                                          {user.email && (
-                                            <p className="text-[11px] text-stone-400 font-normal">{user.email}</p>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </td>
-
-                                    <td className="py-3.5 px-4">
-                                      <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
-                                        user.role === "admin"
-                                          ? "bg-amber-100 text-amber-900 border border-amber-200"
-                                          : user.role === "reservationist"
-                                          ? "bg-emerald-100 text-emerald-900 border border-emerald-200"
-                                          : "bg-sky-100 text-sky-900 border border-sky-200"
-                                      }`}>
-                                        {user.role}
-                                      </span>
-                                    </td>
-
-                                    <td className="py-3.5 px-4">
-                                      {isEditing ? (
-                                        <div className="flex items-center gap-1.5">
-                                          <input
-                                            type="text"
-                                            value={editingStaffPin}
-                                            onChange={(e) => setEditingStaffPin(e.target.value)}
-                                            className="w-24 px-2 py-1 border border-brand-teal text-xs font-mono font-bold bg-white text-stone-900"
-                                            placeholder="New PIN"
-                                            autoFocus
-                                          />
-                                          <button
-                                            onClick={() => handleUpdateStaffPin(user.id)}
-                                            className="p-1 bg-brand-teal text-brand-dark hover:bg-brand-teal/80 font-bold cursor-pointer"
-                                            title="Save new PIN"
-                                          >
-                                            <Check className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={() => { setEditingStaffId(null); setEditingStaffPin(""); }}
-                                            className="p-1 bg-stone-200 text-stone-600 hover:bg-stone-300 cursor-pointer"
-                                            title="Cancel"
-                                          >
-                                            <X className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-center gap-2">
-                                          <span className="font-mono text-xs font-bold tracking-widest px-2 py-1 bg-stone-100 text-stone-800 border border-stone-200 select-all">
-                                            {isRevealed ? user.pin : "••••"}
-                                          </span>
-                                          <button
-                                            onClick={() => setRevealedPins(prev => ({ ...prev, [user.id]: !prev[user.id] }))}
-                                            className="p-1 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
-                                            title={isRevealed ? "Hide PIN" : "Reveal PIN"}
-                                          >
-                                            {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                                          </button>
-                                          <button
-                                            onClick={() => {
-                                              navigator.clipboard.writeText(user.pin);
-                                              setCopiedPinId(user.id);
-                                              setTimeout(() => setCopiedPinId(null), 2000);
-                                              showToast(`PIN for ${user.name} copied to clipboard`);
-                                            }}
-                                            className="p-1 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
-                                            title="Copy PIN"
-                                          >
-                                            {copiedPinId === user.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                                          </button>
-                                        </div>
-                                      )}
-                                    </td>
-
-                                    <td className="py-3.5 px-4 text-right">
-                                      <div className="flex items-center justify-end gap-2">
-                                        <button
-                                          onClick={() => {
-                                            setEditingStaffId(user.id);
-                                            setEditingStaffPin(user.pin);
-                                          }}
-                                          className="text-[10px] font-bold uppercase tracking-wider text-stone-600 hover:text-brand-teal transition-colors cursor-pointer"
-                                        >
-                                          Change PIN
-                                        </button>
-                                        {!isMaster && (
-                                          <>
-                                            <span className="text-stone-200">|</span>
-                                            <button
-                                              onClick={() => handleRevokeStaff(user.id, user.name)}
-                                              className="text-[10px] font-bold uppercase tracking-wider text-rose-600 hover:text-rose-800 transition-colors cursor-pointer"
-                                            >
-                                              Revoke
-                                            </button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* RIGHT 1 COL: ALLOCATE NEW PIN FORM */}
-                    <div className="space-y-4">
-                      <div className="bg-white p-6 border border-stone-200 shadow-sm">
-                        <div className="border-b border-stone-200 pb-3 mb-4">
-                          <h4 className="font-serif text-sm font-bold text-stone-900 uppercase tracking-wider">
-                            Allocate New Passcode
-                          </h4>
-                          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">
-                            Provision a credential for a reservationist
-                          </p>
-                        </div>
-
-                        <form onSubmit={handleAllocateNewStaff} className="space-y-4 text-xs">
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
-                              Staff Member Name *
-                            </label>
-                            <input
-                              type="text"
-                              required
-                              placeholder="e.g. Brenda Achieng"
-                              value={newStaffName}
-                              onChange={(e) => setNewStaffName(e.target.value)}
-                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-teal"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
-                              Staff Role *
-                            </label>
-                            <select
-                              value={newStaffRole}
-                              onChange={(e) => setNewStaffRole(e.target.value as any)}
-                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-teal text-xs font-medium"
-                            >
-                              <option value="reservationist">Reservationist (Inquiries, Offers & Notes)</option>
-                              <option value="admin">Administrator (Full Access & PIN Management)</option>
-                              <option value="concierge">Concierge (Front Desk & Transfers)</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <div className="flex justify-between items-center mb-1">
-                              <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600">
-                                Allocated Passcode (PIN) *
-                              </label>
-                              <button
-                                type="button"
-                                onClick={generateRandomPin}
-                                className="text-[10px] text-brand-teal hover:underline font-bold uppercase tracking-wider cursor-pointer"
-                              >
-                                🎲 Generate
-                              </button>
-                            </div>
-                            <input
-                              type="text"
-                              required
-                              placeholder="e.g. 4821"
-                              value={newStaffPin}
-                              onChange={(e) => setNewStaffPin(e.target.value.replace(/\s+/g, ""))}
-                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 font-mono font-bold focus:outline-none focus:border-brand-teal"
-                            />
-                            <span className="text-[10px] text-stone-400 block mt-1">
-                              Must be unique across all active team members.
-                            </span>
-                          </div>
-
-                          <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
-                              Email / Department (Optional)
-                            </label>
-                            <input
-                              type="email"
-                              placeholder="e.g. brenda@tamarind.co.ke"
-                              value={newStaffEmail}
-                              onChange={(e) => setNewStaffEmail(e.target.value)}
-                              className="w-full p-2.5 border border-stone-300 bg-stone-50 text-stone-900 focus:outline-none focus:border-brand-teal"
-                            />
-                          </div>
-
-                          <button
-                            type="submit"
-                            className="w-full py-3 bg-brand-teal text-brand-dark font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:bg-brand-teal/85 transition-colors cursor-pointer mt-2"
-                          >
-                            <Plus className="w-4 h-4" />
-                            <span>Allocate & Save Passcode</span>
-                          </button>
-                        </form>
-                      </div>
-
-                      <div className="bg-stone-100 p-4 border border-stone-200 text-stone-600 text-[11px] leading-relaxed">
-                        <p className="font-bold uppercase tracking-wide text-stone-800 mb-1">Audit Attribution</p>
-                        When a reservationist updates inquiry stages or sends payment links, the inquiry's chronological audit log registers their exact name.
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <StaffAccountsManager
+                  staffUsers={staffUsers}
+                  onSaveUser={handleSaveStaffAccount}
+                  onUpdateUser={handleUpdateStaffAccount}
+                  onDeleteUser={handleDeleteStaffAccount}
+                  currentUserId={currentUser?.id}
+                />
               )}
 
               {/* TAB 8: AUDIT & ACTIVITY LOGS LEDGER */}

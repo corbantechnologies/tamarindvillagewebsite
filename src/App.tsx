@@ -24,7 +24,7 @@ import {
   MapPin, Phone, Mail, Sparkles, ArrowRight, Clock, ChevronRight,
   ShieldCheck, HelpCircle, CheckCircle2, Star, Calendar, MessageSquare,
   ChevronLeft, Image as ImageIcon, Settings, Plus, Trash2, RotateCcw, Check,
-  Car, Plane, Train, Key, UserCheck
+  Car, Plane, Train, Key, UserCheck, Eye, EyeOff, Lock, ArrowLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -246,58 +246,129 @@ export default function App() {
   const [currentStaffUser, setCurrentStaffUserState] = useState<StaffUser | null>(() => getCurrentStaffUser());
 
   const [isStaffPinModalOpen, setIsStaffPinModalOpen] = useState(false);
-  const [staffPinInput, setStaffPinInput] = useState("");
+  const [staffAuthMode, setStaffAuthMode] = useState<"login" | "forgot" | "reset">("login");
+  const [staffEmailInput, setStaffEmailInput] = useState("");
+  const [staffPasswordInput, setStaffPasswordInput] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const [staffPinError, setStaffPinError] = useState("");
 
-  const handleVerifyStaffPin = (e: React.FormEvent) => {
+  // Forgot password & reset password state
+  const [forgotEmailInput, setForgotEmailInput] = useState("");
+  const [forgotSentMessage, setForgotSentMessage] = useState("");
+  const [resetTokenInput, setResetTokenInput] = useState("");
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
+
+  // Check URL query on mount for password reset token
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const action = urlParams.get("action");
+    const token = urlParams.get("token");
+    if (action === "reset-password" && token) {
+      setResetTokenInput(token);
+      setStaffAuthMode("reset");
+      setIsStaffPinModalOpen(true);
+    }
+  }, []);
+
+  const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const pin = staffPinInput.trim();
+    setStaffPinError("");
+    setAuthLoading(true);
 
-    // Check matched staff user
-    const matchedUser = staffUsers.find((u) => u.pin === pin);
-    if (matchedUser) {
-      setCurrentStaffUserState(matchedUser);
-      setCurrentStaffUser(matchedUser);
-      setIsAdmin(true);
-      try {
-        localStorage.setItem("tamarind_staff_unlocked", "true");
-      } catch (e) {
-        console.error("Failed to store staff state:", e);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: staffEmailInput,
+          password: staffPasswordInput
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Authentication failed.");
       }
-      setIsStaffPinModalOpen(false);
-      setStaffPinInput("");
-      setStaffPinError("");
-      setIsCustomizerOpen(true);
-      triggerNotification("Access Granted", `Welcome ${matchedUser.name} (${matchedUser.role.toUpperCase()})`);
+
+      if (data.user) {
+        setCurrentStaffUserState(data.user);
+        setCurrentStaffUser(data.user);
+        setIsAdmin(true);
+        try {
+          localStorage.setItem("tamarind_staff_unlocked", "true");
+        } catch (e) {
+          console.error(e);
+        }
+        setIsStaffPinModalOpen(false);
+        setStaffEmailInput("");
+        setStaffPasswordInput("");
+        setIsCustomizerOpen(true);
+        toast.success(`Welcome ${data.user.name} (${data.user.role.toUpperCase()})`);
+      }
+    } catch (err: any) {
+      setStaffPinError(err.message || "Failed to log in.");
+      toast.error(err.message || "Login failed");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleRequestPasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStaffPinError("");
+    setAuthLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmailInput })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Request failed");
+
+      setForgotSentMessage(data.message || "Password reset instructions sent.");
+      toast.success("Password reset instructions sent!");
+    } catch (err: any) {
+      setStaffPinError(err.message || "Could not request password reset.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleCompletePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStaffPinError("");
+    if (newPasswordInput !== confirmPasswordInput) {
+      setStaffPinError("Passwords do not match.");
       return;
     }
+    setAuthLoading(true);
 
-    // Master emergency fallback PIN 1977
-    if (pin === "1977" || pin.toLowerCase() === "admin") {
-      const masterAdmin: StaffUser = {
-        id: "user_admin",
-        name: "Master Administrator",
-        pin: "1977",
-        role: "admin",
-        createdAt: new Date().toISOString()
-      };
-      setCurrentStaffUserState(masterAdmin);
-      setCurrentStaffUser(masterAdmin);
-      setIsAdmin(true);
-      try {
-        localStorage.setItem("tamarind_staff_unlocked", "true");
-      } catch (e) {
-        console.error("Failed to store staff state:", e);
-      }
-      setIsStaffPinModalOpen(false);
-      setStaffPinInput("");
-      setStaffPinError("");
-      setIsCustomizerOpen(true);
-      triggerNotification("Access Granted", "Master Administrator unlocked.");
-      return;
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: resetTokenInput,
+          newPassword: newPasswordInput
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Reset failed");
+
+      toast.success("Password reset successfully! You can now log in.");
+      setStaffAuthMode("login");
+      setStaffPasswordInput("");
+      setNewPasswordInput("");
+      setConfirmPasswordInput("");
+    } catch (err: any) {
+      setStaffPinError(err.message || "Could not reset password.");
+    } finally {
+      setAuthLoading(false);
     }
-
-    setStaffPinError("Invalid Staff Passcode. Please contact your system administrator.");
   };
 
   const handleLockStaffMode = () => {
@@ -504,23 +575,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-brand-sand font-sans text-brand-dark selection:bg-brand-teal selection:text-white flex flex-col w-full max-w-full overflow-x-hidden">
-
-      {/* Staff Mode Active Indicator Banner */}
-      {isAdmin && (
-        <div className="bg-brand-teal text-white text-xs font-mono py-1.5 px-4 flex justify-between items-center z-50 border-b border-brand-teal-dark shadow-inner">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-bold uppercase tracking-wider">Staff Management Mode Active</span>
-            <span className="hidden sm:inline text-brand-sand/80">| Edit Extras & Hero Carousel unlocked</span>
-          </div>
-          <button
-            onClick={handleLockStaffMode}
-            className="bg-black/20 hover:bg-black/40 text-white px-2.5 py-0.5 text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer"
-          >
-            Exit Staff Mode
-          </button>
-        </div>
-      )}
 
       {/* Dynamic Sticky Header */}
       <Navbar
@@ -1489,7 +1543,7 @@ export default function App() {
         }}
       />
 
-      {/* Staff Security Verification Modal */}
+      {/* Staff Authentication & Account Verification Modal */}
       <AnimatePresence>
         {isStaffPinModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1512,7 +1566,11 @@ export default function App() {
                     <ShieldCheck className="w-4 h-4 text-brand-gold" />
                     <span>Staff Authentication</span>
                   </div>
-                  <h3 className="font-serif text-2xl font-bold text-brand-dark">Resort Portal Access</h3>
+                  <h3 className="font-serif text-2xl font-bold text-brand-dark">
+                    {staffAuthMode === "login" && "Resort Portal Login"}
+                    {staffAuthMode === "forgot" && "Forgot Password"}
+                    {staffAuthMode === "reset" && "Set New Password"}
+                  </h3>
                 </div>
                 <button
                   onClick={() => setIsStaffPinModalOpen(false)}
@@ -1522,52 +1580,223 @@ export default function App() {
                 </button>
               </div>
 
-              <p className="text-xs text-stone-500 font-light leading-relaxed mb-6">
-                Enter your individual staff PIN passcode to access inquiries, quotes, and resort content controls.
-              </p>
-
               {staffPinError && (
                 <div className="mb-4 p-3 bg-red-50 border-l-2 border-red-500 text-red-700 text-xs font-semibold">
                   {staffPinError}
                 </div>
               )}
 
-              <form onSubmit={handleVerifyStaffPin} className="space-y-4">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
-                    Staff Passcode (PIN)
-                  </label>
-                  <input
-                    type="password"
-                    autoFocus
-                    required
-                    placeholder="Enter 4-digit PIN"
-                    value={staffPinInput}
-                    onChange={(e) => setStaffPinInput(e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 border border-stone-300 focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-900 font-mono"
-                  />
-                  <div className="flex justify-between items-center mt-2 text-[10px] text-stone-400">
-                    <span>Individual PINs allocated per reservationist</span>
-                    <span className="font-mono text-stone-500">Master PIN: 1977</span>
-                  </div>
-                </div>
+              {/* 1. LOGIN MODE */}
+              {staffAuthMode === "login" && (
+                <form onSubmit={handleStaffLogin} className="space-y-4">
+                  <p className="text-xs text-stone-500 font-light leading-relaxed">
+                    Sign in with your registered email and password to access the Tamarind Management Portal.
+                  </p>
 
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsStaffPinModalOpen(false)}
-                    className="px-4 py-2 text-xs font-bold text-stone-500 uppercase tracking-wider hover:text-stone-800"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-brand-teal text-white font-bold text-xs uppercase tracking-widest hover:bg-brand-teal-dark transition-colors"
-                  >
-                    Unlock Staff Mode
-                  </button>
-                </div>
-              </form>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
+                      Business Email
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
+                      <input
+                        type="email"
+                        autoFocus
+                        required
+                        placeholder="e.g. admin@tamarind.co.ke"
+                        value={staffEmailInput}
+                        onChange={(e) => setStaffEmailInput(e.target.value)}
+                        className="w-full text-sm pl-9 pr-3.5 py-2.5 border border-stone-300 focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600">
+                        Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStaffPinError("");
+                          setForgotSentMessage("");
+                          setForgotEmailInput(staffEmailInput);
+                          setStaffAuthMode("forgot");
+                        }}
+                        className="text-[10px] font-bold text-brand-teal hover:underline cursor-pointer"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required
+                        placeholder="Enter account password"
+                        value={staffPasswordInput}
+                        onChange={(e) => setStaffPasswordInput(e.target.value)}
+                        className="w-full text-sm pl-9 pr-10 py-2.5 border border-stone-300 focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-900"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-2.5 text-stone-400 hover:text-stone-700"
+                        title={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 text-[10px] text-stone-400">
+                      <span>Roles: Manager &bull; Reservations &bull; Reception &bull; Admin</span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsStaffPinModalOpen(false)}
+                      className="px-4 py-2 text-xs font-bold text-stone-500 uppercase tracking-wider hover:text-stone-800 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={authLoading}
+                      className="px-6 py-2.5 bg-brand-teal text-white font-bold text-xs uppercase tracking-widest hover:bg-brand-teal-dark transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {authLoading ? "Authenticating..." : "Sign In to Portal"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* 2. FORGOT PASSWORD MODE */}
+              {staffAuthMode === "forgot" && (
+                <form onSubmit={handleRequestPasswordReset} className="space-y-4">
+                  <p className="text-xs text-stone-500 font-light leading-relaxed">
+                    Enter your staff account email below. If an account is registered, a password reset link will be sent via Resend.
+                  </p>
+
+                  {forgotSentMessage && (
+                    <div className="p-3 bg-emerald-50 border-l-2 border-emerald-500 text-emerald-800 text-xs leading-relaxed">
+                      {forgotSentMessage}
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
+                      Staff Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
+                      <input
+                        type="email"
+                        required
+                        autoFocus
+                        placeholder="e.g. yourname@tamarind.co.ke"
+                        value={forgotEmailInput}
+                        onChange={(e) => setForgotEmailInput(e.target.value)}
+                        className="w-full text-sm pl-9 pr-3.5 py-2.5 border border-stone-300 focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStaffPinError("");
+                        setStaffAuthMode("login");
+                      }}
+                      className="flex items-center gap-1 text-xs font-bold text-stone-600 hover:text-stone-900 cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to Sign In</span>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={authLoading}
+                      className="px-5 py-2.5 bg-brand-teal text-white font-bold text-xs uppercase tracking-widest hover:bg-brand-teal-dark transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {authLoading ? "Sending..." : "Send Reset Email"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* 3. RESET PASSWORD MODE */}
+              {staffAuthMode === "reset" && (
+                <form onSubmit={handleCompletePasswordReset} className="space-y-4">
+                  <p className="text-xs text-stone-500 font-light leading-relaxed">
+                    Create a strong new password for your staff account (minimum 6 characters).
+                  </p>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
+                      Reset Token
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Paste 64-character token"
+                      value={resetTokenInput}
+                      onChange={(e) => setResetTokenInput(e.target.value)}
+                      className="w-full text-xs px-3 py-2 border border-stone-300 font-mono bg-stone-50 text-stone-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Enter new password"
+                      value={newPasswordInput}
+                      onChange={(e) => setNewPasswordInput(e.target.value)}
+                      className="w-full text-sm px-3.5 py-2.5 border border-stone-300 focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-600 mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Re-enter new password"
+                      value={confirmPasswordInput}
+                      onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                      className="w-full text-sm px-3.5 py-2.5 border border-stone-300 focus:outline-none focus:border-brand-teal bg-stone-50 text-stone-900"
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStaffPinError("");
+                        setStaffAuthMode("login");
+                      }}
+                      className="flex items-center gap-1 text-xs font-bold text-stone-600 hover:text-stone-900 cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to Sign In</span>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={authLoading}
+                      className="px-5 py-2.5 bg-brand-teal text-white font-bold text-xs uppercase tracking-widest hover:bg-brand-teal-dark transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {authLoading ? "Saving..." : "Set New Password"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </motion.div>
           </div>
         )}

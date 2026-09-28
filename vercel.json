@@ -1,20 +1,28 @@
 {
   "rewrites": [
     {
-      "source": "/api/inquiries/:id/status",
-      "destination": "/api/inquiries?id=:id&action=status"
+      "source": "/api/profitroom/rooms",
+      "destination": "/api/profitroom?type=rooms"
     },
     {
-      "source": "/api/inquiries/:id",
-      "destination": "/api/inquiries?id=:id"
+      "source": "/api/profitroom/offers",
+      "destination": "/api/profitroom?type=offers"
     },
     {
-      "source": "/api/apartments/:id",
-      "destination": "/api/apartments?id=:id"
+      "source": "/api/rooms",
+      "destination": "/api/profitroom?type=rooms"
     },
     {
-      "source": "/api/dining/:id",
-      "destination": "/api/dining?id=:id"
+      "source": "/api/offers",
+      "destination": "/api/profitroom?type=offers"
+    },
+    {
+      "source": "/api/profitroom",
+      "destination": "/api/profitroom"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
     }
   ]
 }
