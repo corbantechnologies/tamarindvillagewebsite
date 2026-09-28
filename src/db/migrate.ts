@@ -200,6 +200,15 @@ export async function initAndMigrateDatabase() {
 
     console.log("✅ Database schema tables verified.");
 
+    // Ensure all required columns exist in older tables (Self-healing schema migration)
+    try {
+      await client.unsafe(`ALTER TABLE apartments ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;`);
+      await client.unsafe(`ALTER TABLE dining_options ADD COLUMN IF NOT EXISTS max_capacity INTEGER DEFAULT 100;`);
+      await client.unsafe(`ALTER TABLE dining_options ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;`);
+    } catch (colErr) {
+      console.warn("Schema self-healing column check warning:", colErr);
+    }
+
     // ==========================================
     // 2. SEEDING & DATA HYDRATION
     // ==========================================

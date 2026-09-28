@@ -7,8 +7,10 @@ import {
   ShieldAlert, CheckCircle, Clock, ArrowRight, Search, Filter, 
   Edit3, Eye, CheckSquare, Sparkles, RefreshCw, Car, Heart, Image as ImageIcon,
   MessageSquare, Copy, ExternalLink, Send, Key, Users, ShieldCheck, UserCheck, EyeOff, Lock,
-  Maximize2, Minimize2, Download, ConciergeBell, Waves, Coffee, BedDouble
+  Maximize2, Minimize2, Download, ConciergeBell, Waves, Coffee, BedDouble,
+  PanelLeft, PanelLeftClose, ChevronLeft, ChevronRight, Menu
 } from "lucide-react";
+import { APARTMENTS, DINING } from "../data.js";
 import { ApartmentType, DiningExperience, StaffUser, StaffRole, BookingRecord, FacilityType, PackageType } from "../types";
 import FrontDeskHub from "./admin/FrontDeskHub";
 import BookingsLedger from "./admin/BookingsLedger";
@@ -162,13 +164,16 @@ export default function StaffDashboardModal({
   
   // Data State loaded from APIs
   const [inquiries, setInquiries] = useState<InquiryData[]>([]);
-  const [apartments, setApartments] = useState<ApartmentType[]>([]);
-  const [dining, setDining] = useState<DiningExperience[]>([]);
+  const [apartments, setApartments] = useState<ApartmentType[]>(APARTMENTS);
+  const [dining, setDining] = useState<DiningExperience[]>(DINING);
   const [pricing, setPricing] = useState<PricingRules>({
     markupMultiplier: 1.0,
     taxRate: 8,
     seasonalFactor: "regular"
   });
+
+  // Collapsible sidebar state (modern drawer)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Loading and feedback states
   const [loading, setLoading] = useState(false);
@@ -344,32 +349,50 @@ export default function StaffDashboardModal({
 
       // 2. Fetch Apartments
       console.log("🔍 [StaffDashboard] Fetching apartments from /api/apartments...");
-      const aptsRes = await fetch("/api/apartments");
-      console.log("🔍 [StaffDashboard] Apartments response status:", aptsRes.status);
-      if (aptsRes.ok) {
-        const data = await aptsRes.json();
-        console.log("🔍 [StaffDashboard] Parsed apartments count:", data.apartments?.length, data.apartments);
-        setApartments(data.apartments || []);
-        if (data.database_error) {
-          activeDbError = data.database_error;
+      try {
+        const aptsRes = await fetch("/api/apartments");
+        console.log("🔍 [StaffDashboard] Apartments response status:", aptsRes.status);
+        if (aptsRes.ok) {
+          const data = await aptsRes.json();
+          console.log("🔍 [StaffDashboard] Parsed apartments count:", data.apartments?.length);
+          if (data.apartments && Array.isArray(data.apartments) && data.apartments.length > 0) {
+            setApartments(data.apartments);
+          } else {
+            setApartments(APARTMENTS);
+          }
+          if (data.database_error) {
+            activeDbError = data.database_error;
+          }
+        } else {
+          setApartments(APARTMENTS);
         }
-      } else {
-        console.error("❌ [StaffDashboard] Failed to fetch apartments, status:", aptsRes.status);
+      } catch (aptErr) {
+        console.warn("Failed to fetch apartments, using default catalog:", aptErr);
+        setApartments(APARTMENTS);
       }
 
       // 3. Fetch Dining Options
       console.log("🔍 [StaffDashboard] Fetching dining options from /api/dining...");
-      const diningRes = await fetch("/api/dining");
-      console.log("🔍 [StaffDashboard] Dining response status:", diningRes.status);
-      if (diningRes.ok) {
-        const data = await diningRes.json();
-        console.log("🔍 [StaffDashboard] Parsed dining count:", data.dining?.length, data.dining);
-        setDining(data.dining || []);
-        if (data.database_error) {
-          activeDbError = data.database_error;
+      try {
+        const diningRes = await fetch("/api/dining");
+        console.log("🔍 [StaffDashboard] Dining response status:", diningRes.status);
+        if (diningRes.ok) {
+          const data = await diningRes.json();
+          console.log("🔍 [StaffDashboard] Parsed dining count:", data.dining?.length);
+          if (data.dining && Array.isArray(data.dining) && data.dining.length > 0) {
+            setDining(data.dining);
+          } else {
+            setDining(DINING);
+          }
+          if (data.database_error) {
+            activeDbError = data.database_error;
+          }
+        } else {
+          setDining(DINING);
         }
-      } else {
-        console.error("❌ [StaffDashboard] Failed to fetch dining options, status:", diningRes.status);
+      } catch (dinErr) {
+        console.warn("Failed to fetch dining options, using default venues:", dinErr);
+        setDining(DINING);
       }
 
       // 4. Fetch Pricing rules
@@ -1157,28 +1180,69 @@ export default function StaffDashboardModal({
         >
 
           {/* PORTAL HEADER */}
-          <div className="bg-brand-dark text-white border-b border-brand-gold/20 px-6 sm:px-8 py-4 sm:py-5 flex items-center justify-between shrink-0">
+          <div className="bg-[#10141d] text-stone-100 border-b border-stone-800 px-4 sm:px-6 py-3 flex items-center justify-between shrink-0 relative z-20 shadow-md">
+            {/* Left: Drawer toggle + Brand Branding */}
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-brand-gold/10 border border-brand-gold/30">
-                <Sliders className="w-6 h-6 text-brand-gold" />
-              </div>
-              <div>
-                <h2 className="font-serif text-lg sm:text-xl font-bold tracking-widest text-brand-gold uppercase">Tamarind Staff Management Portal</h2>
-                <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-0.5">Live Controller & Administrative Dashboard</p>
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 text-stone-400 hover:text-brand-gold hover:bg-stone-800/80 rounded border border-stone-700/60 transition-all cursor-pointer shadow-sm flex items-center justify-center focus:outline-none"
+                title={sidebarCollapsed ? "Expand Navigation Drawer" : "Collapse Navigation Drawer"}
+                aria-label="Toggle Navigation Drawer"
+              >
+                {sidebarCollapsed ? (
+                  <PanelLeft className="w-5 h-5 text-brand-gold" />
+                ) : (
+                  <PanelLeftClose className="w-5 h-5" />
+                )}
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded bg-gradient-to-br from-amber-500/20 to-amber-700/10 border border-brand-gold/40 flex items-center justify-center shadow-inner">
+                  <span className="font-serif font-black text-brand-gold text-xs tracking-wider">TV</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-serif text-sm sm:text-base font-bold tracking-widest text-stone-100 uppercase">
+                      Tamarind Village
+                    </h2>
+                    <span className="hidden md:inline-block text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-brand-gold/15 text-brand-gold border border-brand-gold/30">
+                      Staff Portal
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-stone-400 font-medium tracking-wide hidden sm:block">
+                    Executive Resort Controller & CMS
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            {/* Right: Cloud sync status, Current User, Controls */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Cloud Sync Status */}
+              <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-stone-900/90 border border-stone-800 rounded text-[10px] font-mono text-stone-300">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span className="text-emerald-400 font-bold uppercase tracking-wider">Cloud Live</span>
+              </div>
+
+              {/* Logged in Staff Badge */}
               {currentUser && (
-                <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 bg-stone-800/90 border border-stone-700">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-stone-900/90 border border-stone-800 rounded">
+                  <div className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[10px] font-bold text-brand-gold">
+                    {(currentUser.name || "ST").slice(0, 2).toUpperCase()}
+                  </div>
                   <div className="text-left">
-                    <p className="text-[11px] font-bold text-white leading-none">{currentUser.name}</p>
+                    <p className="text-[11px] font-bold text-stone-200 leading-none truncate max-w-[120px]">{currentUser.name}</p>
                     <p className="text-[9px] font-mono text-brand-gold uppercase tracking-wider mt-0.5">{currentUser.role}</p>
                   </div>
                   {onSwitchUser && (
                     <button
+                      type="button"
                       onClick={onSwitchUser}
-                      className="ml-2 text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white bg-stone-700/60 hover:bg-stone-700 px-2 py-0.5 transition-colors cursor-pointer"
+                      className="ml-1 text-[9px] font-bold uppercase tracking-wider text-stone-300 hover:text-white bg-stone-800 hover:bg-stone-700 px-2 py-1 rounded transition-colors cursor-pointer border border-stone-700"
                       title="Switch staff user / change PIN"
                     >
                       Switch
@@ -1186,8 +1250,9 @@ export default function StaffDashboardModal({
                   )}
                   {onLogout && (
                     <button
+                      type="button"
                       onClick={onLogout}
-                      className="text-[10px] font-bold uppercase tracking-wider text-red-400 hover:text-red-300 bg-red-950/40 hover:bg-red-900/50 px-2 py-0.5 border border-red-800/50 transition-colors cursor-pointer"
+                      className="text-[9px] font-bold uppercase tracking-wider text-rose-300 hover:text-white bg-rose-950/60 hover:bg-rose-900/80 px-2 py-1 rounded border border-rose-800/60 transition-colors cursor-pointer"
                       title="End session & lock dashboard"
                     >
                       Lock
@@ -1195,27 +1260,37 @@ export default function StaffDashboardModal({
                   )}
                 </div>
               )}
-              {loading && <RefreshCw className="w-4 h-4 text-brand-teal animate-spin" />}
+
+              {/* Sync data button */}
               <button
+                type="button"
                 onClick={loadAllDashboardData}
-                className="text-xs text-stone-400 hover:text-white border border-stone-700 hover:border-stone-500 px-3 py-1.5 font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                title="Refresh Live Data"
+                disabled={loading}
+                className="flex items-center gap-1.5 text-xs text-stone-300 hover:text-white bg-stone-900/80 hover:bg-stone-800 border border-stone-700 px-3 py-1.5 rounded font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-50"
+                title="Sync Live Cloud Data"
               >
-                Sync Data
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-brand-gold" : "text-stone-400"}`} />
+                <span className="hidden sm:inline">Sync Data</span>
               </button>
+
+              {/* Fullscreen Toggle */}
               <button
+                type="button"
                 onClick={() => setIsFullScreen(!isFullScreen)}
-                className="p-1.5 border border-stone-800 hover:bg-stone-800 text-stone-400 hover:text-white transition-colors cursor-pointer focus:outline-none"
+                className="p-1.5 rounded border border-stone-700 bg-stone-900/80 hover:bg-stone-800 text-stone-400 hover:text-white transition-colors cursor-pointer focus:outline-none"
                 title={isFullScreen ? "Restore Window Size" : "Maximize Full Screen"}
               >
-                {isFullScreen ? <Minimize2 className="w-5 h-5 text-brand-gold" /> : <Maximize2 className="w-5 h-5" />}
+                {isFullScreen ? <Minimize2 className="w-4 h-4 text-brand-gold" /> : <Maximize2 className="w-4 h-4" />}
               </button>
+
+              {/* Close Button */}
               <button
+                type="button"
                 onClick={onClose}
-                className="p-1.5 border border-stone-800 hover:bg-stone-800 text-stone-400 hover:text-white transition-colors cursor-pointer focus:outline-none"
+                className="p-1.5 rounded border border-stone-700 bg-stone-900/80 hover:bg-stone-800 text-stone-400 hover:text-rose-400 transition-colors cursor-pointer focus:outline-none"
                 title="Close Portal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -1223,213 +1298,380 @@ export default function StaffDashboardModal({
           {/* MAIN BODY GRID */}
           <div className="flex flex-1 overflow-hidden min-h-0">
             
-            {/* PORTAL SIDEBAR */}
-            <div className="w-64 bg-stone-900 text-stone-400 border-r border-stone-800 flex flex-col shrink-0 justify-between py-6">
-              <nav className="space-y-1.5 px-4 overflow-y-auto">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 mb-2">Operations</div>
-                
+            {/* MODERN COLLAPSIBLE DRAWER SIDEBAR */}
+            <div 
+              className={`bg-[#0d1017] text-stone-400 border-r border-stone-800/80 flex flex-col shrink-0 justify-between transition-all duration-300 ease-in-out z-10 ${
+                sidebarCollapsed ? "w-20" : "w-68"
+              }`}
+            >
+              <nav className="space-y-1 p-3 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-stone-800 hover:scrollbar-thumb-stone-700">
+                {/* Section: Operations */}
+                {!sidebarCollapsed ? (
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 pt-1 pb-1">
+                    Operations
+                  </div>
+                ) : (
+                  <div className="my-1 border-t border-stone-800/80 mx-2" />
+                )}
+
+                {/* Tab: Front Desk */}
                 <button
+                  type="button"
                   onClick={() => { setActiveTab("frontdesk"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "frontdesk"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Front Desk Hub" : undefined}
                 >
-                  <ConciergeBell className="w-4.5 h-4.5" />
-                  <span>Front Desk Hub</span>
+                  <ConciergeBell className={`w-4.5 h-4.5 shrink-0 ${activeTab === "frontdesk" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Front Desk Hub</span>}
                   {todayArrivals.length > 0 && (
-                    <span className="ml-auto bg-amber-500 text-stone-950 text-[9px] px-1.5 py-0.5 font-black rounded-full">
-                      {todayArrivals.length}
+                    sidebarCollapsed ? (
+                      <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-[#0d1017]" />
+                    ) : (
+                      <span className="ml-auto bg-amber-500 text-stone-950 text-[9px] px-1.5 py-0.5 font-black rounded-full">
+                        {todayArrivals.length}
+                      </span>
+                    )
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Front Desk Hub {todayArrivals.length > 0 ? `(${todayArrivals.length})` : ""}
                     </span>
                   )}
                 </button>
 
+                {/* Tab: Bookings Ledger */}
                 <button
+                  type="button"
                   onClick={() => { setActiveTab("bookings"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "bookings"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Bookings Ledger" : undefined}
                 >
-                  <BedDouble className="w-4.5 h-4.5" />
-                  <span>Bookings Ledger</span>
-                  <span className="ml-auto bg-stone-800 text-stone-300 text-[9px] px-1.5 py-0.5 font-bold">
-                    {activeBookingsCount}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => { setActiveTab("inquiries"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                    activeTab === "inquiries"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <Mail className="w-4.5 h-4.5" />
-                  <span>Guest Inquiries</span>
-                  {stats.pending > 0 && (
-                    <span className="ml-auto bg-brand-gold text-brand-dark text-[9px] px-1.5 py-0.5 font-bold rounded-full">
-                      {stats.pending}
+                  <BedDouble className={`w-4.5 h-4.5 shrink-0 ${activeTab === "bookings" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Bookings Ledger</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-300 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {activeBookingsCount}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Bookings Ledger ({activeBookingsCount})
                     </span>
                   )}
                 </button>
 
-                <div className="h-px bg-stone-800 my-3 mx-3" />
-                <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 mb-2">Resort & Website CMS</div>
-
+                {/* Tab: Guest Inquiries */}
                 <button
+                  type="button"
+                  onClick={() => { setActiveTab("inquiries"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                    activeTab === "inquiries"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                  }`}
+                  title={sidebarCollapsed ? "Guest Inquiries" : undefined}
+                >
+                  <Mail className={`w-4.5 h-4.5 shrink-0 ${activeTab === "inquiries" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Guest Inquiries</span>}
+                  {stats.pending > 0 && (
+                    sidebarCollapsed ? (
+                      <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-brand-gold ring-2 ring-[#0d1017]" />
+                    ) : (
+                      <span className="ml-auto bg-brand-gold text-brand-dark text-[9px] px-1.5 py-0.5 font-black rounded-full">
+                        {stats.pending}
+                      </span>
+                    )
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Guest Inquiries {stats.pending > 0 ? `(${stats.pending})` : ""}
+                    </span>
+                  )}
+                </button>
+
+                {/* Section: Resort CMS */}
+                {!sidebarCollapsed ? (
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 pt-3 pb-1 border-t border-stone-800/60 mt-2">
+                    Resort & CMS
+                  </div>
+                ) : (
+                  <div className="my-2 border-t border-stone-800/80 mx-2" />
+                )}
+
+                {/* Tab: Suites & Inventory */}
+                <button
+                  type="button"
                   onClick={() => { setActiveTab("apartments"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "apartments"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Suites & Inventory" : undefined}
                 >
-                  <Hotel className="w-4.5 h-4.5" />
-                  <span>Suites & Inventory</span>
-                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
-                    {apartments.length}
-                  </span>
+                  <Hotel className={`w-4.5 h-4.5 shrink-0 ${activeTab === "apartments" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Suites & Inventory</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {apartments.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Suites & Inventory ({apartments.length})
+                    </span>
+                  )}
                 </button>
 
+                {/* Tab: Dining & Dhow */}
                 <button
+                  type="button"
                   onClick={() => { setActiveTab("dining"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "dining"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Dining & Dhow" : undefined}
                 >
-                  <Utensils className="w-4.5 h-4.5" />
-                  <span>Dining & Dhow</span>
-                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
-                    {dining.length}
-                  </span>
+                  <Utensils className={`w-4.5 h-4.5 shrink-0 ${activeTab === "dining" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Dining & Dhow</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {dining.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Dining & Dhow ({dining.length})
+                    </span>
+                  )}
                 </button>
 
+                {/* Tab: Boarding Packages */}
                 <button
+                  type="button"
                   onClick={() => { setActiveTab("packages"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "packages"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Boarding Packages" : undefined}
                 >
-                  <Coffee className="w-4.5 h-4.5" />
-                  <span>Boarding Packages</span>
-                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
-                    {boardingPackages.length}
-                  </span>
+                  <Coffee className={`w-4.5 h-4.5 shrink-0 ${activeTab === "packages" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Boarding Packages</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {boardingPackages.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Boarding Packages ({boardingPackages.length})
+                    </span>
+                  )}
                 </button>
 
+                {/* Tab: Transfers & Fleet */}
                 <button
+                  type="button"
                   onClick={() => { setActiveTab("transfers"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "transfers"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Transfers & Fleet" : undefined}
                 >
-                  <Car className="w-4.5 h-4.5" />
-                  <span>Transfers & Fleet</span>
-                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
-                    {vehicles.length}
-                  </span>
+                  <Car className={`w-4.5 h-4.5 shrink-0 ${activeTab === "transfers" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Transfers & Fleet</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {vehicles.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Transfers & Fleet ({vehicles.length})
+                    </span>
+                  )}
                 </button>
 
+                {/* Tab: Resort Facilities */}
                 <button
+                  type="button"
                   onClick={() => { setActiveTab("facilities"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "facilities"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Resort Facilities" : undefined}
                 >
-                  <Waves className="w-4.5 h-4.5" />
-                  <span>Resort Facilities</span>
-                  <span className="ml-auto bg-stone-800 text-stone-400 text-[9px] px-1.5 py-0.5 font-mono">
-                    {facilities.length}
-                  </span>
+                  <Waves className={`w-4.5 h-4.5 shrink-0 ${activeTab === "facilities" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Resort Facilities</span>}
+                  {!sidebarCollapsed && (
+                    <span className="ml-auto bg-stone-800/80 text-stone-400 text-[9px] px-1.5 py-0.5 rounded font-mono">
+                      {facilities.length}
+                    </span>
+                  )}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Resort Facilities ({facilities.length})
+                    </span>
+                  )}
                 </button>
 
+                {/* Tab: Hero Slideshow */}
                 <button
+                  type="button"
                   onClick={() => { setActiveTab("hero"); setSelectedInquiry(null); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
                     activeTab === "hero"
-                      ? "bg-brand-teal text-brand-dark font-black"
-                      : "hover:bg-stone-800 hover:text-white"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
                   }`}
+                  title={sidebarCollapsed ? "Hero Slideshow" : undefined}
                 >
-                  <ImageIcon className="w-4.5 h-4.5" />
-                  <span>Hero Slideshow</span>
+                  <ImageIcon className={`w-4.5 h-4.5 shrink-0 ${activeTab === "hero" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Hero Slideshow</span>}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Hero Slideshow
+                    </span>
+                  )}
                 </button>
 
+                {/* Section: Governance & Rates */}
                 {(canAccessPricing || canAccessTeam || canAccessLogs) && (
                   <>
-                    <div className="h-px bg-stone-800 my-3 mx-3" />
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 mb-2">Governance & Rates</div>
+                    {!sidebarCollapsed ? (
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-stone-500 px-3 pt-3 pb-1 border-t border-stone-800/60 mt-2">
+                        Governance & Rates
+                      </div>
+                    ) : (
+                      <div className="my-2 border-t border-stone-800/80 mx-2" />
+                    )}
+
+                    {canAccessPricing && (
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab("pricing"); setSelectedInquiry(null); }}
+                        className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                          activeTab === "pricing"
+                            ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                            : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                        }`}
+                        title={sidebarCollapsed ? "Rates & Pricing" : undefined}
+                      >
+                        <DollarSign className={`w-4.5 h-4.5 shrink-0 ${activeTab === "pricing" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                        {!sidebarCollapsed && <span className="truncate">Rates & Pricing</span>}
+                        {sidebarCollapsed && (
+                          <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                            Rates & Dynamic Pricing
+                          </span>
+                        )}
+                      </button>
+                    )}
+
+                    {canAccessTeam && (
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab("team"); setSelectedInquiry(null); }}
+                        className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                          activeTab === "team"
+                            ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                            : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                        }`}
+                        title={sidebarCollapsed ? "Staff Accounts" : undefined}
+                      >
+                        <Users className={`w-4.5 h-4.5 shrink-0 ${activeTab === "team" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                        {!sidebarCollapsed && <span className="truncate">Staff Accounts</span>}
+                        {!sidebarCollapsed && (
+                          <span className="ml-auto bg-stone-800/80 text-brand-gold text-[9px] px-1.5 py-0.5 rounded font-mono">
+                            {staffUsers.length}
+                          </span>
+                        )}
+                        {sidebarCollapsed && (
+                          <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                            Staff Accounts ({staffUsers.length})
+                          </span>
+                        )}
+                      </button>
+                    )}
+
+                    {canAccessLogs && (
+                      <button
+                        type="button"
+                        onClick={() => { setActiveTab("logs"); setSelectedInquiry(null); }}
+                        className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                          activeTab === "logs"
+                            ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                            : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                        }`}
+                        title={sidebarCollapsed ? "Audit & Activity Logs" : undefined}
+                      >
+                        <FileText className={`w-4.5 h-4.5 shrink-0 ${activeTab === "logs" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                        {!sidebarCollapsed && <span className="truncate">Audit & Activity Logs</span>}
+                        {!sidebarCollapsed && (
+                          <span className="ml-auto bg-stone-800/80 text-brand-gold text-[9px] px-1.5 py-0.5 rounded font-mono">
+                            {allAuditLogs.length}
+                          </span>
+                        )}
+                        {sidebarCollapsed && (
+                          <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                            Audit & Activity Logs ({allAuditLogs.length})
+                          </span>
+                        )}
+                      </button>
+                    )}
                   </>
-                )}
-
-                {canAccessPricing && (
-                  <button
-                    onClick={() => { setActiveTab("pricing"); setSelectedInquiry(null); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                      activeTab === "pricing"
-                        ? "bg-brand-teal text-brand-dark font-black"
-                        : "hover:bg-stone-800 hover:text-white"
-                    }`}
-                  >
-                    <DollarSign className="w-4.5 h-4.5" />
-                    <span>Rates & Pricing</span>
-                  </button>
-                )}
-
-                {canAccessTeam && (
-                  <button
-                    onClick={() => { setActiveTab("team"); setSelectedInquiry(null); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                      activeTab === "team"
-                        ? "bg-brand-teal text-brand-dark font-black"
-                        : "hover:bg-stone-800 hover:text-white"
-                    }`}
-                  >
-                    <Users className="w-4.5 h-4.5" />
-                    <span>Staff Accounts</span>
-                    <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
-                      {staffUsers.length}
-                    </span>
-                  </button>
-                )}
-
-                {canAccessLogs && (
-                  <button
-                    onClick={() => { setActiveTab("logs"); setSelectedInquiry(null); }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${
-                      activeTab === "logs"
-                        ? "bg-brand-teal text-brand-dark font-black"
-                        : "hover:bg-stone-800 hover:text-white"
-                    }`}
-                  >
-                    <FileText className="w-4.5 h-4.5" />
-                    <span>Audit & Activity Logs</span>
-                    <span className="ml-auto bg-stone-800 text-brand-gold text-[9px] px-1.5 py-0.5 font-bold">
-                      {allAuditLogs.length}
-                    </span>
-                  </button>
                 )}
               </nav>
 
-              {/* SECURITY SIGNATURE */}
-              <div className="px-6 text-[10px] text-stone-600 space-y-1">
-                <div className="flex items-center gap-1.5 text-brand-gold/70 font-bold uppercase tracking-widest">
-                  <ShieldAlert className="w-3.5 h-3.5" />
-                  <span>SECURE CHANNEL</span>
-                </div>
-                <p>Tamarind Staff Gateways strictly logged & monitored.</p>
+              {/* SIDEBAR FOOTER: DRAWER COLLAPSE BUTTON & SECURITY BADGE */}
+              <div className="border-t border-stone-800/80 bg-stone-950/40 p-3 space-y-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center" : "justify-between px-3"} py-2 rounded text-stone-400 hover:text-brand-gold hover:bg-stone-800/60 transition-colors text-[10px] font-bold uppercase tracking-wider cursor-pointer border border-transparent hover:border-stone-700`}
+                  title={sidebarCollapsed ? "Expand Navigation Drawer" : "Collapse Navigation Drawer"}
+                >
+                  {!sidebarCollapsed ? (
+                    <>
+                      <span className="flex items-center gap-2">
+                        <PanelLeftClose className="w-3.5 h-3.5 text-brand-gold" />
+                        <span>Collapse Menu</span>
+                      </span>
+                      <ChevronLeft className="w-3.5 h-3.5 text-stone-500" />
+                    </>
+                  ) : (
+                    <PanelLeft className="w-4 h-4 text-brand-gold" />
+                  )}
+                </button>
+
+                {!sidebarCollapsed ? (
+                  <div className="px-3 pt-1 text-[9px] text-stone-500 space-y-0.5">
+                    <div className="flex items-center gap-1.5 text-brand-gold/70 font-bold uppercase tracking-widest">
+                      <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                      <span>SECURE CHANNEL</span>
+                    </div>
+                    <p className="text-[8px] text-stone-500 leading-tight">Mombasa Cloud Gateways strictly encrypted.</p>
+                  </div>
+                ) : (
+                  <div className="flex justify-center pt-1" title="Encrypted Staff Gateway">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/80" />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2034,36 +2276,57 @@ export default function StaffDashboardModal({
               {/* --- TAB 2: APARTMENTS EDITOR --- */}
               {activeTab === "apartments" && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-stone-200 pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-5">
                     <div>
-                      <h3 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">Apartments & Suites Editor</h3>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">Customize texts, capacities, base pricing, and presentation images</p>
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 uppercase tracking-wider">Apartments & Suites Inventory</h3>
+                        <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-800 border border-amber-500/30 px-2 py-0.5 rounded">
+                          {apartments.length} Active Suites
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 font-medium tracking-wide mt-1">
+                        Manage room categories, maximum capacities, live pricing tariffs, and visual presentations
+                      </p>
                     </div>
                     {!editingApartment && (
-                      <button
-                        onClick={() => {
-                          setEditingApartment({
-                            id: "apt_" + Date.now(),
-                            name: "",
-                            description: "",
-                            size: "85 m²",
-                            maxGuests: 4,
-                            pricePerNight: 200,
-                            image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
-                            gallery: [],
-                            amenities: ["Air Conditioning", "WiFi", "Minibar", "Ocean View", "En-suite Bathroom"],
-                            bedrooms: 2,
-                            bathrooms: 2,
-                            highlights: ["Direct Ocean Access", "Private Terrace"],
-                            bedConfig: "1 King Bed, 2 Single Beds",
-                            viewType: "Ocean & Horizon View",
-                          });
-                        }}
-                        className="px-4 py-2 bg-brand-teal hover:bg-brand-teal/80 text-brand-dark font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Add New Suite</span>
-                      </button>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        {apartments.length < APARTMENTS.length && (
+                          <button
+                            type="button"
+                            onClick={() => setApartments(APARTMENTS)}
+                            className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer rounded border border-stone-300 transition-colors"
+                            title="Restore default catalog suites"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Reset Baseline</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingApartment({
+                              id: "apt_" + Date.now(),
+                              name: "",
+                              description: "",
+                              size: "85 m²",
+                              maxGuests: 4,
+                              pricePerNight: 200,
+                              image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+                              gallery: [],
+                              amenities: ["Air Conditioning", "WiFi", "Minibar", "Ocean View", "En-suite Bathroom"],
+                              bedrooms: 2,
+                              bathrooms: 2,
+                              highlights: ["Direct Ocean Access", "Private Terrace"],
+                              bedConfig: "1 King Bed, 2 Single Beds",
+                              viewType: "Ocean & Horizon View",
+                            });
+                          }}
+                          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer rounded shadow-sm transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add New Suite</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -2244,46 +2507,99 @@ export default function StaffDashboardModal({
                         </button>
                       </div>
                     </form>
+                  ) : apartments.length === 0 ? (
+                    <div className="bg-white border border-stone-200 p-12 text-center max-w-xl mx-auto my-8 shadow-sm rounded-lg">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 border border-amber-200 text-amber-700 rounded-full flex items-center justify-center">
+                        <Hotel className="w-8 h-8" />
+                      </div>
+                      <h4 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">No Suites Currently In Catalog</h4>
+                      <p className="text-stone-500 text-xs mt-2 leading-relaxed">
+                        There are currently no suites loaded in the live inventory catalog. You can restore Tamarind's baseline luxury suites or add a custom suite.
+                      </p>
+                      <div className="flex items-center justify-center gap-3 mt-6">
+                        <button
+                          type="button"
+                          onClick={() => setApartments(APARTMENTS)}
+                          className="px-4 py-2.5 bg-amber-600 text-white font-bold uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer hover:bg-amber-500 rounded shadow-sm transition-colors"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          <span>Load Baseline Catalog</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingApartment({
+                              id: "apt_" + Date.now(),
+                              name: "",
+                              description: "",
+                              size: "85 m²",
+                              maxGuests: 4,
+                              pricePerNight: 200,
+                              image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=800&q=80",
+                              gallery: [],
+                              amenities: ["Air Conditioning", "WiFi", "Minibar", "Ocean View", "En-suite Bathroom"],
+                              bedrooms: 2,
+                              bathrooms: 2,
+                              highlights: ["Direct Ocean Access", "Private Terrace"],
+                              bedConfig: "1 King Bed, 2 Single Beds",
+                              viewType: "Ocean & Horizon View",
+                            });
+                          }}
+                          className="px-4 py-2.5 bg-stone-900 text-white font-bold uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer hover:bg-stone-800 rounded transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Create Suite</span>
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {apartments.map(apt => (
-                        <div key={apt.id} className="bg-white border border-stone-200 overflow-hidden flex flex-col shadow-sm">
-                          <OptimizedImage 
-                            src={apt.image} 
-                            preset="thumb"
-                            alt={apt.name} 
-                            className="w-full h-48 object-cover border-b border-stone-150"
-                          />
+                        <div key={apt.id} className="bg-white border border-stone-200 rounded overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow group">
+                          <div className="relative">
+                            <OptimizedImage 
+                              src={apt.image} 
+                              preset="thumb"
+                              alt={apt.name} 
+                              className="w-full h-52 object-cover border-b border-stone-150 group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute top-3 right-3 bg-stone-950/85 backdrop-blur-sm border border-stone-700/60 text-brand-gold font-mono text-xs font-bold px-2.5 py-1 rounded shadow-sm">
+                              ${apt.pricePerNight} <span className="text-[10px] text-stone-300 font-normal">/ night</span>
+                            </div>
+                            <div className="absolute bottom-3 left-3 bg-stone-950/75 backdrop-blur-sm text-stone-200 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                              {apt.size} • Max {apt.maxGuests} Guests
+                            </div>
+                          </div>
                           <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                             <div>
-                              <div className="flex items-start justify-between gap-1">
-                                <h4 className="font-serif text-sm font-bold text-stone-900 leading-tight uppercase tracking-wide">
-                                  {apt.name}
-                                </h4>
-                                <span className="font-serif text-sm font-bold text-brand-teal shrink-0">
-                                  ${apt.pricePerNight}/N
-                                </span>
-                              </div>
+                              <h4 className="font-serif text-base font-bold text-stone-900 leading-snug uppercase tracking-wide">
+                                {apt.name}
+                              </h4>
                               <p className="text-stone-500 text-xs mt-2 line-clamp-3 leading-relaxed">
                                 {apt.description}
                               </p>
-                              <div className="grid grid-cols-2 gap-1.5 pt-3.5 border-t border-stone-100 mt-3 text-[10px] text-stone-600 font-semibold uppercase">
-                                <div>Size: {apt.size}</div>
-                                <div>Max Guests: {apt.maxGuests}</div>
+                              <div className="flex flex-wrap gap-1.5 pt-3.5 border-t border-stone-100 mt-3 text-[10px]">
+                                {(apt.highlights || []).slice(0, 2).map((h, i) => (
+                                  <span key={i} className="bg-stone-100 text-stone-700 px-2 py-0.5 rounded font-medium">
+                                    {h}
+                                  </span>
+                                ))}
                               </div>
                             </div>
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 pt-2">
                               <button
+                                type="button"
                                 onClick={() => handleStartEditApartment(apt)}
-                                className="flex-1 py-2 bg-stone-900 hover:bg-brand-teal hover:text-brand-dark text-white font-bold uppercase tracking-widest text-[9px] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                className="flex-1 py-2.5 bg-stone-900 hover:bg-stone-800 text-brand-gold hover:text-white font-bold uppercase tracking-widest text-[10px] rounded transition-all cursor-pointer flex items-center justify-center gap-1.5"
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
+                                <Edit3 className="w-3.5 h-3.5 text-brand-gold" />
                                 <span>Edit Details</span>
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDeleteApartment(apt.id)}
-                                className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
+                                className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
                                 title="Delete Suite"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -2417,29 +2733,50 @@ export default function StaffDashboardModal({
               {/* --- TAB 4: DINING OPTIONS MANAGER --- */}
               {activeTab === "dining" && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-stone-200 pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-5">
                     <div>
-                      <h3 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">Dining & Experiences Manager</h3>
-                      <p className="text-[10px] text-stone-500 font-bold uppercase tracking-wider mt-0.5">Edit operational hours, titles, and highlight descriptors of restaurants</p>
+                      <div className="flex items-center gap-2.5">
+                        <h3 className="font-serif text-lg sm:text-xl font-bold text-stone-900 uppercase tracking-wider">Dining & Experiences Manager</h3>
+                        <span className="text-[10px] font-mono font-bold bg-amber-500/15 text-amber-800 border border-amber-500/30 px-2 py-0.5 rounded">
+                          {dining.length} Venues
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-500 font-medium tracking-wide mt-1">
+                        Edit operational timings, restaurant culinary narratives, and oceanfront dhow experiences
+                      </p>
                     </div>
                     {!editingDining && (
-                      <button
-                        onClick={() => {
-                          setEditingDining({
-                            id: "dining_" + Date.now(),
-                            name: "",
-                            description: "",
-                            highlights: ["Fine Dining", "Oceanside Views"],
-                            hours: "7:00 AM - 11:00 PM",
-                            image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
-                            reservationLinkText: "Inquire Table",
-                          });
-                        }}
-                        className="px-4 py-2 bg-brand-teal hover:bg-brand-teal/80 text-brand-dark font-black uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Add New Venue</span>
-                      </button>
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        {dining.length < DINING.length && (
+                          <button
+                            type="button"
+                            onClick={() => setDining(DINING)}
+                            className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer rounded border border-stone-300 transition-colors"
+                            title="Restore default dining venues"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Reset Baseline</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingDining({
+                              id: "dining_" + Date.now(),
+                              name: "",
+                              description: "",
+                              highlights: ["Fine Dining", "Oceanside Views"],
+                              hours: "7:00 AM - 11:00 PM",
+                              image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+                              reservationLinkText: "Inquire Table",
+                            });
+                          }}
+                          className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 cursor-pointer rounded shadow-sm transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add New Venue</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -2546,40 +2883,89 @@ export default function StaffDashboardModal({
                         </button>
                       </div>
                     </form>
+                  ) : dining.length === 0 ? (
+                    <div className="bg-white border border-stone-200 p-12 text-center max-w-xl mx-auto my-8 shadow-sm rounded-lg">
+                      <div className="w-16 h-16 mx-auto mb-4 bg-amber-50 border border-amber-200 text-amber-700 rounded-full flex items-center justify-center">
+                        <Utensils className="w-8 h-8" />
+                      </div>
+                      <h4 className="font-serif text-lg font-bold text-stone-900 uppercase tracking-wider">No Dining Venues Available</h4>
+                      <p className="text-stone-500 text-xs mt-2 leading-relaxed">
+                        No dining venues or dhow experiences are currently loaded in the database. You can restore Tamarind's baseline culinary experiences or create a new venue.
+                      </p>
+                      <div className="flex items-center justify-center gap-3 mt-6">
+                        <button
+                          type="button"
+                          onClick={() => setDining(DINING)}
+                          className="px-4 py-2.5 bg-amber-600 text-white font-bold uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer hover:bg-amber-500 rounded shadow-sm transition-colors"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          <span>Load Baseline Venues</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingDining({
+                              id: "dining_" + Date.now(),
+                              name: "",
+                              description: "",
+                              highlights: ["Fine Dining", "Oceanside Views"],
+                              hours: "7:00 AM - 11:00 PM",
+                              image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80",
+                              reservationLinkText: "Inquire Table",
+                            });
+                          }}
+                          className="px-4 py-2.5 bg-stone-900 text-white font-bold uppercase tracking-wider text-xs flex items-center gap-2 cursor-pointer hover:bg-stone-800 rounded transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Create Venue</span>
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {dining.map(d => (
-                        <div key={d.id} className="bg-white border border-stone-200 overflow-hidden flex flex-col shadow-sm">
-                          <OptimizedImage 
-                            src={d.image} 
-                            preset="thumb"
-                            alt={d.name} 
-                            className="w-full h-48 object-cover border-b border-stone-150"
-                          />
+                        <div key={d.id} className="bg-white border border-stone-200 rounded overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow group">
+                          <div className="relative">
+                            <OptimizedImage 
+                              src={d.image} 
+                              preset="thumb"
+                              alt={d.name} 
+                              className="w-full h-52 object-cover border-b border-stone-150 group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute top-3 right-3 bg-stone-950/85 backdrop-blur-sm border border-stone-700/60 text-brand-gold font-mono text-[11px] font-bold px-2.5 py-1 rounded shadow-sm">
+                              {d.hours}
+                            </div>
+                          </div>
                           <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                             <div>
-                              <h4 className="font-serif text-sm font-bold text-stone-900 uppercase tracking-wide">
-                                  {d.name}
+                              <h4 className="font-serif text-base font-bold text-stone-900 uppercase tracking-wide">
+                                {d.name}
                               </h4>
                               <p className="text-stone-500 text-xs mt-2 line-clamp-3 leading-relaxed">
                                 {d.description}
                               </p>
-                              <div className="text-[10px] text-stone-600 font-bold uppercase mt-3.5 pt-3.5 border-t border-stone-100">
-                                Timing: {d.hours}
+                              <div className="flex flex-wrap gap-1.5 pt-3.5 border-t border-stone-100 mt-3 text-[10px]">
+                                {(d.highlights || []).slice(0, 3).map((h, i) => (
+                                  <span key={i} className="bg-stone-100 text-stone-700 px-2 py-0.5 rounded font-medium">
+                                    {h}
+                                  </span>
+                                ))}
                               </div>
                             </div>
 
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 pt-2">
                               <button
+                                type="button"
                                 onClick={() => handleStartEditDining(d)}
-                                className="flex-1 py-2 bg-stone-900 hover:bg-brand-teal hover:text-brand-dark text-white font-bold uppercase tracking-widest text-[9px] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                className="flex-1 py-2.5 bg-stone-900 hover:bg-stone-800 text-brand-gold hover:text-white font-bold uppercase tracking-widest text-[10px] rounded transition-all cursor-pointer flex items-center justify-center gap-1.5"
                               >
-                                <Edit3 className="w-3.5 h-3.5" />
+                                <Edit3 className="w-3.5 h-3.5 text-brand-gold" />
                                 <span>Edit Details</span>
                               </button>
                               <button
+                                type="button"
                                 onClick={() => handleDeleteDining(d.id)}
-                                className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-100 font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
+                                className="px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded font-bold uppercase transition-all cursor-pointer flex items-center justify-center"
                                 title="Delete Venue"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />

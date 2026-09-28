@@ -757,14 +757,22 @@ router.get("/apartments", async (req: Request, res: Response) => {
   try {
     if (!isDbConfigured()) {
       const store = readLocalStore();
-      return res.json({ success: true, apartments: store.apartments || DEFAULT_APARTMENTS });
+      const list = store.apartments && store.apartments.length > 0 ? store.apartments : DEFAULT_APARTMENTS;
+      return res.json({ success: true, apartments: list });
     }
     const db = getDb();
     const data = await db.select().from(apartmentsTable);
-    return res.json({ success: true, apartments: data });
+    if (data && data.length > 0) {
+      return res.json({ success: true, apartments: data });
+    }
+    return res.json({ success: true, apartments: DEFAULT_APARTMENTS });
   } catch (err: any) {
-    console.error("Failed to fetch apartments:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("Failed to fetch apartments, using fallback:", err);
+    return res.status(200).json({ 
+      success: true, 
+      apartments: DEFAULT_APARTMENTS, 
+      database_error: err.message 
+    });
   }
 });
 
@@ -851,14 +859,22 @@ router.get("/dining", async (req: Request, res: Response) => {
   try {
     if (!isDbConfigured()) {
       const store = readLocalStore();
-      return res.json({ success: true, dining: store.dining || DEFAULT_DINING });
+      const list = store.dining && store.dining.length > 0 ? store.dining : DEFAULT_DINING;
+      return res.json({ success: true, dining: list });
     }
     const db = getDb();
     const data = await db.select().from(diningOptionsTable);
-    return res.json({ success: true, dining: data });
+    if (data && data.length > 0) {
+      return res.json({ success: true, dining: data });
+    }
+    return res.json({ success: true, dining: DEFAULT_DINING });
   } catch (err: any) {
-    console.error("Failed to fetch dining experiences:", err);
-    return res.status(500).json({ error: err.message });
+    console.error("Failed to fetch dining experiences, using fallback:", err);
+    return res.status(200).json({ 
+      success: true, 
+      dining: DEFAULT_DINING, 
+      database_error: err.message 
+    });
   }
 });
 
