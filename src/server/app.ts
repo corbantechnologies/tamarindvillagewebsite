@@ -22,6 +22,15 @@ import { handleGetPackages, handleCreatePackage, handleUpdatePackage, handleDele
 import { handleGetExtras, handleCreateExtra, handleUpdateExtra, handleDeleteExtra } from "./handlers/extras.js";
 import { handleGetFacilities, handleCreateFacility, handleUpdateFacility, handleDeleteFacility } from "./handlers/facilities.js";
 import { handleGetAuditLogs, handleCreateAuditLog } from "./handlers/audit-logs.js";
+import {
+  handleGetInventory, handleUpsertInventory,
+  handleGetBlocks, handleCreateBlock, handleDeleteBlock,
+  handleCheckAvailability
+} from "./handlers/availability.js";
+import {
+  handlePaystackInitialize, handlePaystackVerify, handlePaystackWebhook,
+  sendBookingConfirmationEmail, sendNewInquiryAlertEmail
+} from "./handlers/paystack.js";
 
 dotenv.config({ path: fs.existsSync(".env.local") ? ".env.local" : ".env" });
 
@@ -457,6 +466,23 @@ router.get("/audit-logs", handleGetAuditLogs);
 router.post("/audit-logs", handleCreateAuditLog);
 
 // ==========================================
+// AVAILABILITY & INVENTORY ROUTES
+// ==========================================
+router.get("/availability", handleCheckAvailability);
+router.get("/inventory", handleGetInventory);
+router.post("/inventory", handleUpsertInventory);
+router.get("/availability/blocks", handleGetBlocks);
+router.post("/availability/blocks", handleCreateBlock);
+router.delete("/availability/blocks/:id", handleDeleteBlock);
+
+// ==========================================
+// PAYSTACK PAYMENT ROUTES
+// ==========================================
+router.post("/paystack/initialize", handlePaystackInitialize);
+router.get("/paystack/verify/:reference", handlePaystackVerify);
+router.post("/paystack/webhook", handlePaystackWebhook);
+
+// ==========================================
 // PROFITROOM PROXY ROUTES (LIVE XML)
 // ==========================================
 const handleProfitroomRooms = async (req: Request, res: Response) => {
@@ -616,6 +642,49 @@ router.post("/inquiries/:id/status", async (req: Request, res: Response) => {
       .set(updatedFields)
       .where(eq(inquiriesTable.id, id))
       .returning();
+
+    // ─── AUTO-CREATE BOOKING when inquiry is marked "Booked" ───────────────
+    if (status === "Booked") {
+      try {
+        const inqPayload = mergedPayload as any;
+        const reference = "TV-" + new Date().getFullYear() + "-" + Math.floor(1000 + Math.random() * 9000);
+        const newBooking = {
+          id: "bkg_" + Date.now(),
+          bookingReference: reference,
+          inquiryId: id,
+          apartmentId: inqPayload.apartmentId || inqPayload.apartmentName?.toLowerCase().replace(/\s+/g, "-") || "unknown",
+          apartmentName: inqPayload.apartmentName || "Tamarind Village Suite",
+          guestName: inqPayload.name || "Guest",
+          guestEmail: inqPayload.email || "",
+          guestPhone: inqPayload.phone || "",
+          checkIn: inqPayload.checkIn && inqPayload.checkIn !== "Flexible / Not specified" ? inqPayload.checkIn : "",
+          checkOut: inqPayload.checkOut && inqPayload.checkOut !== "Flexible / Not specified" ? inqPayload.checkOut : "",
+          adults: Number(inqPayload.adults) || Number(inqPayload.guests) || 1,
+          children: Number(inqPayload.children) || 0,
+          packageId: inqPayload.packageId || null,
+          packageName: inqPayload.packageName || null,
+          totalAmount: Number(inqPayload.totalCost) || 0,
+          currency: inqPayload.currency || "USD",
+          paymentStatus: (inqPayload.paymentStatus || "unpaid") as any,
+          paymentMethod: inqPayload.paymentMethod || null,
+          bookingStatus: "confirmed" as const,
+          specialRequests: inqPayload.requests || inqPayload.specialRequests || null,
+          staffNotes: [],
+          createdAt: new Date().toISOString()
+        };
+        // Only insert if no booking already exists for this inquiry
+        const { bookings: bookingsTable } = await import("../db/schema.js");
+        const existing = await db.select().from(bookingsTable).where(eq(bookingsTable.inquiryId, id));
+        if (existing.length === 0) {
+          await db.insert(bookingsTable).values(newBooking);
+          // Send confirmation email to guest
+          await sendBookingConfirmationEmail(newBooking);
+        }
+      } catch (bookingErr: any) {
+        console.warn("Auto-booking creation skipped:", bookingErr.message);
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────
 
     return res.json({ success: true, inquiry: updated[0] });
   } catch (err: any) {
@@ -1097,6 +1166,9 @@ router.post("/inquire", async (req: Request, res: Response) => {
     }
 
     return res.json({ success: true, inquiryId: newInquiryId, guestToken });
+
+    // Send new-inquiry staff alert (fire-and-forget)
+    sendNewInquiryAlertEmail({ id: newInquiryId, type, payload: enrichedPayload }).catch(() => {});
   } catch (error: any) {
     console.error("Error in /inquire handler:", error);
     return res.status(500).json({ error: error.message || "Internal Server Error" });

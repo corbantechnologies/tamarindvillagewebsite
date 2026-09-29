@@ -1,4 +1,4 @@
-import { pgTable, text, integer, doublePrecision, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, doublePrecision, jsonb, boolean, date } from "drizzle-orm/pg-core";
 
 // ==========================================
 // 1. STAFF USERS & AUTHENTICATION
@@ -174,4 +174,27 @@ export const auditLogs = pgTable("audit_logs", {
 export const globalSettings = pgTable("global_settings", {
   key: text("key").primaryKey(),
   value: jsonb("value").notNull(),
+});
+
+// ==========================================
+// 12. APARTMENT INVENTORY (Unit Counts)
+// ==========================================
+export const apartmentInventory = pgTable("apartment_inventory", {
+  id: text("id").primaryKey(),           // matches apartments.id
+  totalUnits: integer("total_units").notNull().default(1),
+  notes: text("notes"),
+  updatedAt: text("updated_at").notNull(),
+});
+
+// ==========================================
+// 13. AVAILABILITY BLOCKS (Staff-set date ranges)
+// ==========================================
+export const availabilityBlocks = pgTable("availability_blocks", {
+  id: text("id").primaryKey(),
+  apartmentId: text("apartment_id").notNull(), // "all" | apartment id
+  startDate: text("start_date").notNull(),     // YYYY-MM-DD
+  endDate: text("end_date").notNull(),         // YYYY-MM-DD
+  reason: text("reason"),                      // "maintenance" | "full" | "reserved" | custom
+  blockedBy: text("blocked_by"),               // staff name
+  createdAt: text("created_at").notNull(),
 });

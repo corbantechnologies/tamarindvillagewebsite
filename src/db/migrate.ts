@@ -11,7 +11,9 @@ import {
   inquiries, 
   bookings, 
   auditLogs, 
-  globalSettings 
+  globalSettings,
+  apartmentInventory,
+  availabilityBlocks
 } from "./schema.js";
 import bcrypt from "bcryptjs";
 import * as fs from "fs";
@@ -201,6 +203,7 @@ export async function initAndMigrateDatabase() {
     console.log("✅ Database schema tables verified.");
 
     // Ensure all required columns exist in older tables (Self-healing schema migration)
+    // Add new columns for self-healing
     try {
       await client.unsafe(`ALTER TABLE apartments ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;`);
       await client.unsafe(`ALTER TABLE dining_options ADD COLUMN IF NOT EXISTS max_capacity INTEGER DEFAULT 100;`);
@@ -208,6 +211,29 @@ export async function initAndMigrateDatabase() {
     } catch (colErr) {
       console.warn("Schema self-healing column check warning:", colErr);
     }
+
+    // New: apartment_inventory
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS apartment_inventory (
+        id TEXT PRIMARY KEY,
+        total_units INTEGER NOT NULL DEFAULT 1,
+        notes TEXT,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    // New: availability_blocks
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS availability_blocks (
+        id TEXT PRIMARY KEY,
+        apartment_id TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        reason TEXT,
+        blocked_by TEXT,
+        created_at TEXT NOT NULL
+      );
+    `);
 
     // ==========================================
     // 2. SEEDING & DATA HYDRATION
@@ -400,6 +426,27 @@ export async function initAndMigrateDatabase() {
         seasonalFactor: "regular",
       });
       console.log("... Seeded default pricing rules.");
+    }
+
+    // H. Seed Apartment Inventory (1 unit per type by default)
+    const inventoryCountRes = await client.unsafe("SELECT COUNT(*) FROM apartment_inventory");
+    const inventoryCount = parseInt(inventoryCountRes[0]?.count || "0", 10);
+    if (inventoryCount === 0) {
+      console.log("🌱 Seeding default apartment inventory (1 unit per type)...");
+      const defaultInventory = [
+        { id: "1-bedroom", totalUnits: 1 },
+        { id: "2-bedroom", totalUnits: 1 },
+        { id: "3-bedroom", totalUnits: 1 },
+      ];
+      for (const inv of defaultInventory) {
+        await db.insert(apartmentInventory).values({
+          id: inv.id,
+          totalUnits: inv.totalUnits,
+          notes: "Default — update to reflect actual unit count",
+          updatedAt: new Date().toISOString()
+        });
+      }
+      console.log("... Seeded inventory for 3 apartment types.");
     }
 
     // H. Seed initial system audit log

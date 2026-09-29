@@ -17,6 +17,7 @@ import BookingsLedger from "./admin/BookingsLedger";
 import FacilitiesManager from "./admin/FacilitiesManager";
 import PackagesManager from "./admin/PackagesManager";
 import StaffAccountsManager from "./admin/StaffAccountsManager";
+import AvailabilityManager from "./admin/AvailabilityManager";
 import OptimizedImage from "./OptimizedImage";
 import { 
   TransferVehicle, 
@@ -143,7 +144,7 @@ export default function StaffDashboardModal({
 
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<
-    "frontdesk" | "bookings" | "inquiries" | "apartments" | "pricing" | "dining" | "packages" | "transfers" | "facilities" | "hero" | "team" | "logs"
+    "frontdesk" | "bookings" | "inquiries" | "apartments" | "pricing" | "dining" | "packages" | "transfers" | "facilities" | "availability" | "hero" | "team" | "logs"
   >("inquiries");
 
   // Additional modules data
@@ -1390,9 +1391,29 @@ export default function StaffDashboardModal({
                       </span>
                     )
                   )}
-                  {sidebarCollapsed && (
+                  {!sidebarCollapsed && (
                     <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
                       Guest Inquiries {stats.pending > 0 ? `(${stats.pending})` : ""}
+                    </span>
+                  )}
+                </button>
+
+                {/* Tab: Availability & Inventory */}
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab("availability"); setSelectedInquiry(null); }}
+                  className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"} rounded text-xs font-bold uppercase tracking-wider transition-all cursor-pointer relative group ${
+                    activeTab === "availability"
+                      ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-300 border-l-2 border-amber-400 font-black shadow-sm"
+                      : "hover:bg-stone-800/60 hover:text-stone-100 text-stone-400"
+                  }`}
+                  title={sidebarCollapsed ? "Availability" : undefined}
+                >
+                  <Calendar className={`w-4.5 h-4.5 shrink-0 ${activeTab === "availability" ? "text-amber-400" : "text-stone-400 group-hover:text-stone-200"}`} />
+                  {!sidebarCollapsed && <span className="truncate">Availability</span>}
+                  {sidebarCollapsed && (
+                    <span className="fixed left-20 ml-2 px-2.5 py-1 bg-stone-900 text-stone-100 text-xs font-bold rounded shadow-xl border border-stone-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                      Availability & Inventory
                     </span>
                   )}
                 </button>
@@ -1682,10 +1703,10 @@ export default function StaffDashboardModal({
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-amber-950 flex items-start gap-3 rounded-none">
                   <ShieldAlert className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 font-serif">Offline Fallback Engaged</h4>
-                    <p className="text-[11px] mt-1 text-stone-700 leading-relaxed font-bold uppercase tracking-wide">
-                      Warning: A connection to the live database could not be established ({dbWarning}). 
-                      The portal is currently operating in a secure, zero-overhead offline-first fallback mode. All details are preserved locally.
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-900 font-serif">Offline Mode</h4>
+                    <p className="text-[11px] mt-1 text-stone-700 leading-relaxed">
+                      The portal could not connect to the live data service and is operating in offline mode.
+                      Your data is preserved locally and will sync when the connection is restored.
                     </p>
                   </div>
                 </div>
@@ -1711,6 +1732,14 @@ export default function StaffDashboardModal({
                   onDeleteBooking={handleDeleteBooking}
                   onCreateBooking={handleCreateNewBooking}
                   userRole={currentUser?.role || "admin"}
+                />
+              )}
+
+              {/* --- AVAILABILITY & INVENTORY --- */}
+              {activeTab === "availability" && (
+                <AvailabilityManager
+                  apartments={apartments.map(a => ({ id: a.id, name: a.name }))}
+                  currentUserName={currentUser?.name || "Staff"}
                 />
               )}
 
