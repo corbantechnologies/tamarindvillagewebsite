@@ -289,7 +289,7 @@ export async function sendNewInquiryAlertEmail(inquiry: any) {
             <tr><td style="padding: 6px 0; color: #8b7355;">Received</td><td>${new Date().toLocaleString("en-KE", { timeZone: "Africa/Nairobi" })} (EAT)</td></tr>
           </table>
           <div style="margin-top: 24px;">
-            <a href="${process.env.SITE_URL || "https://tamarind.co.ke"}/admin" style="background:#821124;color:#fff;padding:10px 20px;text-decoration:none;font-size:13px;font-weight:bold;">
+            <a href="${process.env.SITE_URL || "https://tamarindvillage.co.ke"}/admin" style="background:#821124;color:#fff;padding:10px 20px;text-decoration:none;font-size:13px;font-weight:bold;">
               View in Dashboard →
             </a>
           </div>
